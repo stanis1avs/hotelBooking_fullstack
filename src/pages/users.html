@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./style.css">
+  <title>Users</title>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="logo">logo</div>
+    <nav>
+      <ul>
+        <li class="item"><a href='#'>Все гостиницы</a></li>
+        <li class="item"><a href='#'>Поиск номера</a></li>
+        <li class="item"><a href='#'>Добавить гостиницу</a></li>
+        <li class="item"><a href='#'>Пользователи</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <div class="wrapper">
+    <header>
+      <div class="signInOutIcon"></div>
+      <div class="signInOutForm">
+        <input type="text" placeholder="Введите логин" class="signInOutInput">
+        <input type="text" placeholder="Введите пароль" class="signInOutInput">
+        <div class="buttons">
+          <button class="signInOutButton">Войти</button>
+          <button class="signInOutButton">Зарегистрироваться</button>
+        </div>
+      </div>
+    </header>
+
+     <main>
+      <h2>Пользователи</h2>
+      <input type="text" placeholder="Введите имя пользователя, id, телефон или почту">
+      <button>Искать</button>
+      <table id="users">
+        <tr>
+          <th>Id</th>
+          <th>ФИО</th>
+          <th>Телефон</th>
+          <th>Email</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Татьяна Симоненко</td>
+          <td>+78002345476</td>
+          <td>tatyana@mail.ru</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Татьяна Симоненко</td>
+          <td>+78002345476</td>
+          <td>tatyana@mail.ru</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Татьяна Симоненко</td>
+          <td>+78002345476</td>
+          <td>tatyana@mail.ru</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Татьяна Симоненко</td>
+          <td>+78002345476</td>
+          <td>tatyana@mail.ru</td>
+        </tr>
+      </table>
+    </main>
+
+    <div class="nextPage">
+      <button class="nextPageButton">1</button>
+      <button class="nextPageButton" disabled>2</button>
+      <button class="nextPageButton" disabled>3</button>
+    </div>
+  </div>
+
+  <div class="supportChat"></div>
+
+  <aside>
+    <div class="support">Техподдержка</div>
+    <div class="messages">
+      <h6 style="align-self: center">Сегодня</h6>
+      <div class="message messageThem">fjeifjier</div>
+      <div class="message messageMe">ffffff</div>
+      <div class="message messageThem">fefhuehfuefjeifjeifjejforjf </div>
+    </div>
+    <input type="text" placeholder="Расскажите что случилось" class="supportInput">
+  </aside>
+</body>
+</html>
