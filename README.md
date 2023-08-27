@@ -3,9 +3,7 @@
 
 За основу было взято ТЗ [Cайт-агрегатор просмотра и бронирования гостиниц](https://github.com/netology-code/fjs-diplom)
 
-[backend](https://github.com/Stanislavsus-prj/hotelBooking_nest_back) 
-
-Приложение имеет учебный характер и создано для постепенного усложнения и утяжеления архитектуры, а также увеличения бизнес-логики посредством добавления различных инструментов и современных возможностей
+Приложение имеет учебный характер и создано для постепенного усложнения и утяжеления архитектуры, а также увеличения бизнес-логики посредством добавления различных инструментов
 
 ## Технический стек frontend-приложения:
 
@@ -17,6 +15,14 @@
 6. React Router
 7. Socket.io
 8. Webpack
+
+## Технический стек backend-приложения:
+
+1. NestJS
+2. Typescript
+3. Mongoose
+4. JWT-Auth(assets_token + refresh_token)
+5. Socket.IO
 
 ## Функционал приложения:
 
@@ -94,21 +100,34 @@
 
 ![f](https://github.com/Stanislavsus-prj/hotelBooking_react_front/blob/main/readme_pictures/manager_supports.jpg)  
 
-## Навигация проекта в каталоге src:
+## Навигация проекта в каталоге src фронтенда:
 
 1. api - функции для осуществления fetch запросов и socket сообщений на сервер
 2. pages - компоненты приложения в одноименных папках с тайпингами по их наличию, а также папка images со статическими изображениями
 3. reducers - редьюсеры редакс состояний приложения и тайпинги используемые в редьюсерах 
 4. sagas - watcher'ы и worker'ы
 5. store - кофигурация stor'а react приложения и объявления хуков react-redux
+6. App.tsx - роутинг приложения
+
+## Навигация проекта в каталоге src бэкенда:
+
+1. Auth - классы аутентификационных стратегий и защитники вебсокетных сообщений
+2. Controllers - контроллеры по встроенной архитектуре NestJS приложений
+3. Decorators - кастомные декораторы
+4. Interface - тайпинги приходящих и уходящих данных на фронтенд
+5. Models - интерфейсы коллекций базы данных Монго
+6. Modules - модули по встроенной архитектуре NestJS приложений
+7. Providers - провайдеры по встроенной архитектуре NestJS приложений
 
 ## Варианты запуска приложения:
-> приложение не запустится без БД
-1. При наличии NodeJS
-```git clone https://github.com/Stanislavsus-prj/hotelBooking_react_front.git```
-```npm install```
-```npm start```
-Приложение запустится на localhost:3000
+1. Из Docker контейнера
+- ```git clone https://github.com/Stanislavsus-prj/hotelBooking_fullstack.git```
+- ```docker compose up```
+- Откройте в браузере ```http://localhost:3000```
+2. При наличии NodeJS
+- ```git clone https://github.com/Stanislavsus-prj/hotelBooking_fullstack.git```
+- ```cd hotelBooking_nest_back && npm install && npm start```
+- ```cd hotelBooking_react_front && npm install && npm start```
 
 ## Доступ 
 
