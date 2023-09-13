@@ -2,11 +2,13 @@ import { Injectable, CanActivate, UnauthorizedException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { SupportProvider } from '../Providers/support.provider'
 import { WsException } from '@nestjs/websockets'
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WsGuardforSendMesg implements CanActivate {
   constructor(
     private supportService: SupportProvider,
+    private configService: ConfigService,
     private jwtService: JwtService) {}
 
   async canActivate(context: any): Promise<boolean> {
@@ -18,13 +20,13 @@ export class WsGuardforSendMesg implements CanActivate {
     const supportRequestId = context.args[0].handshake.query.id;
     const supportRequest = await this.supportService.getRequestById(supportRequestId)
 
-    const decoded = this.jwtService.verify(bearerToken, { secret: process.env.JWT_TOKEN_SECRET || 'hard!to-guess_secret'});
+    const decoded = this.jwtService.verify(bearerToken, { secret: this.configService.get('JWT_TOKEN_SECRET')});
     if(decoded.role !== "manager" && decoded.role !== "client"){
       throw new WsException("Invalid credentials");
       return false
     }
 
-    if(decoded.sub != supportRequest.user){
+    if(decoded.role !== "manager" && decoded.sub != supportRequest.user){
       throw new WsException("Invalid credentials");
       return false
     }

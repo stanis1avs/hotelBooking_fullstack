@@ -10,12 +10,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['../../.env', '../.env']
+      envFilePath: ['.env', '../.env'],
+      isGlobal: true
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        uri: `mongodb+srv://${configService.get('DB_NAME')}:${configService.get('DB_PASSWORD')}@hotelbooking.q3qxgry.mongodb.net/nest?retryWrites=true&w=majority`,
+        uri: `mongodb+srv://${configService.get('DB_NAME')}:${configService.get('DB_PASSWORD')}@hotelbooking.q3qxgry.mongodb.net/nest`,
         useUnifiedTopology: true,
         useNewUrlParser: true
         // uri: 'mongodb://127.0.0.1:27017/nest',

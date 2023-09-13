@@ -4,20 +4,24 @@ import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport';
 import { UserSchema, User } from '../Models/Users';
 import { AuthProvider } from '../Providers/auth.provider'
-// import { AuthMiddleware } from '../Middlewares/auth.middleware'
 import { UsersProvider } from '../Providers/users.provider'
 import { LocalStrategy } from '../Auth/local.strategy'
 import { JwtStrategy } from '../Auth/jwt.strategy'
 import { JwtRefreshStrategy } from '../Auth/jwt-refresh.strategy'
 import { AuthController } from '../Controllers/auth.controller'
 import { ClientAuthController } from '../Controllers/clientAuth.controller'
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     PassportModule,
-    JwtModule.register({
-      secret: 'hard!to-guess_secret'
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get('JWT_TOKEN_SECRET'),
+      }),
+      inject: [ConfigService]
     })],
   controllers: [AuthController, ClientAuthController],
   providers: [AuthProvider, UsersProvider, LocalStrategy, JwtStrategy, JwtRefreshStrategy]
