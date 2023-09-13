@@ -35,12 +35,12 @@ import {
   type recieveResevationList
 } from '../reducers/typesReservationPage'
 import {
-  clientRequestsRequest, managerRequestsRequest, getHistoryRequest,
+  clientRequestsRequest, managerRequestsRequest, getHistoryRequest, makeInactiveRequest,
   sendDataWS, socketConnect, recieveSocket,
   requestsSearchSuccess, messagesSearchSuccess, supportChatFailure
 } from '../reducers/reducersupportChat'
 import {
-  type historyRequest,
+  type historyRequest, type disableRequest,
   type socketConnectType, type sendDataWSType
 } from '../reducers/typesSupportChat'
 import { fetchRequestGet, fetchRequestPost, fetchRequestPut, fetchRequestDelete, sendEvent } from '../api/fetchRequest'
@@ -132,6 +132,10 @@ function * watchRequestsManagerSaga (): Generator<any, void, unknown> {
 
 function * watchHistoryChatSaga (): Generator<any, void, unknown> {
   yield takeEvery(getHistoryRequest.type, handleAccessToken, handleHistoryChat)
+}
+
+function * watchInactiveRequestsSaga (): Generator<any, void, unknown> {
+  yield takeEvery(makeInactiveRequest.type, handleAccessToken, handleInactiveRequest)
 }
 
 function * watchSocketConnectSaga (): Generator<any, void, unknown> {
@@ -391,10 +395,19 @@ function * handleHistoryChat (action: PayloadAction<historyRequest>, accessToken
   }
 }
 
+function * handleInactiveRequest (action: PayloadAction<disableRequest>, accessToken: string): Generator<any, void, any> {
+  try {
+    const data = yield call(fetchRequestPut, '/api/manager/support-requests', accessToken, JSON.stringify(action.payload), null, { 'Content-Type': 'application/json' })
+    yield put(requestsSearchSuccess(data))
+  } catch (error: any) {
+    yield put(supportChatFailure(error.message))
+  }
+}
+
 function * handleSocketConnect (action: PayloadAction<socketConnectType>, accessToken: string): Generator<any, void, any> {
   try {
     const query = action.payload.id
-    const socket = io('http://localhost:7000/support', {
+    const socket = io(`${process.env.REACT_APP_HOST}/support`, {
       extraHeaders: {
         Authorization: `Bearer ${accessToken}`
       },
@@ -439,6 +452,7 @@ export default function * saga () {
   yield spawn(watchRequestsClientSaga)
   yield spawn(watchRequestsManagerSaga)
   yield spawn(watchHistoryChatSaga)
+  yield spawn(watchInactiveRequestsSaga)
   yield spawn(watchSocketConnectSaga)
   yield spawn(watchSendDataWSSaga)
 }

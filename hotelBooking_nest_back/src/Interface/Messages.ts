@@ -4,9 +4,14 @@ export class SendMessage {
   text: string
   readAt?: string
   author: string
+  requestId: string
 }
 
 export class NewMessage {
   text: string
+  id: string
+}
+
+export class MessageRead {
   id: string
 }

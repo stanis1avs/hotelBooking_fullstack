@@ -1,5 +1,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { type SendRequests, type SendMessages, type historyRequest, type recieveSocketType, type socketConnectType, type sendDataWSType } from './typesSupportChat'
+import {
+  type SendRequests, type historyRequest, type disableRequest,
+  type SendMessages,
+  type recieveSocketType, type socketConnectType, type sendDataWSType
+} from './typesSupportChat'
 import { type initStateForSupportChat } from './typesCommon'
 
 const initialState: initStateForSupportChat = {
@@ -28,6 +32,10 @@ export const reducersupportChat = createSlice({
 
     sendDataWS: (state, action: PayloadAction<sendDataWSType>) => ({ ...state, ...action.payload }),
 
+    makeInactiveRequest: (state, action: PayloadAction<disableRequest>) => ({ ...state, ...action.payload }),
+
+    resetChat: (state) => ({ ...initialState }),
+
     requestsSearchSuccess: (state, action: PayloadAction<SendRequests[]>) => ({ ...state, requests: action.payload }),
 
     messagesSearchSuccess: (state, action: PayloadAction<SendMessages[]>) => ({ ...state, messages: action.payload }),
@@ -41,8 +49,8 @@ export const reducersupportChat = createSlice({
 })
 
 export const {
-  clientRequestsRequest, managerRequestsRequest, getHistoryRequest,
-  socketConnect, recieveSocket, sendDataWS,
+  clientRequestsRequest, managerRequestsRequest, getHistoryRequest, makeInactiveRequest,
+  socketConnect, recieveSocket, sendDataWS, resetChat,
   requestsSearchSuccess, messagesSearchSuccess, messageEvent, requestEvent, supportChatFailure
 } = reducersupportChat.actions
 export default reducersupportChat.reducer

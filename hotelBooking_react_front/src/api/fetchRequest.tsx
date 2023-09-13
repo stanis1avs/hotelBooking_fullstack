@@ -31,12 +31,14 @@ export const fetchRequestPost = async (url: string, accessToken: string | null =
   return await response.json()
 }
 
-export const fetchRequestPut = async (url: string, accessToken: string, data: any, id: string) => {
-  const response = await fetch(`${process.env.REACT_APP_HOST}${url}${`/${id}`}`, {
+export const fetchRequestPut = async (url: string, accessToken: string, data: any | null = null, id: string | null = null, header: any | null = null) => {
+  const headers = { ...header }
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+  const response = await fetch(`${process.env.REACT_APP_HOST}${url}${id ? `/${id}` : ''}`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    },
+    headers,
     body: data,
     credentials: 'include'
   })

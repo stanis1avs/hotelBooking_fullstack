@@ -1,10 +1,9 @@
-import { Injectable, Inject, BadRequestException} from '@nestjs/common';
+import { Injectable, BadRequestException} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
-import { UsersProvider } from "./users.provider"
 import { SupportDocument, Support } from '../Models/Support';
 import { MessageDocument, Message } from '../Models/Messages';
-import { SendSupportRequest, CreateRequest, SendSupportRequestFull } from '../Interface/Support'
+import { SendSupportRequest, CreateRequest, DisableRequest } from '../Interface/Support'
 import { SendMessage } from '../Interface/Messages'
 import { UserToJWTPayload, SendUser } from '../Interface/Users'
 
@@ -12,8 +11,7 @@ import { UserToJWTPayload, SendUser } from '../Interface/Users'
 export class SupportProvider {
   constructor(
     @InjectModel(Support.name) private supportModel: Model<SupportDocument>,
-    @InjectModel(Message.name) private messagesModel: Model<MessageDocument>,
-    @Inject(UsersProvider) readonly usersProvider: UsersProvider
+    @InjectModel(Message.name) private messagesModel: Model<MessageDocument>
   ) {}
 
   async createRequest(createRequest: CreateRequest, currUser: UserToJWTPayload): Promise<SendSupportRequest> {
@@ -25,7 +23,7 @@ export class SupportProvider {
       messages: [message]
     });
     await createdRequest.save();
-    return this.printFormatSupport(createdRequest, 1)
+    return this.printFormatSupport(createdRequest)
   }
 
   async getRequestById(id: string): Promise<SupportDocument> {
@@ -36,20 +34,17 @@ export class SupportProvider {
     return supportRequest
   }
 
-  async getRequestsforManager(): Promise<any>{
+  async getRequestsforManager(): Promise<SendSupportRequest[]>{
     const foundSupportRequest = await this.supportModel.find({
       isActive: true,
     })
     if(!foundSupportRequest){
       throw new BadRequestException()
     }
-    return foundSupportRequest.map(async (el) => {
-      const user = await this.usersProvider.getIdUser(el.user.toString())
+    return foundSupportRequest.map((el) => {
       return {
-        ...this.printFormatSupport(el, el.messages.length),
-        // hasNewMessages: el.messages.some( (e) => e.readAt !== undefined),
+        ...this.printFormatSupport(el),
         }
-        // client: user}
     })
   }
 
@@ -63,60 +58,65 @@ export class SupportProvider {
     }
     return foundSupportRequest.map(el => {
       return {
-        ...this.printFormatSupport(el, el.messages.length),
-        // hasNewMessages: el.messages.some( (e) => e.readAt !== undefined)
+        ...this.printFormatSupport(el),
       }
     })
   }
 
-
   async getHistory(id: string, currUser: UserToJWTPayload): Promise<SendMessage[]>{
     const supportRequest = await this.getRequestById(id)
-    return supportRequest.messages.map(el => this.printFormatHistoryMesg(supportRequest, el))
+    return supportRequest.messages.map(el => this.printFormatMessage(el, supportRequest._id))
+  }
+
+  async makeInactiveRequest(data: DisableRequest): Promise<SendSupportRequest[]>{
+    await this.supportModel.findByIdAndUpdate(data.id, {isActive: false})
+    return await this.getRequestsforManager()
+
   }
 
   async newMessage(textMessage: string, currUser: UserToJWTPayload): Promise<MessageDocument> {
     const message = new this.messagesModel({
       author: currUser.id,
       sentAt: new Date().toISOString(),
-      text: textMessage,
+      text: textMessage
     })
     return await message.save();
   }
 
-  async messagesRead(id: string): Promise<void> {
+  async messagesRead(id: string, currUser: UserToJWTPayload): Promise<SendMessage[]> {
     const supportRequest = await this.getRequestById(id)
-    supportRequest.messages.forEach((el) => {
-      if(!el.readAt) {
-        readAt: new Date().toISOString()
+    supportRequest.messages.forEach((el: any) => {
+      if(el.author.toString() != currUser.id && !el.readAt) {
+        el.readAt = new Date().toISOString()
       }
     })
+    await this.supportModel.findByIdAndUpdate(id, {messages: [...supportRequest.messages]})
+    return supportRequest.messages.map(el => this.printFormatMessage(el, supportRequest._id))
   }
 
   async sendMessage(id: string, text: string, currUser: UserToJWTPayload): Promise<SendMessage> {
     const message = await this.newMessage(text, currUser)
     const supportRequest = await this.getRequestById(id)
     await this.supportModel.findByIdAndUpdate(id, {messages: [...supportRequest.messages, message]})
-    return this.printFormatHistoryMesg(supportRequest, message)
+    return this.printFormatMessage(message, supportRequest._id)
   }
 
-  printFormatSupport(counter: SupportDocument, numberMessages: number): SendSupportRequest {
+  printFormatSupport(counter: SupportDocument): SendSupportRequest {
     return {
       id: counter.id,
       createdAt: new Date(counter.createdAt).toISOString(),
-      hasNewMessages: true,
-      // hasNewMessages: (numberMessages == 1 ? false : true),
       title: counter.messages[0]
     }
   }
 
-  printFormatHistoryMesg(supportRequest: SupportDocument, message: any): SendMessage {
+  printFormatMessage(message: any, requestId: string): SendMessage {
     return {
       id: message._id,
-      createdAt: new Date(supportRequest.createdAt).toISOString(),
+      createdAt: new Date(message.sentAt).toISOString(),
       text: message.text,
-      readAt: message.read ? new Date(message.readAt).toISOString() : undefined,
-      author: message.author
+      readAt: message.readAt ?? undefined,
+      author: message.author,
+      requestId
     }
   }
 }

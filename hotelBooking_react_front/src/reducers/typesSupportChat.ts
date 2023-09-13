@@ -11,11 +11,16 @@ export interface SendMessages {
   text: string
   readAt?: string
   author: string
+  requestId: string
 }
 
 export interface historyRequest {
   id: string
   requests: []
+}
+
+export interface disableRequest {
+  id: string
 }
 
 export interface recieveSocketType {
@@ -30,7 +35,7 @@ export interface sendDataWSType {
   event: string
   socket: any
   data: {
-    text: string
+    text?: string
     id?: string
   }
 }
