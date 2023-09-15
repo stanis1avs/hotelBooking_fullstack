@@ -1,4 +1,22 @@
 {
-  "singleQuote": true,
-  "trailingComma": "all"
+  "overrides": [
+    {
+      "files": "*.ts",
+      "options": {
+        "printWidth": 160,
+        "overrides": [
+          {
+            "files": "*.ts",
+            "excludedFiles": "*.spec.ts",
+            "options": {
+              "parser": "typescript",
+              "singleQuote": true,
+              "trailingComma": "all",
+              "arrowParens": "avoid"
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

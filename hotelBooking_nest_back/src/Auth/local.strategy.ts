@@ -1,14 +1,14 @@
-import { Strategy } from 'passport-local';
-import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { AuthProvider } from '../Providers/auth.provider';
-import { SendUser } from '../Interface/Users'
+import { Strategy } from "passport-local";
+import { PassportStrategy } from "@nestjs/passport";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { AuthProvider } from "../Providers/auth.provider";
+import { SendUser } from "../Interface/Users";
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthProvider) {
     super({
-      usernameField: 'email'
+      usernameField: "email",
     });
   }
 

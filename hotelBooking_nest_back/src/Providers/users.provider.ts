@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import { genSaltSync, hashSync } from "bcrypt";
-import { UserDocument, User } from '../Models/Users';
-import { SearchUserParams, CreateUser, SendUser } from '../Interface/Users'
+import { UserDocument, User } from "../Models/Users";
+import { SearchUserParams, CreateUser, SendUser } from "../Interface/Users";
 
 @Injectable()
 export class UsersProvider {
@@ -13,33 +13,34 @@ export class UsersProvider {
     const createdUser = new this.userModel({
       ...createUser,
       password: hashSync(createUser.password, genSaltSync(10)),
-      role: createUser.role ? createUser.role : 'client'
+      role: createUser.role ? createUser.role : "client",
     });
     await createdUser.save();
-    return this.printFormatUser(createdUser)
+    return this.printFormatUser(createdUser);
   }
 
-  async getAllUsers(queryParams: SearchUserParams): Promise<SendUser[]>{
-    const foundUsers = await this.userModel.find({
-      name: { "$regex": queryParams.name, "$options": "i" },
-      email: { "$regex": queryParams.email, "$options": "i" },
-      contactPhone: { "$regex": queryParams.contactPhone, "$options": "i" },
-      role: "client"
-    })
+  async getAllUsers(queryParams: SearchUserParams): Promise<SendUser[]> {
+    const foundUsers = await this.userModel
+      .find({
+        name: { $regex: queryParams.name, $options: "i" },
+        email: { $regex: queryParams.email, $options: "i" },
+        contactPhone: { $regex: queryParams.contactPhone, $options: "i" },
+        role: "client",
+      })
       .skip(queryParams.offset)
       .limit(50);
-    if(!foundUsers){
-      throw new BadRequestException()
+    if (!foundUsers) {
+      throw new BadRequestException();
     }
-    return foundUsers.map(el => this.printFormatUser(el))
+    return foundUsers.map((el) => this.printFormatUser(el));
   }
 
   async getIdUser(id: string): Promise<SendUser> {
-    const foundUser = await this.userModel.findById(id)
-    if(!foundUser){
-      throw new BadRequestException()
+    const foundUser = await this.userModel.findById(id);
+    if (!foundUser) {
+      throw new BadRequestException();
     }
-    return this.printFormatUser(foundUser)
+    return this.printFormatUser(foundUser);
   }
 
   printFormatUser(user: UserDocument): SendUser {
@@ -48,7 +49,7 @@ export class UsersProvider {
       email: user.email,
       name: user.name,
       contactPhone: user.contactPhone,
-      role: user.role
-    }
+      role: user.role,
+    };
   }
 }

@@ -1,22 +1,18 @@
-import { Injectable} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { JwtService } from "@nestjs/jwt";
 import { compareSync } from "bcrypt";
-import { UserDocument, User } from '../Models/Users';
-import { SendUser, UserToJWTPayload, ValidatedToken } from '../Interface/Users'
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserDocument, User } from "../Models/Users";
+import { SendUser, UserToJWTPayload, ValidatedToken } from "../Interface/Users";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthProvider {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private jwtService: JwtService,
-    private configService: ConfigService
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService, private configService: ConfigService) {}
 
   async validateUser(email: string, pass: string): Promise<SendUser | null> {
-    const user = await this.userModel.findOne({email: email});
+    const user = await this.userModel.findOne({ email: email });
     if (user && compareSync(pass, user.password)) {
       return this.printFormatUser(user);
     }
@@ -27,21 +23,28 @@ export class AuthProvider {
     return {
       token: this.jwtService.sign(
         { email: userData.email, role: userData.role, sub: userData.id },
-        { secret: this.configService.get('JWT_TOKEN_SECRET'), expiresIn: "2 days" }),
-      userData
+        {
+          secret: this.configService.get("JWT_TOKEN_SECRET"),
+          expiresIn: "2 days",
+        }
+      ),
+      userData,
     };
   }
 
-  async validateRefresh(userData: ValidatedToken): Promise<{token: string}> {
+  async validateRefresh(userData: ValidatedToken): Promise<{ token: string }> {
     return {
-      token: this.jwtService.sign(userData.userData, { secret: this.configService.get('JWT_TOKEN_SECRET'), expiresIn: "10 days" })
+      token: this.jwtService.sign(userData.userData, {
+        secret: this.configService.get("JWT_TOKEN_SECRET"),
+        expiresIn: "10 days",
+      }),
     };
   }
 
   async refresh(userDataShort: UserToJWTPayload): Promise<ValidatedToken> {
-    const user = await this.userModel.findById(userDataShort.id)
-    const userDataFull = this.printFormatUser(user)
-    return await this.login(userDataFull)
+    const user = await this.userModel.findById(userDataShort.id);
+    const userDataFull = this.printFormatUser(user);
+    return await this.login(userDataFull);
   }
 
   printFormatUser(user: UserDocument): SendUser {
@@ -50,7 +53,7 @@ export class AuthProvider {
       email: user.email,
       name: user.name,
       contactPhone: user.contactPhone,
-      role: user.role
-    }
+      role: user.role,
+    };
   }
 }

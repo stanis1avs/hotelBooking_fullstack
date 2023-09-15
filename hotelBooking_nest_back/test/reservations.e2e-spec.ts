@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from '../src/app.module'
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "../src/app.module";
 // import { ReservationModule } from '../src/Modules/reservation.module'
 
-describe('ReservationModule (e2e)', () => {
+describe("ReservationModule (e2e)", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -16,14 +16,11 @@ describe('ReservationModule (e2e)', () => {
     await app.init();
   });
 
-  it('Delete id', () => {
-    return request(app.getHttpServer())
-      .get(':id')
-      .expect(204)
+  it("Delete id", () => {
+    return request(app.getHttpServer()).get(":id").expect(204);
   });
 
   afterAll(async () => {
     await app.close();
   });
 });
-

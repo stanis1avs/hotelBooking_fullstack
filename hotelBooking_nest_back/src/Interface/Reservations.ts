@@ -1,41 +1,41 @@
-import * as mongoose from 'mongoose';
+import * as mongoose from "mongoose";
 
 export class CreateReservation {
-  roomId: string
-  dateStart: string
-  dateEnd: string
+  roomId: string;
+  dateStart: string;
+  dateEnd: string;
 }
 
 export class SendReservationForClients {
-  id: mongoose.Types.ObjectId
-  dateStart: string
-  dateEnd: string
+  id: mongoose.Types.ObjectId;
+  dateStart: string;
+  dateEnd: string;
   room: {
-    description: string
-    images: string[] | Buffer[]
-  }
+    description: string;
+    images: string[] | Buffer[];
+  };
   hotel: {
-    title: string
-  }
+    title: string;
+  };
 }
 
 export class SendReservationForManagers {
-  id: mongoose.Types.ObjectId
-  dateStart: string
-  dateEnd: string
+  id: mongoose.Types.ObjectId;
+  dateStart: string;
+  dateEnd: string;
   client: {
-    id: string
-    name: string
-    contactPhone: string
-  }
+    id: string;
+    name: string;
+    contactPhone: string;
+  };
   room: {
-    description: string
-  }
+    description: string;
+  };
   hotel: {
-    title: string
-  }
+    title: string;
+  };
 }
 
 export class ReservationParams {
-  offset: number
+  offset: number;
 }
