@@ -13,14 +13,20 @@ const initialState: initStateForHotelPage = {
   nameHotel: '',
   descriptionHotel: '',
   imageHotel: null,
-  descriptionRooms: ['', ''],
+  descriptionRooms: {
+    standart: '',
+    lux: ''
+  },
   imagesRooms: {
     standart: [null, null],
     lux: [null, null]
   },
+  roomsId: {
+    standart: null,
+    lux: null,
+  },
   descriptionRoom: '',
   imagesRoom: ['', ''],
-  roomsId: [null, null],
   roomId: '',
   error: null
 }

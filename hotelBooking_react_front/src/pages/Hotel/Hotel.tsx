@@ -23,12 +23,18 @@ export default () => {
       nameHotel: rooms[0].hotel.title,
       descriptionHotel: rooms[0].hotel.description,
       imageHotel: rooms[0].hotel.image,
-      descriptionRooms: [rooms[0].description, rooms[1].description],
+      descriptionRooms: {
+        standart: rooms[0].description,
+        lux: rooms[1].description
+      },
       imagesRooms: {
         standart: [rooms[0].images[0], rooms[0].images[1]],
         lux: [rooms[1].images[0], rooms[1].images[1]]
       },
-      roomsId: [rooms[0].id, rooms[1].id]
+      roomsId: {
+        standart: rooms[0].id,
+        lux: rooms[1].id
+      }
     }))
     navigate('/allhotels/newhotel')
   }

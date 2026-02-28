@@ -18,14 +18,20 @@ export interface initStateForHotelPage {
   nameHotel: string
   descriptionHotel: string
   imageHotel: string | Blob | null
-  descriptionRooms: [string, string]
+  descriptionRooms: {
+    standart: string,
+    lux: string
+  }
   imagesRooms: {
     standart: [Blob | string | null, Blob | string | null]
     lux: [Blob | string | null, Blob | string | null]
   }
   descriptionRoom: string
   imagesRoom: [Blob | string, Blob | string]
-  roomsId: [string | null, string | null]
+  roomsId: {
+    standart: string| null,
+    lux: string | null,
+  }
   roomId: string
   error: any
 }

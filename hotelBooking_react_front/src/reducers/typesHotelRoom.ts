@@ -57,12 +57,18 @@ export interface changeStateWithoutRequestType {
   nameHotel?: string
   descriptionHotel?: string
   imageHotel?: string | Blob | null
-  descriptionRooms?: [string, string]
+  descriptionRooms?: {
+    standart: string,
+    lux: string
+  }
   imagesRooms?: {
     standart: [Blob | string, Blob | string | null]
     lux: [Blob | string, Blob | string | null]
   }
-  roomsId?: [string | null, string | null]
+  roomsId?: {
+    standart: string | null
+    lux: string | null
+  }
 }
 
 export interface recieveSearchInfo {

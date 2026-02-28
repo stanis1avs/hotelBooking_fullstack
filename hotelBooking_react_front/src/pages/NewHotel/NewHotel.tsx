@@ -42,7 +42,6 @@ export default () => {
   }
 
   const handleEditHotel = () => {
-    console.log(imageHotel)
     if (imageHotel) {
       dispatch(edithotelRequest({ nameHotel, descriptionHotel, imageHotel, id }))
     }

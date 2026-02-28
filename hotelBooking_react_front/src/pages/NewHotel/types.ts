@@ -4,6 +4,10 @@ export interface ImagesRooms {
   [key: string]: [Blob | string | null, Blob | string | null]
 }
 
+export interface ImagesRoom {
+  [key: number]: [Blob | string | null, Blob | string | null]
+}
+
 export interface NewHotel {
   nameHotel: string
   descriptionHotel: string
