@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Hotel, HotelDocument } from "../Models/Hotels";
 import { CreateHotel, UpdateHotelParams, SearchHotelParams, SendHotel } from "../Interface/Hotels";
+import { normalizeImageForClient } from "../utils/image.utils";
 
 @Injectable()
 export class HotelsProvider {
@@ -20,17 +21,28 @@ export class HotelsProvider {
   }
 
   async getAllHotels(queryParams: SearchHotelParams, reservedHotels: string[] | null): Promise<SendHotel[]> {
+    const query: any = {
+      _id: { $nin: reservedHotels },
+    };
+
+    if (queryParams.hotel && queryParams.hotel.trim()) {
+      query.title = { $regex: queryParams.hotel, $options: "i" };
+    }
+
     const foundHotels = await this.hotelModel
-      .find({
-        _id: { $nin: reservedHotels },
-        title: { $regex: queryParams.hotel, $options: "i" },
-      })
+      .find(query)
       .skip(queryParams.offset)
       .limit(10);
     if (!foundHotels) {
       throw new BadRequestException();
     }
-    return foundHotels.map((el) => this.printFormatHotel(el));
+    return foundHotels.map((el) => {
+      const formatted = this.printFormatHotel(el);
+      return {
+        ...formatted,
+        image: normalizeImageForClient((el as any).image),
+      };
+    });
   }
 
   async editHotel(id: string, data: UpdateHotelParams): Promise<SendHotel> {

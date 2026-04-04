@@ -5,6 +5,7 @@ import { Room, RoomDocument } from "../Models/Rooms";
 import { HotelDocument } from "../Models/Hotels";
 import { HotelsProvider } from "./hotels.provider";
 import { CreateRoom, UpdateRoomParams, SearchRoomsParams, SendRoom } from "../Interface/Hotels";
+import { normalizeImageForClient } from "../utils/image.utils";
 
 @Injectable()
 export class RoomsProvider {
@@ -63,11 +64,13 @@ export class RoomsProvider {
     return {
       id: room._id,
       description: room.description,
-      images: room.images,
+      images: room.images?.map((img: any) => {        
+        return normalizeImageForClient(img);
+      }).filter((img) => img !== "") || [],
       isEnabled: isEnabl ? room.isEnabled : undefined,
       hotel: {
         id: _id,
-        image,
+        image: normalizeImageForClient(image),
         title,
         description: isHotelDeskr ? description : undefined,
       },
