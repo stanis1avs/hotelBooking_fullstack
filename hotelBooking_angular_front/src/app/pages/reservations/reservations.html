@@ -1,0 +1,28 @@
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Reservations</h1>
+    <div class="text-sm opacity-70">Your bookings</div>
+  </div>
+  <button mat-raised-button color="primary" (click)="reload()">Reload</button>
+</div>
+
+<div *ngIf="loading$ | async" class="flex justify-center py-8">
+  <mat-spinner diameter="40" />
+</div>
+
+<div class="grid grid-cols-1 gap-4" *ngIf="!(loading$ | async)">
+  <ng-container *ngFor="let r of (items$ | async)">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>{{ r.hotel.title }}</mat-card-title>
+        <mat-card-subtitle>{{ r.dateStart }} → {{ r.dateEnd }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="text-sm opacity-80">{{ r.room.description }}</div>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button color="warn" (click)="deleteReservation(r.id)">Delete</button>
+      </mat-card-actions>
+    </mat-card>
+  </ng-container>
+</div>

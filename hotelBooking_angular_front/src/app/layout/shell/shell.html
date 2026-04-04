@@ -1,0 +1,62 @@
+<mat-sidenav-container class="h-screen">
+  <mat-sidenav mode="side" opened class="w-72">
+    <div class="px-4 py-4">
+      <div class="text-lg font-semibold">Hotel Booking</div>
+    </div>
+
+    <mat-nav-list>
+      <a mat-list-item routerLink="/hotels" routerLinkActive="active">
+        <mat-icon matListItemIcon>hotel</mat-icon>
+        <span matListItemTitle>Hotels</span>
+      </a>
+
+      <a mat-list-item routerLink="/reservations" routerLinkActive="active">
+        <mat-icon matListItemIcon>event</mat-icon>
+        <span matListItemTitle>Reservations</span>
+      </a>
+
+      <a mat-list-item routerLink="/support" routerLinkActive="active">
+        <mat-icon matListItemIcon>support_agent</mat-icon>
+        <span matListItemTitle>Support</span>
+      </a>
+
+      <div class="mt-4 px-4 text-xs font-semibold opacity-70">Admin</div>
+
+      <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active">
+        <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+        <span matListItemTitle>Manage Hotels</span>
+      </a>
+
+      <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active">
+        <mat-icon matListItemIcon>meeting_room</mat-icon>
+        <span matListItemTitle>Manage Rooms</span>
+      </a>
+
+      <div class="mt-4 px-4 text-xs font-semibold opacity-70">Auth</div>
+
+      <a mat-list-item routerLink="/login" routerLinkActive="active">
+        <mat-icon matListItemIcon>login</mat-icon>
+        <span matListItemTitle>Login</span>
+      </a>
+
+      <a mat-list-item routerLink="/register" routerLinkActive="active">
+        <mat-icon matListItemIcon>person_add</mat-icon>
+        <span matListItemTitle>Register</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="sticky top-0 z-10">
+      <!-- <span>Hotel Booking</span> -->
+      <span class="flex-1"></span>
+      <a mat-button routerLink="/hotels">Hotels</a>
+      <a mat-button routerLink="/reservations">Reservations</a>
+      <a mat-button routerLink="/support">Support</a>
+    </mat-toolbar>
+
+    <div class="max-w-6xl mx-auto p-4">
+      <router-outlet />
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -1,0 +1,47 @@
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Hotels</h1>
+    <div class="text-sm opacity-70">Search by name and availability window</div>
+  </div>
+  <button mat-raised-button color="primary" (click)="reload()">Reload</button>
+</div>
+
+<form (ngSubmit)="reload()">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>Search</mat-label>
+    <input matInput [formControl]="termControl" placeholder="Hotel name" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>Date arrival</mat-label>
+    <input matInput type="date" [formControl]="dateArrivalControl" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>Date departure</mat-label>
+    <input matInput type="date" [formControl]="dateDepartureControl" />
+  </mat-form-field>
+</div>
+</form>
+
+<div *ngIf="loading$ | async" class="flex justify-center py-8">
+  <mat-spinner diameter="40" />
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="!(loading$ | async)">
+  <ng-container *ngFor="let hotel of (items$ | async)">
+    <mat-card class="h-full flex flex-col">
+      <div class="flex-shrink-0">
+        <img *ngIf="hotel.image" mat-card-image [src]="hotel.image" alt="hotel" class="!h-64 !w-full !object-cover" />
+      </div>
+      <mat-card-content class="!p-4 !flex-grow">
+        <mat-card-title class="!text-lg !mb-2">{{ hotel.title }}</mat-card-title>
+        <div class="!text-sm !opacity-80 !line-clamp-3">{{ hotel.description }}</div>
+      </mat-card-content>
+      <mat-card-actions align="end" class="!flex-shrink-0 !px-4 !pb-4 !pt-2">
+        <a mat-button color="primary" [routerLink]="['/hotels', hotel.id]" class="!px-4 !py-2">Details</a>
+      </mat-card-actions>
+    </mat-card>
+  </ng-container>
+</div>
