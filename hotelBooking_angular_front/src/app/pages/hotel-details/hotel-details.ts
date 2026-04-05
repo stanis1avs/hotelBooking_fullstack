@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import { map, distinctUntilChanged } from 'rxjs';
 import { RoomsActions } from '../../actions/rooms.actions';
 import { selectRoomsItems, selectRoomsLoading } from '../../selectors/rooms.selectors';
+import { selectAuthUser } from '../../selectors/auth.selectors';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ReservationsActions } from '../../actions/reservations.actions';
 import { MatCardModule } from '@angular/material/card';
@@ -31,6 +32,7 @@ export class HotelDetails {
   readonly hotelId$;
   readonly items$;
   readonly loading$;
+  readonly user$;
 
   readonly form = new FormGroup({
     dateStart: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
@@ -45,6 +47,7 @@ export class HotelDetails {
 
     this.items$ = this.store.select(selectRoomsItems);
     this.loading$ = this.store.select(selectRoomsLoading);
+    this.user$ = this.store.select(selectAuthUser);
 
     const today = new Date();
     const end = new Date();

@@ -31,7 +31,12 @@
         <div class="text-sm opacity-80">{{ room.description }}</div>
       </mat-card-content>
       <mat-card-actions align="end" class="px-4 pb-4 pt-2">
-        <button mat-raised-button color="primary" (click)="book(room.id)">Book</button>
+        @if ((user$ | async)?.role === 'client') {
+          <button mat-raised-button color="primary" (click)="book(room.id)">Забронировать</button>
+        }
+        @if ((user$ | async)?.role !== 'client') {
+          <span class="text-sm opacity-50">Бронирование доступно только для гостей</span>
+        }
       </mat-card-actions>
     </mat-card>
   </ng-container>
