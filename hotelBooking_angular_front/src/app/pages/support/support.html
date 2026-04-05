@@ -1,25 +1,106 @@
 <div class="flex items-center justify-between mb-4">
   <div>
-    <h1 class="text-2xl font-semibold">Support</h1>
-    <div class="text-sm opacity-70">Support requests</div>
+    <h1 class="text-2xl font-semibold">Поддержка</h1>
+    <div class="text-sm opacity-70">Обращения в техподдержку</div>
   </div>
-  <button mat-raised-button color="primary" (click)="reload()">Reload</button>
+  <button mat-raised-button color="primary" (click)="loadRequests()">Обновить</button>
 </div>
 
-<div *ngIf="loading$ | async" class="flex justify-center py-8">
-  <mat-spinner diameter="40" />
-</div>
+@if (requestsLoading) {
+  <div class="flex justify-center py-8"><mat-spinner diameter="40" /></div>
+}
 
-<div class="grid grid-cols-1 gap-4" *ngIf="!(loading$ | async)">
-  <ng-container *ngFor="let s of (items$ | async)">
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Support request</mat-card-title>
-        <mat-card-subtitle>Details</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <pre class="text-xs overflow-auto">{{ s | json }}</pre>
-      </mat-card-content>
-    </mat-card>
-  </ng-container>
-</div>
+@if (!requestsLoading) {
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Список обращений -->
+    <div>
+      <h2 class="text-lg font-semibold mb-3">Обращения</h2>
+
+      @if (requests.length === 0) {
+        <div class="text-sm opacity-60 mb-4">Нет активных обращений</div>
+      }
+
+      @for (req of requests; track req.id) {
+        <mat-card
+          class="mb-3 cursor-pointer transition-all"
+          [class.ring-2]="selectedRequest?.id === req.id"
+          [class.ring-teal-500]="selectedRequest?.id === req.id"
+          (click)="openRequest(req)">
+          <mat-card-header>
+            <mat-card-title class="text-sm">{{ req.title?.text || 'Обращение #' + req.id }}</mat-card-title>
+            <mat-card-subtitle>{{ req.isActive ? 'Активно' : 'Закрыто' }}</mat-card-subtitle>
+          </mat-card-header>
+          @if (userRole === 'manager' && req.isActive) {
+            <mat-card-actions align="end">
+              <button mat-button color="warn" (click)="closeRequest(req, $event)">
+                <mat-icon>close</mat-icon> Закрыть
+              </button>
+            </mat-card-actions>
+          }
+        </mat-card>
+      }
+
+      <!-- Клиент: создать новое обращение -->
+      @if (userRole === 'client') {
+        <mat-divider class="my-4" />
+        <h2 class="text-lg font-semibold mb-3">Новое обращение</h2>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Опишите проблему</mat-label>
+          <textarea matInput rows="3" [formControl]="newRequestControl"></textarea>
+          @if (newRequestControl.invalid && newRequestControl.touched) {
+            <mat-error>Минимум 3 символа</mat-error>
+          }
+        </mat-form-field>
+        <button mat-raised-button color="primary"
+          [disabled]="newRequestControl.invalid"
+          (click)="createRequest()">
+          Отправить обращение
+        </button>
+      }
+    </div>
+
+    <!-- Переписка -->
+    <div>
+      @if (selectedRequest) {
+        <h2 class="text-lg font-semibold mb-3">
+          Переписка: {{ selectedRequest.title?.text || 'Обращение' }}
+        </h2>
+
+        @if (messagesLoading) {
+          <div class="flex justify-center py-4"><mat-spinner diameter="30" /></div>
+        }
+
+        @if (!messagesLoading) {
+          <div class="flex flex-col gap-2 mb-4 max-h-80 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+            @for (msg of messages; track msg.id) {
+              <div class="rounded-lg px-3 py-2 text-sm max-w-xs bg-teal-100 self-end">
+                <div>{{ msg.text }}</div>
+                <div class="text-xs opacity-50 mt-1">{{ msg.createdAt | slice:0:10 }}</div>
+              </div>
+            }
+            @if (messages.length === 0) {
+              <div class="text-sm opacity-60 text-center py-4">Сообщений пока нет</div>
+            }
+          </div>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Введите сообщение</mat-label>
+            <input matInput [formControl]="newMessageControl" (keyup.enter)="sendMessage()" />
+          </mat-form-field>
+          <button mat-raised-button color="primary" class="w-full"
+            [disabled]="newMessageControl.invalid"
+            (click)="sendMessage()">
+            <mat-icon>send</mat-icon> Отправить
+          </button>
+        }
+      } @else {
+        <div class="text-sm opacity-60 mt-12 text-center">
+          <mat-icon class="opacity-40 text-4xl">chat</mat-icon>
+          <div class="mt-2">Выберите обращение слева для просмотра переписки</div>
+        </div>
+      }
+    </div>
+
+  </div>
+}
