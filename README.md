@@ -1,59 +1,77 @@
-# Hotel Booking
-
-[English version](https://github.com/stanis1avs/marketplace_frontend/blob/main/README-en.md) 
-
-На реализации проект бронирования отелей. За основу было взято ТЗ [Cайт-агрегатор просмотра и бронирования гостиниц](https://github.com/netology-code/fjs-diplom)
-
-[Функционал работы приложения](https://github.com/stanis1avs/hotelBooking_fullstack/blob/main/FUNCTIONAL.md)
-[UML диаграммы](https://github.com/stanis1avs/hotelBooking_fullstack/blob/main/UML.md)
+# Hotel Booking Fullstack
 
 Новые фичи приложения [тут](https://github.com/users/stanis1avs/projects/3)
 
-## Технический стек frontend-приложения:
+[Функционал работы приложения](https://github.com/stanis1avs/hotelBooking_fullstack/blob/main/FUNCTIONAL.md)
 
-1. React
-2. Typescript
-3. Tailwind CSS
-4. Redux Saga
-5. Redux Thunk
-6. React Router
-7. Socket.io
-8. Webpack
-9. _Three.js (в разработке)_
-10. _Apollo Client (в разработке)_
-11. _миграция на Angular + NgRx_
-12. _rxjs-based middleware для redux saga_
+## О проекте
 
-## Технический стек backend-приложения:
+**Hotel Booking** — приложение для поиска и бронирования отелей.
 
-1. NestJS
-2. Typescript
-3. Mongoose
-4. JWT-Auth
-5. Socket.IO
-6. _Apollo Server (в разработке)_
-7. _Redis (в разработке)_
-8. _RMQ (в разработке)_
-9. _Whisper AI + Web Speech API (в разработке)_
-10. _Hyperledger Fabric (в разработке)_
-11. _Hugging Face (в разработке)_
-12. _аддон на python для Time-series ML (в разработке)_
+### Основная функциональность:
+- Поиск отелей с фильтрацией по датам и названию
+- Просмотр номеров отеля с фотографиями
+- Бронирование номеров с выбором дат
+- Управление бронированиями (просмотр, удаление)
+- Система ролей: **клиент / менеджер / администратор**
+- Менеджер управляет всеми бронированиями
+- Администратор управляет отелями и номерами через CRUD-интерфейс
+- Служба поддержки с перепиской в реальном времени (WebSocket)
+
+---
+
+## Технический стек
+
+### Backend
+1. **NestJS** — основной фреймворк
+3. **MongoDB** + **Mongoose** — база данных
+4. **JWT + Passport.js** — аутентификация (access + refresh токены)
+5. **Socket.IO** — реалтайм чат поддержки
+
+### В разработке
+- **Apollo Server**
+- **Whisper AI + Web Speech API** - общение с техподдержкой
+- **Hyperledger Fabric** — проверка бронирования через блокчейн
+- **Hugging Face** — фильтр сообщений
+- **Python аддон** — Time-series ML - анализ загруженности отелей
+
+### Frontend (Angular — актуальный)
+1. **Angular 21** 
+2. **NgRx**
+3. **Angular Material**
+4. **Tailwind CSS**
+5. **RxJS**
+
+### В разработке
+- **Socket.IO client**
+- **Apollo Client**
+- **Three.js** — 3D визуализация отелей
+
+### Frontend (React — legacy)
+> Первоначальная реализация, заменена на Angular.
+
+1. **React** + **TypeScript**
+2. **Redux Toolkit** + **Redux Saga**
+3. **Tailwind CSS**
+4. **Socket.IO**
+
+---
+
+## Архитектура ролей
+
+| Роль | Доступ |
+|------|--------|
+| **client** | Поиск отелей, бронирование, свои брони, поддержка |
+| **manager** | Все бронирования (просмотр + удаление), поддержка (закрытие обращений) |
+| **admin** | Управление отелями и номерами (CRUD + загрузка фото) |
 
 
-## Варианты запуска приложения:
-1. Из Docker контейнера
-- ```git clone https://github.com/Stanislavsus-prj/hotelBooking_fullstack.git```
-- ```docker compose up```
-- Откройте в браузере ```http://localhost:3000```
-2. При наличии NodeJS
-- ```git clone https://github.com/Stanislavsus-prj/hotelBooking_fullstack.git```
-- ```cd hotelBooking_nest_back && npm install && npm start```
-- ```cd hotelBooking_react_front && npm install && npm start```
+---
 
-## Доступ 
+## Тестовые аккаунты
 
-менеджер - string1@mail.ru - 12345789qwertyuio
-
-админ - string@mail.ru - 12345789qwertyuio
-
-клиент - client3@mail.ru - password
+| Роль          | Email           | Пароль            |
+| ---------------| -----------------| -------------------|
+| Менеджер      | string1@mail.ru | 12345789qwertyuio |
+| Администратор | string@mail.ru  | 12345789qwertyuio |
+| Клиент        | client3@mail.ru | password          |
