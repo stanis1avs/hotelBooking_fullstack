@@ -2,57 +2,81 @@
   <mat-sidenav mode="side" opened class="w-72">
     <div class="px-4 py-4">
       <div class="text-lg font-semibold">Hotel Booking</div>
+      @if (user$ | async; as user) {
+        <div class="text-sm opacity-60 mt-1">{{ user.name }}</div>
+      }
     </div>
 
     <mat-nav-list>
       <a mat-list-item routerLink="/hotels" routerLinkActive="active">
         <mat-icon matListItemIcon>hotel</mat-icon>
-        <span matListItemTitle>Hotels</span>
+        <span matListItemTitle>Отели</span>
       </a>
 
-      <a mat-list-item routerLink="/reservations" routerLinkActive="active">
-        <mat-icon matListItemIcon>event</mat-icon>
-        <span matListItemTitle>Reservations</span>
-      </a>
+      @if ((user$ | async)?.role === 'client') {
+        <a mat-list-item routerLink="/reservations" routerLinkActive="active">
+          <mat-icon matListItemIcon>event</mat-icon>
+          <span matListItemTitle>Мои брони</span>
+        </a>
+        <a mat-list-item routerLink="/support" routerLinkActive="active">
+          <mat-icon matListItemIcon>support_agent</mat-icon>
+          <span matListItemTitle>Поддержка</span>
+        </a>
+      }
 
-      <a mat-list-item routerLink="/support" routerLinkActive="active">
-        <mat-icon matListItemIcon>support_agent</mat-icon>
-        <span matListItemTitle>Support</span>
-      </a>
+      @if ((user$ | async)?.role === 'manager') {
+        <a mat-list-item routerLink="/manager/reservations" routerLinkActive="active">
+          <mat-icon matListItemIcon>table_view</mat-icon>
+          <span matListItemTitle>Все брони</span>
+        </a>
+        <a mat-list-item routerLink="/support" routerLinkActive="active">
+          <mat-icon matListItemIcon>support_agent</mat-icon>
+          <span matListItemTitle>Поддержка</span>
+        </a>
+      }
 
-      <div class="mt-4 px-4 text-xs font-semibold opacity-70">Admin</div>
+      @if ((user$ | async)?.role === 'admin') {
+        <div class="mt-4 px-4 text-xs font-semibold opacity-70">Администрирование</div>
+        <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active">
+          <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+          <span matListItemTitle>Управление отелями</span>
+        </a>
+        <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active">
+          <mat-icon matListItemIcon>meeting_room</mat-icon>
+          <span matListItemTitle>Управление номерами</span>
+        </a>
+      }
 
-      <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active">
-        <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
-        <span matListItemTitle>Manage Hotels</span>
-      </a>
+      <mat-divider class="my-2" />
 
-      <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active">
-        <mat-icon matListItemIcon>meeting_room</mat-icon>
-        <span matListItemTitle>Manage Rooms</span>
-      </a>
-
-      <div class="mt-4 px-4 text-xs font-semibold opacity-70">Auth</div>
-
-      <a mat-list-item routerLink="/login" routerLinkActive="active">
-        <mat-icon matListItemIcon>login</mat-icon>
-        <span matListItemTitle>Login</span>
-      </a>
-
-      <a mat-list-item routerLink="/register" routerLinkActive="active">
-        <mat-icon matListItemIcon>person_add</mat-icon>
-        <span matListItemTitle>Register</span>
-      </a>
+      @if (user$ | async) {
+        <a mat-list-item (click)="logout()" style="cursor:pointer">
+          <mat-icon matListItemIcon>logout</mat-icon>
+          <span matListItemTitle>Выйти</span>
+        </a>
+      } @else {
+        <a mat-list-item routerLink="/login" routerLinkActive="active">
+          <mat-icon matListItemIcon>login</mat-icon>
+          <span matListItemTitle>Войти</span>
+        </a>
+        <a mat-list-item routerLink="/register" routerLinkActive="active">
+          <mat-icon matListItemIcon>person_add</mat-icon>
+          <span matListItemTitle>Регистрация</span>
+        </a>
+      }
     </mat-nav-list>
   </mat-sidenav>
 
   <mat-sidenav-content>
     <mat-toolbar color="primary" class="sticky top-0 z-10">
-      <!-- <span>Hotel Booking</span> -->
       <span class="flex-1"></span>
-      <a mat-button routerLink="/hotels">Hotels</a>
-      <a mat-button routerLink="/reservations">Reservations</a>
-      <a mat-button routerLink="/support">Support</a>
+      @if (user$ | async; as user) {
+        <span class="text-sm mr-4 opacity-80">{{ user.email }}</span>
+        <button mat-button (click)="logout()">Выйти</button>
+      } @else {
+        <a mat-button routerLink="/login">Войти</a>
+        <a mat-button routerLink="/register">Регистрация</a>
+      }
     </mat-toolbar>
 
     <div class="max-w-6xl mx-auto p-4">
