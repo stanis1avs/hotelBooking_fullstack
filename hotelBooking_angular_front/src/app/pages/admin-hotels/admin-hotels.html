@@ -1,1 +1,77 @@
-<p>admin-hotels works!</p>
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Управление отелями</h1>
+    <div class="text-sm opacity-70">Создание и редактирование отелей</div>
+  </div>
+  <div class="flex gap-2">
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon> Добавить отель
+    </button>
+    <button mat-button (click)="loadHotels()">Обновить</button>
+  </div>
+</div>
+
+@if (showForm) {
+  <mat-card class="mb-6">
+    <mat-card-header>
+      <mat-card-title>{{ editingHotel ? 'Редактировать отель' : 'Новый отель' }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="pt-4">
+      <form [formGroup]="form" class="flex flex-col gap-4">
+        <mat-form-field appearance="outline">
+          <mat-label>Название</mat-label>
+          <input matInput formControlName="title" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Описание</mat-label>
+          <textarea matInput rows="3" formControlName="description"></textarea>
+        </mat-form-field>
+        <div class="flex items-center gap-4">
+          @if (previewUrl) {
+            <img [src]="previewUrl" alt="preview" class="w-32 h-24 object-cover rounded-lg" />
+          }
+          <label class="cursor-pointer border border-gray-300 rounded px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+            <mat-icon>upload</mat-icon>
+            {{ editingHotel ? 'Заменить фото' : 'Загрузить фото' }}
+            <input type="file" accept="image/*" class="hidden" (change)="onFileChange($event)" />
+          </label>
+        </div>
+      </form>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-button (click)="cancelForm()">Отмена</button>
+      <button mat-raised-button color="primary" [disabled]="saving" (click)="save()">
+        {{ saving ? 'Сохранение...' : 'Сохранить' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+}
+
+@if (loading) {
+  <div class="flex justify-center py-8"><mat-spinner diameter="40" /></div>
+}
+
+@if (!loading) {
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    @for (hotel of hotels; track hotel.id) {
+      <mat-card>
+        @if (hotel.image) {
+          <img mat-card-image [src]="hotel.image" alt="hotel" class="h-40 object-cover" />
+        }
+        <mat-card-header>
+          <mat-card-title>{{ hotel.title }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="!flex !flex-col !justify-between !h-full">
+          <div class="text-sm opacity-70 mt-2">{{ hotel.description }}</div>
+          <mat-card-actions align="end">
+            <button mat-button (click)="openEdit(hotel)"><mat-icon>edit</mat-icon> Изменить</button>
+            <button mat-button color="warn" (click)="delete(hotel)"><mat-icon>delete</mat-icon> Удалить</button>
+          </mat-card-actions>
+        </mat-card-content>
+      </mat-card>
+    }
+    @if (hotels.length === 0) {
+      <div class="col-span-full text-center opacity-60 py-8">Отели не найдены</div>
+    }
+  </div>
+}
