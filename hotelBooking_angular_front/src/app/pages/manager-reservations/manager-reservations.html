@@ -1,0 +1,55 @@
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Все бронирования</h1>
+    <div class="text-sm opacity-70">Управление бронями гостей</div>
+  </div>
+  <button mat-raised-button color="primary" (click)="loadReservations()">Обновить</button>
+</div>
+
+@if (loading) {
+  <div class="flex justify-center py-8"><mat-spinner diameter="40" /></div>
+}
+
+@if (!loading) {
+  @if (reservations.length === 0) {
+    <div class="text-center opacity-60 py-8">Бронирований нет</div>
+  }
+  @if (reservations.length > 0) {
+    <div class="overflow-auto">
+      <table mat-table [dataSource]="reservations" class="w-full">
+        <ng-container matColumnDef="hotel">
+          <th mat-header-cell *matHeaderCellDef>Отель</th>
+          <td mat-cell *matCellDef="let r">{{ r.hotel.title }}</td>
+        </ng-container>
+        <ng-container matColumnDef="room">
+          <th mat-header-cell *matHeaderCellDef>Номер</th>
+          <td mat-cell *matCellDef="let r">{{ r.room.description }}</td>
+        </ng-container>
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>Гость</th>
+          <td mat-cell *matCellDef="let r">{{ r.user?.name ?? '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Телефон</th>
+          <td mat-cell *matCellDef="let r">{{ r.user?.contactPhone ?? '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="dateStart">
+          <th mat-header-cell *matHeaderCellDef>Заезд</th>
+          <td mat-cell *matCellDef="let r">{{ r.dateStart | date:'dd.MM.yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="dateEnd">
+          <th mat-header-cell *matHeaderCellDef>Выезд</th>
+          <td mat-cell *matCellDef="let r">{{ r.dateEnd | date:'dd.MM.yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r">
+            <button mat-button color="warn" (click)="delete(r.id)">Удалить</button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
+  }
+}

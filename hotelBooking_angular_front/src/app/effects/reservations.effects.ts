@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { catchError, concatMap, map, of } from 'rxjs';
+import { catchError, concatMap, map, of, tap } from 'rxjs';
 import { ReservationsActions } from '../actions/reservations.actions';
 import { Api } from '../core/api';
 
@@ -9,9 +11,12 @@ import { Api } from '../core/api';
 export class ReservationsEffects {
   readonly loadReservations$;
   readonly createReservation$;
+  readonly createReservationSuccess$;
   readonly deleteReservation$;
+  readonly deleteReservationSuccess$;
+  readonly deleteReservationFailure$;
 
-  constructor(private actions$: Actions, private api: Api) {
+  constructor(private actions$: Actions, private api: Api, private router: Router, private snackBar: MatSnackBar) {
     this.loadReservations$ = createEffect(() =>
       this.actions$.pipe(
         ofType(ReservationsActions.loadReservations),
@@ -36,6 +41,18 @@ export class ReservationsEffects {
       )
     );
 
+    this.createReservationSuccess$ = createEffect(
+      () =>
+        this.actions$.pipe(
+          ofType(ReservationsActions.createReservationSuccess),
+          tap(() => {
+            this.snackBar.open('Бронирование успешно создано', 'OK', { duration: 3000 });
+            this.router.navigateByUrl('/reservations');
+          })
+        ),
+      { dispatch: false }
+    );
+
     this.deleteReservation$ = createEffect(() =>
       this.actions$.pipe(
         ofType(ReservationsActions.deleteReservation),
@@ -46,6 +63,24 @@ export class ReservationsEffects {
           )
         )
       )
+    );
+
+    this.deleteReservationSuccess$ = createEffect(
+      () =>
+        this.actions$.pipe(
+          ofType(ReservationsActions.deleteReservationSuccess),
+          tap(() => this.snackBar.open('Бронирование удалено', 'OK', { duration: 3000 }))
+        ),
+      { dispatch: false }
+    );
+
+    this.deleteReservationFailure$ = createEffect(
+      () =>
+        this.actions$.pipe(
+          ofType(ReservationsActions.deleteReservationFailure),
+          tap(() => this.snackBar.open('Ошибка удаления бронирования', 'OK', { duration: 3000 }))
+        ),
+      { dispatch: false }
     );
   }
 }
