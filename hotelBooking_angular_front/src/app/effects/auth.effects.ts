@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 
 import { catchError, concatMap, map, of, tap } from 'rxjs';
@@ -13,6 +14,8 @@ export class AuthEffects {
   readonly login$;
   readonly register$;
   readonly logout$;
+  readonly logoutSuccess$;
+  readonly loadCurrentUser$;
   readonly refreshToken$;
 
   constructor(
@@ -20,6 +23,7 @@ export class AuthEffects {
     private api: Api,
     private authToken: AuthToken,
     private http: HttpClient,
+    private router: Router,
   ) {
     this.login$ = createEffect(() =>
       this.actions$.pipe(
@@ -56,7 +60,31 @@ export class AuthEffects {
           this.api.authLogout().pipe(
             tap(() => this.authToken.clear()),
             map(() => AuthActions.logoutSuccess()),
-            catchError((error) => of(AuthActions.logoutFailure({ error })))
+            catchError(() => {
+              this.authToken.clear();
+              return of(AuthActions.logoutSuccess());
+            })
+          )
+        )
+      )
+    );
+
+    this.logoutSuccess$ = createEffect(
+      () =>
+        this.actions$.pipe(
+          ofType(AuthActions.logoutSuccess),
+          tap(() => this.router.navigateByUrl('/login'))
+        ),
+      { dispatch: false }
+    );
+
+    this.loadCurrentUser$ = createEffect(() =>
+      this.actions$.pipe(
+        ofType(AuthActions.loadCurrentUser),
+        concatMap(() =>
+          this.api.getCurrentUser().pipe(
+            map((payload) => AuthActions.loadCurrentUserSuccess({ payload })),
+            catchError((error) => of(AuthActions.loadCurrentUserFailure({ error })))
           )
         )
       )
