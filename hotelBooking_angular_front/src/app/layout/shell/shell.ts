@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { take } from 'rxjs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -10,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthActions } from '../../actions/auth.actions';
 import { selectAuthUser } from '../../selectors/auth.selectors';
+import { AuthToken } from '../../core/auth-token';
 
 @Component({
   selector: 'app-shell',
@@ -30,8 +32,14 @@ import { selectAuthUser } from '../../selectors/auth.selectors';
 export class Shell {
   readonly user$;
 
-  constructor(private readonly store: Store) {
+  constructor(private readonly store: Store, authToken: AuthToken) {
     this.user$ = this.store.select(selectAuthUser);
+
+    if (authToken.getAccessToken()) {
+      this.store.select(selectAuthUser).pipe(take(1)).subscribe((user) => {
+        if (!user) this.store.dispatch(AuthActions.loadCurrentUser());
+      });
+    }
   }
 
   logout() {
