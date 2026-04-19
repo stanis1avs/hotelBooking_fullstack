@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
@@ -39,7 +40,7 @@ export class Login {
 
     this.store
       .select(selectAuthUser)
-      .pipe(filter((u) => !!u))
+      .pipe(filter((u) => !!u), takeUntilDestroyed())
       .subscribe(() => this.router.navigateByUrl('/hotels'));
   }
 
