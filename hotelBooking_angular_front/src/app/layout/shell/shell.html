@@ -29,6 +29,10 @@
           <mat-icon matListItemIcon>table_view</mat-icon>
           <span matListItemTitle>Все брони</span>
         </a>
+        <a mat-list-item routerLink="/manager/users" routerLinkActive="active">
+          <mat-icon matListItemIcon>people</mat-icon>
+          <span matListItemTitle>Пользователи</span>
+        </a>
         <a mat-list-item routerLink="/support" routerLinkActive="active">
           <mat-icon matListItemIcon>support_agent</mat-icon>
           <span matListItemTitle>Поддержка</span>
@@ -43,7 +47,11 @@
         </a>
         <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active">
           <mat-icon matListItemIcon>meeting_room</mat-icon>
-          <span matListItemTitle>Управление номерами</span>
+          <span matListItemTitle>Управление комнатами</span>
+        </a>
+        <a mat-list-item routerLink="/admin/users" routerLinkActive="active">
+          <mat-icon matListItemIcon>people</mat-icon>
+          <span matListItemTitle>Управление пользователями</span>
         </a>
       }
 

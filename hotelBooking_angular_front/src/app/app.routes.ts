@@ -10,6 +10,8 @@ import { Support } from './pages/support/support';
 import { AdminHotels } from './pages/admin-hotels/admin-hotels';
 import { AdminRooms } from './pages/admin-rooms/admin-rooms';
 import { ManagerReservations } from './pages/manager-reservations/manager-reservations';
+import { AdminUsersComponent } from './pages/admin-users/admin-users';
+import { ManagerUsersComponent } from './pages/manager-users/manager-users';
 import { authGuard } from './core/auth.guard';
 import { roleGuard } from './core/role.guard';
 
@@ -47,6 +49,16 @@ export const routes: Routes = [
         path: 'admin/rooms',
         component: AdminRooms,
         canActivate: [authGuard, roleGuard(['admin'])],
+      },
+      {
+        path: 'admin/users',
+        component: AdminUsersComponent,
+        canActivate: [authGuard, roleGuard(['admin'])],
+      },
+      {
+        path: 'manager/users',
+        component: ManagerUsersComponent,
+        canActivate: [authGuard, roleGuard(['manager'])],
       },
     ],
   },

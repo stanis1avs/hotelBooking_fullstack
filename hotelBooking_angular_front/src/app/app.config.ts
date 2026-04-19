@@ -13,6 +13,7 @@ import { hotelsFeature } from './reducers/hotels.reducer';
 import { roomsFeature } from './reducers/rooms.reducer';
 import { reservationsFeature } from './reducers/reservations.reducer';
 import { supportFeature } from './reducers/support.reducer';
+import { usersFeature } from './reducers/users.reducer';
 import { credentialsInterceptor } from './core/credentials-interceptor';
 import { authInterceptor } from './core/auth-interceptor';
 import { AuthEffects } from './effects/auth.effects';
@@ -20,6 +21,7 @@ import { HotelsEffects } from './effects/hotels.effects';
 import { RoomsEffects } from './effects/rooms.effects';
 import { ReservationsEffects } from './effects/reservations.effects';
 import { SupportEffects } from './effects/support.effects';
+import { UsersEffects } from './effects/users.effects';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,8 +36,9 @@ export const appConfig: ApplicationConfig = {
       [roomsFeature.name]: roomsFeature.reducer,
       [reservationsFeature.name]: reservationsFeature.reducer,
       [supportFeature.name]: supportFeature.reducer,
+      [usersFeature.name]: usersFeature.reducer,
     }),
-    provideEffects([AuthEffects, HotelsEffects, RoomsEffects, ReservationsEffects, SupportEffects]),
+    provideEffects([AuthEffects, HotelsEffects, RoomsEffects, ReservationsEffects, SupportEffects, UsersEffects]),
     provideStoreDevtools({
       maxAge: 25,
       logOnly: false,

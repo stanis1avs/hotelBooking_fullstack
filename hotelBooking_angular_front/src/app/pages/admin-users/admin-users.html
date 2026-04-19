@@ -1,0 +1,255 @@
+<div class="container-fluid p-4">
+  <h2 class="mb-4">Users Management</h2>
+
+  <!-- Search Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <mat-card class="shadow-sm">
+        <mat-card-content class="p-4">
+          <div class="flex items-center mb-4">
+            <mat-icon class="me-2 text-primary">search</mat-icon>
+            <h3 class="mb-0 fw-semibold">Search Users</h3>
+          </div>
+          <form [formGroup]="searchForm" class="flex gap-3 items-center">
+            <mat-form-field appearance="outline" class="flex-grow-1">
+              <mat-label>Search by name, email, or phone</mat-label>
+              <input matInput formControlName="searchQuery" placeholder="Enter name, email, or phone number">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+            <div class="flex gap-2">
+              <button mat-raised-button color="primary" (click)="onSearch()" [disabled]="!searchForm.valid" class="px-4">
+                <mat-icon class="me-1">search</mat-icon>
+                Search
+              </button>
+              <button mat-stroked-button (click)="clearSearch()" class="px-4">
+                <mat-icon class="me-1">clear</mat-icon>
+                Clear
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Create User Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <mat-card class="shadow-sm">
+        <mat-card-content class="p-4">
+          <div class="flex items-center mb-4">
+            <mat-icon class="me-2 text-success">person_add</mat-icon>
+            <h3 class="mb-0 fw-semibold">Create New User</h3>
+          </div>
+          <form [formGroup]="createUserForm" class="row g-4">
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Full Name</mat-label>
+                <input matInput formControlName="name" placeholder="Enter user's full name">
+                <mat-icon matSuffix>person</mat-icon>
+                <mat-error *ngIf="createUserForm.get('name')?.hasError('required')">
+                  Name is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Email Address</mat-label>
+                <input matInput formControlName="email" placeholder="user@example.com">
+                <mat-icon matSuffix>email</mat-icon>
+                <mat-error *ngIf="createUserForm.get('email')?.hasError('required')">
+                  Email is required
+                </mat-error>
+                <mat-error *ngIf="createUserForm.get('email')?.hasError('email')">
+                  Please enter a valid email
+                </mat-error>
+              </mat-form-field>
+            </div>
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Phone Number</mat-label>
+                <input matInput formControlName="contactPhone" placeholder="+1234567890">
+                <mat-icon matSuffix>phone</mat-icon>
+                <mat-error *ngIf="createUserForm.get('contactPhone')?.hasError('required')">
+                  Phone is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Password</mat-label>
+                <input matInput type="password" formControlName="password" placeholder="Enter secure password">
+                <mat-icon matSuffix>lock</mat-icon>
+                <mat-error *ngIf="createUserForm.get('password')?.hasError('required')">
+                  Password is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            <div class="col-md-6">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>User Role</mat-label>
+                <mat-select formControlName="role">
+                  <mat-option value="client">
+                    <mat-icon class="me-2">person</mat-icon>Client
+                  </mat-option>
+                  <mat-option value="manager">
+                    <mat-icon class="me-2">supervisor_account</mat-icon>Manager
+                  </mat-option>
+                  <mat-option value="admin">
+                    <mat-icon class="me-2">admin_panel_settings</mat-icon>Admin
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <div class="col-12">
+              <div class="flex gap-2 mt-3">
+                <button mat-raised-button color="primary" (click)="onCreateUser()" [disabled]="!createUserForm.valid" class="px-4 py-2">
+                  <mat-icon class="me-2">add</mat-icon>
+                  Create User
+                </button>
+                <button mat-stroked-button (click)="createUserForm.reset(); createUserForm.patchValue({ role: 'client' })" class="px-4 py-2">
+                  <mat-icon class="me-2">refresh</mat-icon>
+                  Reset Form
+                </button>
+              </div>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="row">
+    <div class="col-12">
+      <mat-card class="shadow-sm">
+        <mat-card-content class="p-4">
+          <div class="flex items-center mb-4">
+            <mat-icon class="me-2 text-info">people</mat-icon>
+            <h3 class="mb-0 fw-semibold">Users List</h3>
+          </div>
+          
+          <!-- Loading Indicator -->
+          <div *ngIf="loading$ | async" class="text-center p-5">
+            <mat-spinner></mat-spinner>
+            <p class="mt-3 text-muted">Loading users...</p>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="error$ | async" class="alert alert-danger flex items-center" role="alert">
+            <mat-icon class="me-2">error</mat-icon>
+            Error loading users. Please try again.
+          </div>
+
+          <!-- Users Table -->
+          <div *ngIf="!(loading$ | async) && !(error$ | async)">
+            <div *ngIf="users$ | async; let users">
+              <!-- Empty State -->
+              <div *ngIf="!users || users.length === 0" class="text-center p-5">
+                <mat-icon class="text-muted" style="font-size: 48px; height: 48px; width: 48px;">people_outline</mat-icon>
+                <h5 class="text-muted mt-3">No users found</h5>
+                <p class="text-muted">Try adjusting your search criteria or create a new user.</p>
+                <button mat-stroked-button (click)="clearSearch()" class="mt-2">
+                  <mat-icon class="me-1">refresh</mat-icon>
+                  Clear Search
+                </button>
+              </div>
+
+              <!-- Users Table -->
+              <div *ngIf="users && users.length > 0" class="table-responsive">
+                <table mat-table [dataSource]="users" class="w-100">
+                  <!-- ID Column -->
+                  <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef class="fw-bold">ID</th>
+                    <td mat-cell *matCellDef="let user">
+                      <code class="bg-light px-2 py-1 rounded">{{ user.id }}</code>
+                    </td>
+                  </ng-container>
+
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef class="fw-bold">Name</th>
+                    <td mat-cell *matCellDef="let user">
+                      <div class="flex items-center">
+                        <mat-icon class="me-2 text-muted" style="font-size: 20px;">person</mat-icon>
+                        {{ user.name }}
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <!-- Phone Column -->
+                  <ng-container matColumnDef="contactPhone">
+                    <th mat-header-cell *matHeaderCellDef class="fw-bold">Phone</th>
+                    <td mat-cell *matCellDef="let user">
+                      <div class="flex items-center">
+                        <mat-icon class="me-2 text-muted" style="font-size: 20px;">phone</mat-icon>
+                        {{ user.contactPhone }}
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <!-- Email Column -->
+                  <ng-container matColumnDef="email">
+                    <th mat-header-cell *matHeaderCellDef class="fw-bold">Email</th>
+                    <td mat-cell *matCellDef="let user">
+                      <div class="flex items-center">
+                        <mat-icon class="me-2 text-muted" style="font-size: 20px;">email</mat-icon>
+                        {{ user.email }}
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <!-- Role Column -->
+                  <ng-container matColumnDef="role">
+                    <th mat-header-cell *matHeaderCellDef class="fw-bold">Role</th>
+                    <td mat-cell *matCellDef="let user">
+                      <span class="badge px-3 py-2" 
+                            [class]="'bg-primary text-white'" 
+                            *ngIf="user.role === 'admin'">
+                        <mat-icon class="me-1" style="font-size: 16px;">admin_panel_settings</mat-icon>
+                        Admin
+                      </span>
+                      <span class="badge px-3 py-2" 
+                            [class]="'bg-success text-white'" 
+                            *ngIf="user.role === 'manager'">
+                        <mat-icon class="me-1" style="font-size: 16px;">supervisor_account</mat-icon>
+                        Manager
+                      </span>
+                      <span class="badge px-3 py-2" 
+                            [class]="'bg-info text-white'" 
+                            *ngIf="user.role === 'client' || !user.role">
+                        <mat-icon class="me-1" style="font-size: 16px;">person</mat-icon>
+                        Client
+                      </span>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="displayedColumns" class="bg-light"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="border-bottom"></tr>
+                </table>
+
+                <!-- Pagination -->
+                <div class="flex items-center flex-row justify-between mt-4 pt-3 border-top">
+                  <button mat-stroked-button (click)="onPrevPage()" [disabled]="!(hasPrevPage$ | async)" 
+                          class="flex items-center">
+                    <mat-icon class="me-1">chevron_left</mat-icon>
+                    Previous
+                  </button>
+                  <div class="text-center">
+                    <span class="badge bg-light text-dark px-3 py-2">
+                      {{ users.length }} users
+                    </span>
+                  </div>
+                  <button mat-stroked-button (click)="onNextPage()" [disabled]="!(hasNextPage$ | async)" 
+                          class="flex items-center">
+                    Next
+                    <mat-icon class="ms-1">chevron_right</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>

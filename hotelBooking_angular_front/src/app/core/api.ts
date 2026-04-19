@@ -210,4 +210,16 @@ export class Api {
   getAllHotels() {
     return this.http.get<HotelDto[]>(`${this.host}/api/common/hotels`, { params: { offset: 0, dateArrival: '2024-01-01', dateDeparture: '2024-12-31' } });
   }
+
+  adminGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }) {
+    return this.http.get<UserDto[]>(`${this.host}/api/admin/users`, { params });
+  }
+
+  adminCreateUser(body: { email: string; password: string; name: string; contactPhone: string; role?: string }) {
+    return this.http.post<UserDto>(`${this.host}/api/admin/users`, body);
+  }
+
+  managerGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }) {
+    return this.http.get<UserDto[]>(`${this.host}/api/manager/users`, { params });
+  }
 }
