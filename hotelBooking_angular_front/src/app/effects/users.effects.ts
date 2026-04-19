@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, concatMap, map, of } from 'rxjs';
-import { UserDto } from '../core/api';
 import { UsersActions } from '../actions/users.actions';
-import { Api } from '../core/api';
+import { ApolloService } from '../graphql/apollo.service';
 
 @Injectable()
 export class UsersEffects {
@@ -13,14 +12,14 @@ export class UsersEffects {
 
   constructor(
     private actions$: Actions,
-    private api: Api,
+    private apolloService: ApolloService,
   ) {
     this.adminLoadUsers$ = createEffect(() =>
       this.actions$.pipe(
         ofType(UsersActions.adminLoadUsers),
         concatMap(({ payload }: any) =>
-          this.api.adminGetUsers(payload).pipe(
-            map((users: UserDto[]) => UsersActions.adminLoadUsersSuccess({ payload: users })),
+          this.apolloService.adminGetUsers(payload).pipe(
+            map((users) => UsersActions.adminLoadUsersSuccess({ payload: users })),
             catchError((error: any) => of(UsersActions.adminLoadUsersFailure({ error })))
           )
         )
@@ -31,8 +30,8 @@ export class UsersEffects {
       this.actions$.pipe(
         ofType(UsersActions.adminCreateUser),
         concatMap(({ payload }) =>
-          this.api.adminCreateUser(payload).pipe(
-            map((payload) => UsersActions.adminCreateUserSuccess({ payload })),
+          this.apolloService.adminCreateUser(payload).pipe(
+            map((user) => UsersActions.adminCreateUserSuccess({ payload: user })),
             catchError((error) => of(UsersActions.adminCreateUserFailure({ error })))
           )
         )
@@ -43,8 +42,8 @@ export class UsersEffects {
       this.actions$.pipe(
         ofType(UsersActions.managerLoadUsers),
         concatMap(({ payload }) =>
-          this.api.managerGetUsers(payload).pipe(
-            map((payload) => UsersActions.managerLoadUsersSuccess({ payload })),
+          this.apolloService.managerGetUsers(payload).pipe(
+            map((users) => UsersActions.managerLoadUsersSuccess({ payload: users })),
             catchError((error) => of(UsersActions.managerLoadUsersFailure({ error })))
           )
         )

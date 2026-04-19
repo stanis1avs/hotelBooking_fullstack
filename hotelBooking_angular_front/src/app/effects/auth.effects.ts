@@ -6,8 +6,7 @@ import { catchError, concatMap, map, of, tap } from 'rxjs';
 import { AuthActions } from '../actions/auth.actions';
 import { Api } from '../core/api';
 import { AuthToken } from '../core/auth-token';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
+import { ApolloService } from '../graphql/apollo.service';
 
 @Injectable()
 export class AuthEffects {
@@ -22,14 +21,14 @@ export class AuthEffects {
     private actions$: Actions,
     private api: Api,
     private authToken: AuthToken,
-    private http: HttpClient,
+    private apolloService: ApolloService,
     private router: Router,
   ) {
     this.login$ = createEffect(() =>
       this.actions$.pipe(
         ofType(AuthActions.login),
         concatMap(({ payload }) =>
-          this.api.authLogin(payload).pipe(
+          this.apolloService.login(payload.email, payload.password).pipe(
             tap((res) => {
               this.authToken.setAccessToken(res.access_token);
               this.authToken.setRefreshToken(res.refresh_token);
@@ -45,7 +44,7 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.register),
         concatMap(({ payload }) =>
-          this.api.register(payload).pipe(
+          this.apolloService.register(payload).pipe(
             map((res) => AuthActions.registerSuccess({ payload: res })),
             catchError((error) => of(AuthActions.registerFailure({ error })))
           )
@@ -53,6 +52,7 @@ export class AuthEffects {
       )
     );
 
+    // Logout stays on Api — backend endpoint is a no-op, just clear tokens locally
     this.logout$ = createEffect(() =>
       this.actions$.pipe(
         ofType(AuthActions.logout),
@@ -82,7 +82,7 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.loadCurrentUser),
         concatMap(() =>
-          this.api.getCurrentUser().pipe(
+          this.apolloService.getCurrentUser().pipe(
             map((payload) => AuthActions.loadCurrentUserSuccess({ payload })),
             catchError((error) => of(AuthActions.loadCurrentUserFailure({ error })))
           )
@@ -99,21 +99,14 @@ export class AuthEffects {
             return of(AuthActions.refreshTokenFailure({ error: 'No refresh token' }));
           }
 
-          return this.http
-            .post<{ access_token: string }>(
-              `${environment.api.host}/api/auth/refresh`,
-              {},
-              {
-                headers: {
-                  Authorization: `Bearer ${refreshToken}`,
-                },
-              }
-            )
-            .pipe(
-              tap((res) => this.authToken.setAccessToken(res.access_token)),
-              map((res) => AuthActions.refreshTokenSuccess({ accessToken: res.access_token })),
-              catchError((error) => of(AuthActions.refreshTokenFailure({ error })))
-            );
+          return this.apolloService.refreshToken(refreshToken).pipe(
+            tap((res) => {
+              this.authToken.setAccessToken(res.access_token);
+              this.authToken.setRefreshToken(res.refresh_token);
+            }),
+            map((res) => AuthActions.refreshTokenSuccess({ accessToken: res.access_token })),
+            catchError((error) => of(AuthActions.refreshTokenFailure({ error })))
+          );
         })
       )
     );

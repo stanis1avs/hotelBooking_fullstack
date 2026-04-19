@@ -5,7 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { catchError, concatMap, map, of, tap } from 'rxjs';
 import { ReservationsActions } from '../actions/reservations.actions';
-import { Api } from '../core/api';
+import { ApolloService } from '../graphql/apollo.service';
 
 @Injectable()
 export class ReservationsEffects {
@@ -16,12 +16,17 @@ export class ReservationsEffects {
   readonly deleteReservationSuccess$;
   readonly deleteReservationFailure$;
 
-  constructor(private actions$: Actions, private api: Api, private router: Router, private snackBar: MatSnackBar) {
+  constructor(
+    private actions$: Actions,
+    private apolloService: ApolloService,
+    private router: Router,
+    private snackBar: MatSnackBar,
+  ) {
     this.loadReservations$ = createEffect(() =>
       this.actions$.pipe(
         ofType(ReservationsActions.loadReservations),
         concatMap(() =>
-          this.api.getReservations().pipe(
+          this.apolloService.getReservations().pipe(
             map((items) => ReservationsActions.loadReservationsSuccess({ items })),
             catchError((error) => of(ReservationsActions.loadReservationsFailure({ error })))
           )
@@ -33,7 +38,7 @@ export class ReservationsEffects {
       this.actions$.pipe(
         ofType(ReservationsActions.createReservation),
         concatMap(({ payload }) =>
-          this.api.createReservation(payload).pipe(
+          this.apolloService.createReservation(payload).pipe(
             map((item) => ReservationsActions.createReservationSuccess({ item })),
             catchError((error) => of(ReservationsActions.createReservationFailure({ error })))
           )
@@ -57,7 +62,7 @@ export class ReservationsEffects {
       this.actions$.pipe(
         ofType(ReservationsActions.deleteReservation),
         concatMap(({ reservationId }) =>
-          this.api.deleteReservation(reservationId).pipe(
+          this.apolloService.deleteReservation(reservationId).pipe(
             map(() => ReservationsActions.deleteReservationSuccess({ reservationId })),
             catchError((error) => of(ReservationsActions.deleteReservationFailure({ error })))
           )

@@ -17,7 +17,7 @@ export class ReservationsProvider {
     @Inject(UsersProvider) readonly usersProvider: UsersProvider
   ) {}
 
-  async createReservation(createReservation: CreateReservation, userId: string): Promise<void> {
+  async createReservation(createReservation: CreateReservation, userId: string): Promise<SendReservationForClients> {
     const reservationedRoom = await this.getHotelandRoom(createReservation.roomId);
     const createdReservation = new this.reservationModel({
       ...createReservation,
@@ -27,6 +27,7 @@ export class ReservationsProvider {
       hotelId: reservationedRoom.hotel.id,
     });
     await createdReservation.save();
+    return this.printFormatReservationUser(createdReservation, reservationedRoom);
   }
 
   async getReservations(queryParams: ReservationParams): Promise<SendReservationForManagers[]> {

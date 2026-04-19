@@ -1,7 +1,11 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, inject, provideBrowserGlobalErrorListeners } from '@angular/core';
+// apollo-angular uses Angular HttpClient, so authInterceptor already adds Bearer token to /graphql requests
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { InMemoryCache } from '@apollo/client/core';
+import { provideApollo } from 'apollo-angular';
+import { HttpLink } from 'apollo-angular/http';
 
 import { routes } from './app.routes';
 import { provideStore } from '@ngrx/store';
@@ -22,6 +26,7 @@ import { RoomsEffects } from './effects/rooms.effects';
 import { ReservationsEffects } from './effects/reservations.effects';
 import { SupportEffects } from './effects/support.effects';
 import { UsersEffects } from './effects/users.effects';
+import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -42,6 +47,17 @@ export const appConfig: ApplicationConfig = {
     provideStoreDevtools({
       maxAge: 25,
       logOnly: false,
+    }),
+    provideApollo(() => {
+      const httpLink = inject(HttpLink);
+      return {
+        link: httpLink.create({ uri: `${environment.api.host}/graphql` }),
+        cache: new InMemoryCache(),
+        defaultOptions: {
+          watchQuery: { fetchPolicy: 'network-only' },
+          query: { fetchPolicy: 'network-only' },
+        },
+      };
     }),
   ],
 };

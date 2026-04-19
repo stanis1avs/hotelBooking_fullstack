@@ -1,0 +1,141 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthPayloadType {
+  access_token: String!
+  refresh_token: String!
+  user: UserType!
+}
+
+type ClientReservationType {
+  dateEnd: String!
+  dateStart: String!
+  hotel: ReservationHotelType!
+  id: ID!
+  room: ReservationRoomType!
+}
+
+input CreateReservationInput {
+  dateEnd: String!
+  dateStart: String!
+  roomId: String!
+}
+
+input CreateUserInput {
+  contactPhone: String
+  email: String!
+  name: String!
+  password: String!
+  role: String!
+}
+
+type HotelInRoomType {
+  description: String
+  id: ID!
+  image: String
+  title: String!
+}
+
+type HotelType {
+  description: String
+  id: ID!
+  image: String
+  title: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type ManagerReservationType {
+  client: ReservationClientType!
+  dateEnd: String!
+  dateStart: String!
+  hotel: ReservationHotelType!
+  id: ID!
+  room: ReservationRoomType!
+}
+
+type Mutation {
+  adminCreateUser(input: CreateUserInput!): UserType!
+  closeSupportRequest(id: String!): Boolean!
+  createReservation(input: CreateReservationInput!): ClientReservationType!
+  deleteReservation(id: String!): Boolean!
+  login(input: LoginInput!): AuthPayloadType!
+  refreshToken(refreshToken: String!): AuthPayloadType!
+  register(input: RegisterInput!): UserType!
+}
+
+type Query {
+  adminUsers(contactPhone: String = "", email: String = "", limit: Int = 50, name: String = "", offset: Int = 0): [UserType!]!
+  allReservations(offset: Int = 0): [ManagerReservationType!]!
+  allSupportRequests: [SupportRequestType!]!
+  hotelRoom(id: String!): RoomType
+  hotelRooms(hotel: String!, isEnabled: Boolean): [RoomType!]!
+  hotels(dateArrival: String!, dateDeparture: String!, hotel: String, offset: Int = 0): [HotelType!]!
+  managerUsers(contactPhone: String = "", email: String = "", limit: Int = 50, name: String = "", offset: Int = 0): [UserType!]!
+  me: UserType!
+  myReservations: [ClientReservationType!]!
+  mySupportRequests: [SupportRequestType!]!
+  supportMessages(requestId: String!): [SupportMessageType!]!
+}
+
+input RegisterInput {
+  contactPhone: String
+  email: String!
+  name: String!
+  password: String!
+}
+
+type ReservationClientType {
+  contactPhone: String
+  id: ID!
+  name: String
+}
+
+type ReservationHotelType {
+  title: String!
+}
+
+type ReservationRoomType {
+  description: String
+  images: [String!]!
+}
+
+type RoomType {
+  description: String
+  hotel: HotelInRoomType!
+  id: ID!
+  images: [String!]!
+  isEnabled: Boolean
+}
+
+type SupportFirstMessageType {
+  text: String
+}
+
+type SupportMessageType {
+  author: String!
+  createdAt: String!
+  id: ID!
+  readAt: String
+  requestId: String!
+  text: String!
+}
+
+type SupportRequestType {
+  createdAt: String!
+  id: ID!
+  isActive: Boolean
+  title: SupportFirstMessageType
+}
+
+type UserType {
+  contactPhone: String
+  email: String!
+  id: ID!
+  name: String!
+  role: String
+}

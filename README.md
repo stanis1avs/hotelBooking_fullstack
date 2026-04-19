@@ -24,12 +24,12 @@
 
 ### Backend
 1. **NestJS** — основной фреймворк
-3. **MongoDB** + **Mongoose** — база данных
-4. **JWT + Passport.js** — аутентификация (access + refresh токены)
-5. **Socket.IO** — реалтайм чат поддержки
+2. **MongoDB** + **Mongoose** — база данных
+3. **JWT + Passport.js** — аутентификация (access + refresh токены)
+4. **Socket.IO** — реалтайм чат поддержки
+5. **Apollo Server**
 
 ### В разработке
-- **Apollo Server**
 - **Whisper AI + Web Speech API** - общение с техподдержкой
 - **Hyperledger Fabric** — проверка бронирования через блокчейн
 - **Hugging Face** — фильтр сообщений
@@ -41,10 +41,10 @@
 3. **Angular Material**
 4. **Tailwind CSS**
 5. **RxJS**
+6. **Apollo Client**
 
 ### В разработке
 - **Socket.IO client**
-- **Apollo Client**
 - **Three.js** — 3D визуализация отелей
 
 ### Frontend (React — legacy)
