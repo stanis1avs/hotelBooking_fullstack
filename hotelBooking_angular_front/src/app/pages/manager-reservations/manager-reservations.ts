@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Api, ManagerReservationDto } from '../../core/api';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,15 +16,23 @@ export class ManagerReservations {
   reservations: ManagerReservationDto[] = [];
   loading = false;
 
-  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar) {
+  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar, private readonly cdr: ChangeDetectorRef) {
     this.loadReservations();
   }
 
   loadReservations() {
     this.loading = true;
     this.api.getManagerReservations({ offset: 0, limit: 100 }).subscribe({
-      next: (items) => { this.reservations = items; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open('Ошибка загрузки броней', 'OK', { duration: 3000 }); },
+      next: (items) => { 
+        this.reservations = items; 
+        this.loading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.loading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки броней', 'OK', { duration: 3000 }); 
+      },
     });
   }
 

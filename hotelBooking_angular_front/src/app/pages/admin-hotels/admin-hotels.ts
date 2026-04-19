@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -33,15 +33,23 @@ export class AdminHotels {
     description: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
   });
 
-  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar) {
+  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar, private readonly cdr: ChangeDetectorRef) {
     this.loadHotels();
   }
 
   loadHotels() {
     this.loading = true;
     this.api.getAllHotels().subscribe({
-      next: (hotels) => { this.hotels = hotels; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open('Ошибка загрузки отелей', 'OK', { duration: 3000 }); },
+      next: (hotels) => { 
+        this.hotels = hotels; 
+        this.loading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.loading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки отелей', 'OK', { duration: 3000 }); 
+      },
     });
   }
 

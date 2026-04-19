@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -37,15 +37,23 @@ export class AdminRooms {
     hotelId: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
   });
 
-  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar) {
+  constructor(private readonly api: Api, private readonly snackBar: MatSnackBar, private readonly cdr: ChangeDetectorRef) {
     this.loadHotels();
   }
 
   loadHotels() {
     this.hotelsLoading = true;
     this.api.getAllHotels().subscribe({
-      next: (hotels) => { this.hotels = hotels; this.hotelsLoading = false; },
-      error: () => { this.hotelsLoading = false; this.snackBar.open('Ошибка загрузки отелей', 'OK', { duration: 3000 }); },
+      next: (hotels) => { 
+        this.hotels = hotels; 
+        this.hotelsLoading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.hotelsLoading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки отелей', 'OK', { duration: 3000 }); 
+      },
     });
   }
 
@@ -59,8 +67,16 @@ export class AdminRooms {
     if (!this.selectedHotelId) return;
     this.roomsLoading = true;
     this.api.getRooms({ hotel: this.selectedHotelId }).subscribe({
-      next: (rooms) => { this.rooms = rooms; this.roomsLoading = false; },
-      error: () => { this.roomsLoading = false; this.snackBar.open('Ошибка загрузки номеров', 'OK', { duration: 3000 }); },
+      next: (rooms) => { 
+        this.rooms = rooms; 
+        this.roomsLoading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.roomsLoading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки номеров', 'OK', { duration: 3000 }); 
+      },
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { AsyncPipe, SlicePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -38,7 +38,7 @@ export class Support implements OnInit {
   readonly newRequestControl = new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.minLength(3)] });
   readonly newMessageControl = new FormControl<string>('', { nonNullable: true, validators: [Validators.required] });
 
-  constructor(private readonly store: Store, private readonly api: Api, private readonly snackBar: MatSnackBar) {
+  constructor(private readonly store: Store, private readonly api: Api, private readonly snackBar: MatSnackBar, private readonly cdr: ChangeDetectorRef) {
     this.user$ = this.store.select(selectAuthUser);
   }
 
@@ -56,8 +56,16 @@ export class Support implements OnInit {
       : this.api.getClientSupportRequests();
 
     call$.subscribe({
-      next: (items) => { this.requests = items; this.requestsLoading = false; },
-      error: () => { this.requestsLoading = false; this.snackBar.open('Ошибка загрузки обращений', 'OK', { duration: 3000 }); },
+      next: (items) => { 
+        this.requests = items; 
+        this.requestsLoading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.requestsLoading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки обращений', 'OK', { duration: 3000 }); 
+      },
     });
   }
 
@@ -66,8 +74,16 @@ export class Support implements OnInit {
     this.messages = [];
     this.messagesLoading = true;
     this.api.getSupportMessages(req.id).subscribe({
-      next: (msgs) => { this.messages = msgs; this.messagesLoading = false; },
-      error: () => { this.messagesLoading = false; this.snackBar.open('Ошибка загрузки сообщений', 'OK', { duration: 3000 }); },
+      next: (msgs) => { 
+        this.messages = msgs; 
+        this.messagesLoading = false; 
+        this.cdr.detectChanges(); 
+      },
+      error: () => { 
+        this.messagesLoading = false; 
+        this.cdr.detectChanges(); 
+        this.snackBar.open('Ошибка загрузки сообщений', 'OK', { duration: 3000 }); 
+      },
     });
   }
 
