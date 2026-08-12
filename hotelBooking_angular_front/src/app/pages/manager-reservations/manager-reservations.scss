@@ -1,3 +1,124 @@
 table.mat-mdc-table {
-  min-width: 860px;
+  min-width: 940px;
+}
+
+/* ============================================================ ПЛИТКИ
+   Выручка — заголовок дашборда, поэтому шире и крупнее остальных. */
+.stats {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.7fr 1fr 1fr 1fr;
+}
+@media (max-width: 1100px) { .stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .stats { grid-template-columns: 1fr; } }
+
+.stat {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 15px 17px 13px;
+  border-radius: var(--mat-sys-corner-large);
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+}
+
+.stat.clickable { cursor: pointer; }
+.stat.clickable:hover {
+  border-color: var(--mat-sys-outline);
+  box-shadow: var(--mat-sys-level2);
+  transform: translateY(-2px);
+}
+.stat[aria-pressed='true'] {
+  border-color: var(--mat-sys-primary);
+  box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+}
+.stat[aria-pressed='true'] .stat-label { color: var(--mat-sys-primary); }
+
+.stat-label {
+  position: relative;
+  z-index: 2;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mat-sys-outline);
+}
+
+.stat-value {
+  position: relative;
+  z-index: 2;
+  font-size: 27px;
+  line-height: 1.12;
+  font-variant-numeric: tabular-nums;
+}
+.stat.hero { padding: 17px 20px 15px; }
+.stat.hero .stat-value {
+  font-size: 38px;
+  color: var(--mat-sys-tertiary);
+}
+
+/* Дельта берёт цвет из семантической группы, а не из акцентной латуни —
+   иначе акцент перестаёт работать как акцент. */
+.stat-delta {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.stat-delta.up { color: #2f7a5a; }
+.stat-delta.down { color: var(--mat-sys-error); }
+.stat-delta .vs {
+  color: var(--mat-sys-outline);
+  font-weight: 400;
+}
+.delta-icon { font-size: 15px; width: 15px; height: 15px; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .stat-delta.up { color: #7ccfa6; }
+}
+:root[data-theme='dark'] .stat-delta.up { color: #7ccfa6; }
+
+.stat-hint {
+  position: relative;
+  z-index: 2;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--mat-sys-outline);
+}
+
+.spark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.9;
+}
+.stat.hero .spark { height: 58px; }
+
+.filter-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 5px 6px 5px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat { transition: none; }
+  .stat.clickable:hover { transform: none; }
 }

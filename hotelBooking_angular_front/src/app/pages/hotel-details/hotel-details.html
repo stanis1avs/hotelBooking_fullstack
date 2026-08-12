@@ -5,90 +5,214 @@
     Все отели
   </a>
 
-  @if (items$ | async; as rooms) {
-    @if (rooms.length && rooms[0].hotel; as _) {
-      <mat-card appearance="outlined" class="overflow-hidden">
-        @if (rooms[0].hotel.image) {
-          <img
-            [src]="rooms[0].hotel.image"
-            [alt]="'Фотография отеля ' + rooms[0].hotel.title"
-            class="hero-photo" />
+  @if (hotel(); as h) {
+    <section class="hero-card">
+      @if (h.image) {
+        <img [src]="h.image" [alt]="'Фотография отеля ' + h.title" class="hero-photo" />
+      }
+      @if (h.stars) {
+        <span class="glass hero-stars">
+          @for (s of stars(h.stars); track $index) { <mat-icon class="star-icon">star</mat-icon> }
+        </span>
+      }
+      <div class="hero-caption">
+        <h1 class="hotel-name text-3xl">{{ h.title }}</h1>
+        <p class="hero-meta">
+          @if (h.city) { <mat-icon class="pin">place</mat-icon>{{ h.city }} · }
+          @if (h.rating) { {{ h.rating.toFixed(1) }} из 5 · {{ h.reviewsCount }} отзывов }
+        </p>
+      </div>
+    </section>
+
+    <mat-card appearance="outlined">
+      <mat-card-content class="pt-4">
+        <p class="text-sm muted" style="max-width: 66ch">{{ h.description }}</p>
+        @if (h.amenities.length) {
+          <div class="amenities mt-4">
+            @for (a of h.amenities; track a) {
+              <span class="amenity">
+                <mat-icon class="amenity-icon">{{ amenity[a].icon }}</mat-icon>
+                {{ amenity[a].label }}
+              </span>
+            }
+          </div>
         }
-        <mat-card-content class="pt-5">
-          <h1 class="page-title">{{ rooms[0].hotel.title }}</h1>
-          @if (rooms[0].hotel.description) {
-            <p class="page-sub mt-2" style="max-width: 66ch">{{ rooms[0].hotel.description }}</p>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Шаги бронирования: даты, номер, подтверждение со сводкой -->
+  <nav class="stepper" aria-label="Шаги бронирования">
+    @for (label of steps; track label; let i = $index) {
+      <button
+        type="button"
+        class="step"
+        [class.active]="step() === i"
+        [class.done]="step() > i"
+        [attr.aria-current]="step() === i ? 'step' : null"
+        (click)="goToStep(i)">
+        <span class="step-num">
+          @if (step() > i) { <mat-icon class="check">check</mat-icon> } @else { {{ i + 1 }} }
+        </span>
+        <span class="step-label">{{ label }}</span>
+      </button>
+      @if (i < steps.length - 1) { <span class="step-line" aria-hidden="true"></span> }
+    }
+  </nav>
+
+  @if (step() === 0) {
+    <mat-card appearance="outlined">
+      <mat-card-content class="pt-4 flex flex-col gap-4">
+        <div>
+          <h2 class="text-base font-semibold">Когда планируете приехать?</h2>
+          <p class="text-sm muted mt-1">Занятые даты недоступны для выбора в календаре.</p>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" style="max-width: 420px">
+          <mat-label>Даты проживания</mat-label>
+          <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
+            <input matStartDate formControlName="start" placeholder="Заезд" />
+            <input matEndDate formControlName="end" placeholder="Выезд" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="picker" />
+          <mat-date-range-picker #picker />
+          <mat-hint>{{ nightsLabel() }}</mat-hint>
+        </mat-form-field>
+        <div class="flex justify-end">
+          <button mat-flat-button color="primary" [disabled]="range.invalid" (click)="goToStep(1)">
+            Выбрать номер
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (step() === 1) {
+    @if (loading$ | async) { <mat-progress-bar mode="indeterminate" /> }
+
+    @if (rooms$ | async; as rooms) {
+      @if (rooms.length) {
+        <div class="flex flex-col gap-3">
+          @for (room of rooms; track room.id) {
+            <div class="room" [class.picked]="selectedRoom()?.id === room.id">
+              @if (room.images.length) {
+                <img [src]="room.images[0]" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
+              } @else {
+                <span class="room-photo room-photo-empty"><mat-icon>bed</mat-icon></span>
+              }
+
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 class="text-base font-semibold">{{ room.title }}</h3>
+                  @if (selectedRoom()?.id === room.id) {
+                    <span class="status-chip" data-status="active">Выбран</span>
+                  }
+                </div>
+                <p class="text-sm muted mb-2">{{ room.description }}</p>
+                <div class="flex flex-wrap gap-2">
+                  @if (room.size) { <span class="amenity">{{ room.size }} м²</span> }
+                  <span class="amenity"><mat-icon class="amenity-icon">group</mat-icon>до {{ room.guests }}</span>
+                  @if (room.bed) { <span class="amenity"><mat-icon class="amenity-icon">bed</mat-icon>{{ room.bed }}</span> }
+                </div>
+              </div>
+
+              <div class="room-side">
+                <div class="text-right">
+                  <div class="price text-xl">{{ room.price * nightsCount() | money }}</div>
+                  <div class="text-xs faint">{{ room.price | money }} × {{ nightsLabel() }}</div>
+                </div>
+                @if (isClient$ | async) {
+                  <button
+                    mat-flat-button
+                    [color]="selectedRoom()?.id === room.id ? 'primary' : undefined"
+                    [class.mat-mdc-outlined-button]="selectedRoom()?.id !== room.id"
+                    (click)="pickRoom(room)">
+                    {{ selectedRoom()?.id === room.id ? 'Продолжить' : 'Выбрать' }}
+                  </button>
+                } @else {
+                  <span class="text-xs muted text-right">Бронирование доступно гостям</span>
+                }
+              </div>
+            </div>
           }
+        </div>
+        <div class="flex justify-start">
+          <button mat-button (click)="goToStep(0)">
+            <mat-icon>arrow_back</mat-icon>
+            Изменить даты
+          </button>
+        </div>
+      } @else if ((loading$ | async) === false) {
+        <mat-card appearance="outlined">
+          <app-empty-state
+            icon="meeting_room"
+            title="Свободных номеров нет"
+            description="На выбранные даты все номера этого отеля заняты. Попробуйте другой период.">
+            <button mat-stroked-button (click)="goToStep(0)">Изменить даты</button>
+          </app-empty-state>
+        </mat-card>
+      }
+    }
+  }
+
+  @if (step() === 2 && selectedRoom(); as room) {
+    <div class="confirm-grid">
+      <mat-card appearance="outlined">
+        <mat-card-content class="pt-4 flex flex-col gap-4">
+          <h2 class="text-base font-semibold">Данные гостя</h2>
+          <form [formGroup]="guest" class="grid gap-4" style="grid-template-columns: repeat(2, minmax(0,1fr))">
+            <mat-form-field appearance="outline">
+              <mat-label>Имя и фамилия</mat-label>
+              <input matInput formControlName="name" autocomplete="name" />
+              @if (guest.controls.name.hasError('required')) { <mat-error>Укажите имя</mat-error> }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Телефон</mat-label>
+              <input matInput formControlName="phone" autocomplete="tel" />
+              @if (guest.controls.phone.hasError('required')) { <mat-error>Укажите телефон</mat-error> }
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="grid-column: 1 / -1">
+              <mat-label>Электронная почта</mat-label>
+              <input matInput type="email" formControlName="email" autocomplete="email" />
+              @if (guest.controls.email.hasError('email')) { <mat-error>Проверьте формат адреса</mat-error> }
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="grid-column: 1 / -1">
+              <mat-label>Пожелания к заселению</mat-label>
+              <textarea matInput rows="3" formControlName="note"
+                placeholder="Например: номер повыше, подальше от лифта"></textarea>
+              <mat-hint>Передадим отелю, но выполнение не гарантируем</mat-hint>
+            </mat-form-field>
+          </form>
+          <div>
+            <button mat-button (click)="goToStep(1)">
+              <mat-icon>arrow_back</mat-icon>
+              Назад к номерам
+            </button>
+          </div>
         </mat-card-content>
       </mat-card>
-    }
-  }
 
-  <mat-card appearance="outlined">
-    <mat-card-content class="pt-4 flex flex-col gap-3">
-      <h2 class="text-base font-semibold">Когда планируете приехать?</h2>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" style="max-width: 420px">
-        <mat-label>Даты проживания</mat-label>
-        <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
-          <input matStartDate formControlName="start" placeholder="Заезд" />
-          <input matEndDate formControlName="end" placeholder="Выезд" />
-        </mat-date-range-input>
-        <mat-datepicker-toggle matIconSuffix [for]="picker" />
-        <mat-date-range-picker #picker />
-        @if (nights$ | async; as nights) {
-          <mat-hint>{{ nights }}</mat-hint>
-        }
-      </mat-form-field>
-    </mat-card-content>
-  </mat-card>
+      <mat-card appearance="outlined" class="summary">
+        <mat-card-content class="pt-4">
+          <p class="page-eyebrow">Ваша бронь</p>
+          <h3 class="serif text-lg mb-3">{{ hotel()?.title }}</h3>
 
-  <h2 class="text-lg font-semibold">Номера</h2>
+          <div class="sum-row"><span class="muted">Номер</span><span class="font-semibold">{{ room.title }}</span></div>
+          <div class="sum-row"><span class="muted">Заезд</span><span class="font-semibold num">{{ range.controls.start.value | date: 'd MMMM y' }}</span></div>
+          <div class="sum-row"><span class="muted">Выезд</span><span class="font-semibold num">{{ range.controls.end.value | date: 'd MMMM y' }}</span></div>
+          <div class="sum-row"><span class="muted">Срок</span><span class="font-semibold">{{ nightsLabel() }}</span></div>
+          <div class="sum-row"><span class="muted">{{ room.price | money }} × {{ nightsCount() }}</span><span class="font-semibold num">{{ total() | money }}</span></div>
+          <div class="sum-row"><span class="muted">Сервисный сбор</span><span style="color: var(--mat-sys-primary)">включён</span></div>
+          <div class="sum-row total"><span>Итого</span><span class="price text-2xl">{{ total() | money }}</span></div>
 
-  @if (loading$ | async) {
-    <mat-progress-bar mode="indeterminate" />
-  }
-
-  @if (items$ | async; as rooms) {
-    @if (rooms.length) {
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))">
-        @for (room of rooms; track room.id) {
-          <mat-card appearance="outlined" class="flex flex-col">
-            @if (room.images.length) {
-              <img
-                [src]="room.images[0]"
-                [alt]="'Фотография номера в отеле ' + room.hotel.title"
-                loading="lazy"
-                class="room-photo" />
-            }
-            <mat-card-content class="pt-4 flex-1 flex flex-col gap-3">
-              <!-- Название берётся из данных. Раньше первый номер всегда назывался
-                   «Стандарт», а все остальные — «Люкс», независимо от содержимого -->
-              <p class="text-sm">{{ room.description || 'Описание появится позже' }}</p>
-              @if (room.isEnabled === false) {
-                <span class="status-chip" data-status="closed">Временно недоступен</span>
-              }
-            </mat-card-content>
-            <mat-card-actions align="end">
-              @if (isClient$ | async) {
-                <button mat-flat-button color="primary" (click)="book(room.id)" [disabled]="room.isEnabled === false">
-                  Забронировать
-                </button>
-              } @else {
-                <span class="text-sm muted pr-2">Бронирование доступно гостям</span>
-              }
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
-    } @else if ((loading$ | async) === false) {
-      <mat-card appearance="outlined">
-        <app-empty-state
-          icon="meeting_room"
-          title="Свободных номеров нет"
-          description="На выбранные даты все номера этого отеля заняты. Попробуйте другой период.">
-          <a mat-stroked-button routerLink="/hotels">Вернуться к поиску</a>
-        </app-empty-state>
+          <button mat-flat-button color="primary" class="w-full mt-4" style="height: 48px" (click)="confirm()">
+            Подтвердить бронирование
+          </button>
+          <p class="text-xs faint text-center mt-2">
+            Бесплатная отмена до {{ range.controls.start.value | date: 'd MMMM' }}
+          </p>
+        </mat-card-content>
       </mat-card>
-    }
+    </div>
   }
 </div>

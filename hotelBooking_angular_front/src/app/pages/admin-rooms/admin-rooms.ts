@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Api, HotelDto, RoomDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
+import { MoneyPipe } from '../../shared/money.pipe';
 import { confirmAction } from '../../shared/confirm-dialog';
 import { errorMessage } from '../../core/error-message';
 
@@ -24,7 +25,8 @@ const MAX_IMAGES = 10;
   selector: 'app-admin-rooms',
   imports: [
     ReactiveFormsModule, MatCardModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule,
-    MatInputModule, MatProgressBarModule, MatIconModule, MatSelectModule, MatTooltipModule, EmptyState,
+    MatInputModule, MatProgressBarModule, MatIconModule, MatSelectModule, MatTooltipModule,
+    EmptyState, MoneyPipe,
   ],
   templateUrl: './admin-rooms.html',
   styleUrl: './admin-rooms.scss',
@@ -50,11 +52,23 @@ export class AdminRooms implements OnInit, OnDestroy {
   private objectUrls: string[] = [];
 
   readonly form = new FormGroup({
+    title: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
     description: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
     hotelId: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    price: new FormControl<number>(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
+    size: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] }),
+    guests: new FormControl<number>(2, { nonNullable: true, validators: [Validators.min(1), Validators.max(10)] }),
+    bed: new FormControl<string>('', { nonNullable: true }),
     // Признак доступности не был выведен в форму, хотя в модели он есть.
     isEnabled: new FormControl<boolean>(true, { nonNullable: true }),
   });
+
+  private emptyForm() {
+    return {
+      title: '', description: '', hotelId: this.selectedHotelId ?? '',
+      price: 0, size: 0, guests: 2, bed: '', isEnabled: true,
+    };
+  }
 
   ngOnInit(): void {
     this.loadHotels();
@@ -115,7 +129,7 @@ export class AdminRooms implements OnInit, OnDestroy {
     this.selectedFiles = [];
     this.releaseUrls();
     this.previewUrls = [];
-    this.form.reset({ description: '', hotelId: this.selectedHotelId ?? '', isEnabled: true });
+    this.form.reset(this.emptyForm());
     this.showForm = true;
   }
 
@@ -125,8 +139,13 @@ export class AdminRooms implements OnInit, OnDestroy {
     this.releaseUrls();
     this.previewUrls = room.images ?? [];
     this.form.setValue({
+      title: room.title ?? '',
       description: room.description ?? '',
       hotelId: room.hotel.id,
+      price: room.price ?? 0,
+      size: room.size ?? 0,
+      guests: room.guests ?? 2,
+      bed: room.bed ?? '',
       isEnabled: room.isEnabled ?? true,
     });
     this.showForm = true;
@@ -138,7 +157,7 @@ export class AdminRooms implements OnInit, OnDestroy {
     this.selectedFiles = [];
     this.releaseUrls();
     this.previewUrls = [];
-    this.form.reset({ description: '', hotelId: this.selectedHotelId ?? '', isEnabled: true });
+    this.form.reset(this.emptyForm());
   }
 
   onFilesChange(event: Event): void {
@@ -188,10 +207,16 @@ export class AdminRooms implements OnInit, OnDestroy {
       return;
     }
 
+    const v = this.form.getRawValue();
     const fd = new FormData();
-    fd.append('description', this.form.controls.description.value);
-    fd.append('hotelId', this.form.controls.hotelId.value);
-    fd.append('isEnabled', String(this.form.controls.isEnabled.value));
+    fd.append('title', v.title);
+    fd.append('description', v.description);
+    fd.append('hotelId', v.hotelId);
+    fd.append('price', String(v.price));
+    fd.append('size', String(v.size));
+    fd.append('guests', String(v.guests));
+    fd.append('bed', v.bed);
+    fd.append('isEnabled', String(v.isEnabled));
     this.selectedFiles.forEach((f) => fd.append('images', f));
 
     this.saving = true;

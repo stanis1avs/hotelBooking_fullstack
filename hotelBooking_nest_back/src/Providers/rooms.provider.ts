@@ -18,7 +18,12 @@ export class RoomsProvider {
     // Проверяем существование отеля до вставки, иначе получим номер-сироту.
     const hotel = await this.hotelsProvider.getIdHotel(createRoom.hotelId);
     const createdRoom = new this.roomModel({
+      title: createRoom.title ?? "",
       description: createRoom.description,
+      price: createRoom.price ?? 0,
+      size: createRoom.size ?? 0,
+      guests: createRoom.guests ?? 2,
+      bed: createRoom.bed ?? "",
       images: createRoom.images,
       isEnabled: createRoom.isEnabled ?? true,
       hotel: new mongoose.Types.ObjectId(createRoom.hotelId),
@@ -34,8 +39,9 @@ export class RoomsProvider {
       throw new NotFoundException("Номер не найден");
     }
     const patch: Record<string, unknown> = { updatedAt: new Date() };
-    if (data.description !== undefined) patch.description = data.description;
-    if (data.isEnabled !== undefined) patch.isEnabled = data.isEnabled;
+    for (const field of ["title", "description", "price", "size", "guests", "bed", "isEnabled"] as const) {
+      if (data[field] !== undefined) patch[field] = data[field];
+    }
     if (data.images?.length) patch.images = data.images;
 
     const editedRoom = await this.roomModel.findByIdAndUpdate(id, patch, { new: true });
@@ -58,7 +64,7 @@ export class RoomsProvider {
     if (onlyEnabled) query.isEnabled = true;
     else if (queryParams.isEnabled !== undefined) query.isEnabled = queryParams.isEnabled;
 
-    const foundRooms = await this.roomModel.find(query).sort({ _id: 1 });
+    const foundRooms = await this.roomModel.find(query).sort({ price: 1, _id: 1 });
     if (!foundRooms.length) return [];
 
     // Один запрос за отелями на весь список вместо запроса на каждый номер.
@@ -109,13 +115,19 @@ export class RoomsProvider {
   ): SendRoom {
     return {
       id: room._id,
+      title: room.title || "Номер",
       description: room.description,
+      price: room.price ?? 0,
+      size: room.size ?? 0,
+      guests: room.guests ?? 2,
+      bed: room.bed ?? "",
       images: (room.images ?? []).map((img: any) => normalizeImageForClient(img)).filter(Boolean),
       isEnabled: withEnabled ? room.isEnabled : undefined,
       hotel: {
         id: hotel?._id,
         image: normalizeImageForClient(hotel?.image),
         title: hotel?.title,
+        city: hotel?.city,
         description: withHotelDescription ? hotel?.description : undefined,
       },
     };

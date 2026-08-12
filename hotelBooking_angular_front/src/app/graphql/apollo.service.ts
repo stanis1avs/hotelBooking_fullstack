@@ -13,11 +13,13 @@ import {
   SupportRequestDto,
   SupportMessageDto,
   CreateReservationRequestDto,
+  ManagerStatsDto,
 } from '../core/api';
 
 import { ME_QUERY } from './queries/auth.queries';
-import { GET_HOTELS } from './queries/hotels.queries';
+import { GET_HOTEL, GET_HOTELS } from './queries/hotels.queries';
 import { GET_HOTEL_ROOMS } from './queries/rooms.queries';
+import { MANAGER_STATS } from './queries/stats.queries';
 import { MY_RESERVATIONS, ALL_RESERVATIONS } from './queries/reservations.queries';
 import { ADMIN_USERS, MANAGER_USERS } from './queries/users.queries';
 import { MY_SUPPORT_REQUESTS, ALL_SUPPORT_REQUESTS, SUPPORT_MESSAGES } from './queries/support.queries';
@@ -75,7 +77,13 @@ export class ApolloService {
 
   // ── Hotels ──────────────────────────────────────────────────────────────────
 
-  getHotels(params: { offset: number; hotel?: string; dateArrival: string; dateDeparture: string }): Observable<HotelDto[]> {
+  getHotels(params: {
+    offset: number;
+    limit?: number;
+    hotel?: string;
+    dateArrival: string;
+    dateDeparture: string;
+  }): Observable<HotelDto[]> {
     return this.apollo
       .query<{ hotels: HotelDto[] }>({
         query: GET_HOTELS,
@@ -83,6 +91,26 @@ export class ApolloService {
         fetchPolicy: 'network-only',
       })
       .pipe(map((res) => res.data!.hotels));
+  }
+
+  getHotel(id: string): Observable<HotelDto | null> {
+    return this.apollo
+      .query<{ hotel: HotelDto | null }>({
+        query: GET_HOTEL,
+        variables: { id },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(map((res) => res.data!.hotel));
+  }
+
+  getManagerStats(days = 30): Observable<ManagerStatsDto> {
+    return this.apollo
+      .query<{ managerStats: ManagerStatsDto }>({
+        query: MANAGER_STATS,
+        variables: { days },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(map((res) => res.data!.managerStats));
   }
 
   // ── Rooms ───────────────────────────────────────────────────────────────────

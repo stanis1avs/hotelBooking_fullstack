@@ -4,8 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Тема «патина и латунь»: фирменный зелёный вместо стоковой azure-палитры,
-   латунь как акцент для цен и рейтингов. */
+/* ============================================================
+   Тема «патина и латунь»
+
+   mat.theme() генерирует полный набор системных токенов M3, а блок
+   переопределений ниже задаёт фирменные цвета: вердигрис как primary
+   и латунь как акцент для цен и рейтингов. Стоковая azure-палитра
+   не давала продукту никакой узнаваемости.
+   ============================================================ */
 html {
   height: 100%;
   @include mat.theme((
@@ -16,12 +22,103 @@ html {
     typography: Roboto,
     density: 0,
   ));
+
+  /* Светлая тема: нейтрали смещены в зелёный, чистый серый читается как неподобранный */
+  --mat-sys-primary: #1b6a61;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #c9e8e2;
+  --mat-sys-on-primary-container: #04322c;
+
+  --mat-sys-secondary: #4a6360;
+  --mat-sys-on-secondary: #ffffff;
+  --mat-sys-secondary-container: #cde7e3;
+  --mat-sys-on-secondary-container: #05201d;
+
+  --mat-sys-tertiary: #8f6326;
+  --mat-sys-on-tertiary: #ffffff;
+  --mat-sys-tertiary-container: #f5e7ce;
+  --mat-sys-on-tertiary-container: #3a2708;
+
+  --mat-sys-error: #a82019;
+  --mat-sys-on-error: #ffffff;
+  --mat-sys-error-container: #fadad7;
+  --mat-sys-on-error-container: #3d0a07;
+
+  --mat-sys-surface: #fbfcfc;
+  --mat-sys-surface-dim: #dbe3e1;
+  --mat-sys-surface-bright: #fbfcfc;
+  --mat-sys-surface-container-lowest: #ffffff;
+  --mat-sys-surface-container-low: #f4f7f6;
+  --mat-sys-surface-container: #eaefed;
+  --mat-sys-surface-container-high: #e3eae8;
+  --mat-sys-surface-container-highest: #dfe6e4;
+  --mat-sys-on-surface: #101a19;
+  --mat-sys-on-surface-variant: #55635f;
+
+  --mat-sys-outline: #7b8b87;
+  --mat-sys-outline-variant: #d0dbd8;
+
+  --mat-sys-background: #f2f6f5;
+  --mat-sys-on-background: #101a19;
+  --mat-sys-inverse-surface: #0b1f22;
+  --mat-sys-inverse-on-surface: #eaf3f0;
+  --mat-sys-inverse-primary: #6fcbbd;
+
+  --brand-display: 'Playfair Display', ui-serif, Georgia, 'Times New Roman', serif;
 }
 
+/* Тёмная тема подобрана отдельно, а не получена инверсией:
+   вердигрис светлеет до мятного, латунь — до медового. */
+@mixin dark-tokens {
+  --mat-sys-primary: #6fcbbd;
+  --mat-sys-on-primary: #00201c;
+  --mat-sys-primary-container: #1d4b45;
+  --mat-sys-on-primary-container: #b6e9e0;
+
+  --mat-sys-secondary: #b0ccc7;
+  --mat-sys-on-secondary: #1b3532;
+  --mat-sys-secondary-container: #324b48;
+  --mat-sys-on-secondary-container: #cce8e3;
+
+  --mat-sys-tertiary: #dfb374;
+  --mat-sys-on-tertiary: #3d2a0a;
+  --mat-sys-tertiary-container: #4a3617;
+  --mat-sys-on-tertiary-container: #f6e3c3;
+
+  --mat-sys-error: #f29c93;
+  --mat-sys-on-error: #56110c;
+  --mat-sys-error-container: #5a1f1a;
+  --mat-sys-on-error-container: #ffdad5;
+
+  --mat-sys-surface: #0e1817;
+  --mat-sys-surface-dim: #0e1817;
+  --mat-sys-surface-bright: #333e3c;
+  --mat-sys-surface-container-lowest: #070f0f;
+  --mat-sys-surface-container-low: #141f1e;
+  --mat-sys-surface-container: #1a2725;
+  --mat-sys-surface-container-high: #22312e;
+  --mat-sys-surface-container-highest: #2a3a37;
+  --mat-sys-on-surface: #e6edeb;
+  --mat-sys-on-surface-variant: #a3b2ae;
+
+  --mat-sys-outline: #85948f;
+  --mat-sys-outline-variant: #3b4a47;
+
+  --mat-sys-background: #070f0f;
+  --mat-sys-on-background: #e6edeb;
+  --mat-sys-inverse-surface: #e7eeec;
+  --mat-sys-inverse-on-surface: #0e1817;
+  --mat-sys-inverse-primary: #1b6a61;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme='light']) { @include dark-tokens; }
+}
+html[data-theme='dark'] { @include dark-tokens; }
+
 body {
-  /* Тёмная тема включается по системной настройке — токены M3 уже готовы к обеим. */
   color-scheme: light dark;
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-background);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
   margin: 0;
@@ -29,9 +126,21 @@ body {
 }
 
 /* ============================================================
-   Общие классы поверх системных токенов M3.
-   Цвета не хардкодятся, поэтому одинаково работают в обеих темах.
+   Общие классы поверх системных токенов.
+   Цвета не хардкодятся, поэтому работают в обеих темах.
    ============================================================ */
+
+/* Серифная пара для названий отелей и заголовков — характер
+   гостиничной полиграфии; интерфейс остаётся на гротеске. */
+.serif,
+.page-title,
+.hotel-name,
+.stat-value,
+.price {
+  font-family: var(--brand-display);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
 
 .page-eyebrow {
   font-size: 11px;
@@ -40,10 +149,12 @@ body {
   text-transform: uppercase;
   color: var(--mat-sys-tertiary);
   margin-bottom: 4px;
+  font-family: var(--mat-sys-body-medium-font);
 }
 
 .page-title {
-  font: var(--mat-sys-headline-small);
+  font-size: 26px;
+  line-height: 1.15;
   margin: 0;
   text-wrap: balance;
 }
@@ -51,11 +162,9 @@ body {
 .page-sub {
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface-variant);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-/* Приглушённый текст через семантический токен, а не через opacity:
-   прозрачность роняла контраст ниже минимума WCAG AA. */
 .muted { color: var(--mat-sys-on-surface-variant); }
 .faint { color: var(--mat-sys-outline); }
 
@@ -67,7 +176,6 @@ body {
 .num { font-variant-numeric: tabular-nums; }
 
 .price {
-  font-weight: 600;
   color: var(--mat-sys-tertiary);
   font-variant-numeric: tabular-nums;
 }
@@ -85,41 +193,9 @@ body {
   color: var(--mat-sys-on-tertiary-container);
 }
 
-/* Плашка роли. Раньше это был Bootstrap-класс badge bg-primary,
-   который без Bootstrap рисовался обычным текстом. */
-.role-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 11px;
-  border-radius: 999px;
-  font-size: 12.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  background: var(--mat-sys-surface-container-high);
-  color: var(--mat-sys-on-surface-variant);
-}
-.role-chip::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.role-chip[data-role='client'] {
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
-}
-.role-chip[data-role='manager'] {
-  background: var(--mat-sys-tertiary-container);
-  color: var(--mat-sys-on-tertiary-container);
-}
-.role-chip[data-role='admin'] {
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-}
-
+/* Плашки. Раньше это были Bootstrap-классы badge bg-*,
+   которые без Bootstrap рисовались обычным текстом. */
+.role-chip,
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -133,6 +209,7 @@ body {
   background: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface-variant);
 }
+.role-chip::before,
 .status-chip::before {
   content: '';
   width: 6px;
@@ -140,14 +217,43 @@ body {
   border-radius: 50%;
   background: currentColor;
 }
-.status-chip[data-status='active'] {
+.role-chip[data-role='client'],
+.status-chip[data-status='active'],
+.status-chip[data-status='upcoming'] {
   background: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
 }
-.status-chip[data-status='closed'] {
+.role-chip[data-role='manager'],
+.status-chip[data-status='staying'] {
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+.role-chip[data-role='admin'] {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+.status-chip[data-status='closed'],
+.status-chip[data-status='past'] {
   background: var(--mat-sys-surface-container-highest);
   color: var(--mat-sys-on-surface-variant);
 }
+
+/* Мелкая плашка поверх фотографии */
+.glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f2f8f6;
+  background: rgba(12, 28, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.glass.brass { color: #e8c289; }
 
 .pager {
   display: flex;
@@ -161,7 +267,6 @@ body {
 }
 .pager-select { width: 84px; }
 
-/* Таблицы: липкая шапка и подсветка строки под курсором */
 table.mat-mdc-table .mat-mdc-header-cell {
   font-size: 11.5px;
   font-weight: 700;
@@ -174,7 +279,6 @@ table.mat-mdc-table .mat-mdc-row:hover {
   background: var(--mat-sys-surface-container-low);
 }
 
-/* Скелетон вместо подмены контента спиннером — макет не прыгает */
 @keyframes skeleton-shimmer {
   0% { background-position: -420px 0; }
   100% { background-position: 420px 0; }

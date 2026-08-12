@@ -1,12 +1,31 @@
 import { gql } from 'apollo-angular';
 
+const HOTEL_CARD = `
+  id
+  title
+  description
+  image
+  city
+  stars
+  rating
+  reviewsCount
+  amenities
+  minPrice
+  roomsCount
+`;
+
 export const GET_HOTELS = gql`
-  query GetHotels($offset: Int, $hotel: String, $dateArrival: String!, $dateDeparture: String!) {
-    hotels(offset: $offset, hotel: $hotel, dateArrival: $dateArrival, dateDeparture: $dateDeparture) {
-      id
-      title
-      description
-      image
+  query GetHotels($offset: Int, $limit: Int, $hotel: String, $dateArrival: String!, $dateDeparture: String!) {
+    hotels(offset: $offset, limit: $limit, hotel: $hotel, dateArrival: $dateArrival, dateDeparture: $dateDeparture) {
+      ${HOTEL_CARD}
+    }
+  }
+`;
+
+export const GET_HOTEL = gql`
+  query GetHotel($id: String!) {
+    hotel(id: $id) {
+      ${HOTEL_CARD}
     }
   }
 `;

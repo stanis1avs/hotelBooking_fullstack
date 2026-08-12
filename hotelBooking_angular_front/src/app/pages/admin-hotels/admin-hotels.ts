@@ -9,9 +9,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatChipsModule } from '@angular/material/chips';
 
-import { Api, HotelDto } from '../../core/api';
+import { Amenity, Api, HotelDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
+import { MoneyPipe } from '../../shared/money.pipe';
+import { AMENITY_LIST, AMENITY_META } from '../../shared/amenities';
 import { confirmAction } from '../../shared/confirm-dialog';
 import { errorMessage } from '../../core/error-message';
 
@@ -21,7 +25,8 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   selector: 'app-admin-hotels',
   imports: [
     ReactiveFormsModule, MatCardModule, MatButtonModule, MatFormFieldModule,
-    MatInputModule, MatProgressBarModule, MatIconModule, MatTooltipModule, EmptyState,
+    MatInputModule, MatProgressBarModule, MatIconModule, MatTooltipModule,
+    MatSelectModule, MatChipsModule, EmptyState, MoneyPipe,
   ],
   templateUrl: './admin-hotels.html',
   styleUrl: './admin-hotels.scss',
@@ -44,9 +49,16 @@ export class AdminHotels implements OnInit, OnDestroy {
   /** Созданные blob-URL нужно освобождать, иначе файлы висят в памяти до перезагрузки. */
   private objectUrls: string[] = [];
 
+  readonly amenityList = AMENITY_LIST;
+
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] }),
     description: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    city: new FormControl<string>('', { nonNullable: true }),
+    stars: new FormControl<number>(3, { nonNullable: true, validators: [Validators.min(1), Validators.max(5)] }),
+    rating: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0), Validators.max(5)] }),
+    reviewsCount: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] }),
+    amenities: new FormControl<Amenity[]>([], { nonNullable: true }),
   });
 
   ngOnInit(): void {
@@ -94,8 +106,22 @@ export class AdminHotels implements OnInit, OnDestroy {
     this.selectedFile = null;
     this.releaseUrls();
     this.previewUrl = hotel.image;
-    this.form.setValue({ title: hotel.title, description: hotel.description ?? '' });
+    this.form.setValue({
+      title: hotel.title,
+      description: hotel.description ?? '',
+      city: hotel.city ?? '',
+      stars: hotel.stars ?? 3,
+      rating: hotel.rating ?? 0,
+      reviewsCount: hotel.reviewsCount ?? 0,
+      amenities: hotel.amenities ?? [],
+    });
     this.showForm = true;
+  }
+
+  readonly amenityMeta = AMENITY_META;
+
+  stars(n: number): number[] {
+    return Array.from({ length: Math.max(0, Math.min(5, n)) });
   }
 
   cancelForm(): void {
@@ -139,9 +165,16 @@ export class AdminHotels implements OnInit, OnDestroy {
       return;
     }
 
+    const v = this.form.getRawValue();
     const fd = new FormData();
-    fd.append('title', this.form.controls.title.value);
-    fd.append('description', this.form.controls.description.value);
+    fd.append('title', v.title);
+    fd.append('description', v.description);
+    fd.append('city', v.city);
+    fd.append('stars', String(v.stars));
+    fd.append('rating', String(v.rating));
+    fd.append('reviewsCount', String(v.reviewsCount));
+    // FormData не умеет массивы — на бэкенде строка разбирается по запятой
+    fd.append('amenities', v.amenities.join(','));
     // Файл добавляем только когда он выбран — редактирование без замены
     // фотографии теперь корректно обрабатывается сервером.
     if (this.selectedFile) fd.append('image', this.selectedFile);

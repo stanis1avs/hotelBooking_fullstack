@@ -55,24 +55,54 @@ export interface ManagerReservationDto {
   user?: { name: string; contactPhone: string };
 }
 
+export type Amenity = 'wifi' | 'parking' | 'breakfast' | 'pool' | 'spa' | 'pets';
+
 export interface HotelDto {
   id: Id;
   title: string;
   description: string;
   image: string;
+  city: string;
+  stars: number;
+  rating: number;
+  reviewsCount: number;
+  amenities: Amenity[];
+  /** Минимальная цена среди доступных номеров, ₽ за ночь */
+  minPrice: number;
+  roomsCount: number;
 }
 
 export interface RoomDto {
   id: Id;
+  title: string;
   description: string;
+  price: number;
+  size: number;
+  guests: number;
+  bed: string;
   images: string[];
   isEnabled?: boolean;
   hotel: {
     id: Id;
     image: string;
     title: string;
+    city?: string;
     description?: string;
   };
+}
+
+export interface MetricDto {
+  value: number;
+  delta: number;
+  series: number[];
+}
+
+export interface ManagerStatsDto {
+  days: number;
+  revenue: MetricDto;
+  bookings: MetricDto;
+  upcoming: MetricDto;
+  staying: MetricDto;
 }
 
 export interface CreateReservationRequestDto {

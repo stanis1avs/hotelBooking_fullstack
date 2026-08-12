@@ -1,18 +1,20 @@
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-6">
 
-  <header>
-    <p class="page-eyebrow">Свободно на выбранные даты</p>
-    <h1 class="page-title">Поиск отелей</h1>
-    <p class="page-sub">Отели, где все номера заняты на эти даты, в выдачу не попадают</p>
-  </header>
+  <!-- Герой: страница открывается образом места, а не формой ввода -->
+  <section class="hero">
+    <div class="hero-art" aria-hidden="true"></div>
+    <div class="hero-body">
+      <p class="page-eyebrow" style="color: var(--hero-eyebrow)">Пристань · бронирование</p>
+      <h1 class="hero-title">Двадцать три отеля<br />от Калининграда до Владивостока</h1>
+      <p class="hero-sub">
+        Свободные даты видно сразу в календаре — занятые номера не попадут в выдачу
+        и не дадут ошибиться на шаге оплаты.
+      </p>
 
-  <mat-card appearance="outlined">
-    <mat-card-content class="pt-4">
-      <form class="grid gap-3 items-start" style="grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) auto"
-            (ngSubmit)="search()">
+      <form class="hero-form" [formGroup]="form" (ngSubmit)="search()">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Название или город</mat-label>
-          <input matInput [formControl]="termControl" autocomplete="off" placeholder="Например: Сочи" />
+          <input matInput formControlName="term" autocomplete="off" placeholder="Например: Сочи" />
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
 
@@ -24,49 +26,105 @@
           </mat-date-range-input>
           <mat-datepicker-toggle matIconSuffix [for]="picker" />
           <mat-date-range-picker #picker />
-          @if (nightsLabel$ | async; as nights) {
-            <mat-hint>{{ nights }}</mat-hint>
-          }
         </mat-form-field>
 
-        <button mat-flat-button color="primary" type="submit" style="height: 56px">Найти</button>
+        <button mat-flat-button color="primary" type="submit" class="hero-submit">Найти</button>
       </form>
-    </mat-card-content>
-  </mat-card>
+
+      <!-- Подборки — это готовые фильтры, а не украшение -->
+      <div class="hero-presets">
+        @for (preset of presets; track preset.term) {
+          <button type="button" class="preset" (click)="applyPreset(preset)">
+            <mat-icon>{{ preset.icon }}</mat-icon>
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </section>
 
   @if (loading$ | async) {
     <mat-progress-bar mode="indeterminate" />
   }
 
   @if (items$ | async; as hotels) {
-    @if (hotels.length) {
-      <p class="text-sm muted">{{ countLabel(hotels.length) }}</p>
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <p class="text-sm muted">
+        {{ countLabel(hotels.length) }} · цены за {{ nightsLabel() }}
+      </p>
+      @if (form.controls.term.value) {
+        <button mat-button (click)="resetSearch()">
+          <mat-icon>close</mat-icon>
+          Сбросить «{{ form.controls.term.value }}»
+        </button>
+      }
+    </div>
 
-      <div class="grid gap-5" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+    @if (hotels.length) {
+      <div class="hotel-grid">
         @for (hotel of hotels; track hotel.id) {
           <a class="hotel-card" [routerLink]="['/hotels', hotel.id]">
-            @if (hotel.image) {
-              <!-- Осмысленный alt вместо одинакового «hotel» на всех карточках -->
-              <img
-                [src]="hotel.image"
-                [alt]="'Фотография отеля ' + hotel.title"
-                loading="lazy"
-                class="hotel-photo" />
-            } @else {
-              <div class="hotel-photo grid place-items-center" style="background: var(--mat-sys-surface-container-high)">
-                <mat-icon class="faint">apartment</mat-icon>
-              </div>
-            }
+            <span class="hotel-photo-wrap">
+              @if (hotel.image) {
+                <img [src]="hotel.image" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="hotel-photo" />
+              } @else {
+                <span class="hotel-photo hotel-photo-empty"><mat-icon>apartment</mat-icon></span>
+              }
 
-            <div class="p-4 flex-1 flex flex-col gap-2">
-              <h2 class="text-lg font-semibold leading-snug">{{ hotel.title }}</h2>
-              <p class="text-sm muted line-clamp-3">{{ hotel.description }}</p>
-            </div>
+              @if (hotel.rating >= 4.7) {
+                <span class="glass brass photo-tl">★ Выбор гостей</span>
+              }
+              @if (hotel.stars) {
+                <span class="glass photo-tr">
+                  @for (s of stars(hotel.stars); track $index) {
+                    <mat-icon class="star-icon">star</mat-icon>
+                  }
+                </span>
+              }
 
-            <div class="hotel-footer">
-              <span class="text-sm muted">Подробности и номера</span>
-              <mat-icon>arrow_forward</mat-icon>
-            </div>
+              <span class="photo-caption">
+                <span class="hotel-name">{{ hotel.title }}</span>
+                @if (hotel.city) {
+                  <span class="hotel-city"><mat-icon class="pin">place</mat-icon>{{ hotel.city }}</span>
+                }
+              </span>
+            </span>
+
+            <span class="hotel-body">
+              @if (hotel.rating) {
+                <span class="flex items-center gap-2 mb-2">
+                  <span class="rating-chip"><mat-icon class="star-icon">star</mat-icon>{{ hotel.rating.toFixed(1) }}</span>
+                  <span class="text-xs faint">{{ reviewsLabel(hotel.reviewsCount) }}</span>
+                </span>
+              }
+              <span class="hotel-desc">{{ hotel.description }}</span>
+
+              @if (hotel.amenities.length) {
+                <span class="amenities">
+                  @for (a of hotel.amenities; track a) {
+                    <span class="amenity">
+                      <mat-icon class="amenity-icon">{{ amenity[a].icon }}</mat-icon>
+                      {{ amenity[a].label }}
+                    </span>
+                  }
+                </span>
+              }
+            </span>
+
+            <span class="hotel-footer">
+              <span>
+                @if (hotel.minPrice) {
+                  <span class="price text-xl">{{ hotel.minPrice * nights() | money }}</span>
+                  <span class="block text-xs faint">{{ hotel.minPrice | money }} за ночь</span>
+                } @else {
+                  <span class="text-sm muted">Цена по запросу</span>
+                }
+              </span>
+              <span class="cta">
+                Выбрать
+                <mat-icon>arrow_forward</mat-icon>
+              </span>
+            </span>
           </a>
         }
       </div>

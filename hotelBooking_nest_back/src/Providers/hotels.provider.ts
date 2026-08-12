@@ -2,22 +2,36 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { FilterQuery, Model, isValidObjectId } from "mongoose";
 import { Hotel, HotelDocument } from "../Models/Hotels";
+import { Room, RoomDocument } from "../Models/Rooms";
 import { CreateHotel, UpdateHotelParams, SearchHotelParams, SendHotel } from "../Interface/Hotels";
 import { normalizeImageForClient } from "../utils/image.utils";
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const MAX_LIMIT = 50;
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 12;
+
+interface PriceInfo {
+  minPrice: number;
+  roomsCount: number;
+}
 
 @Injectable()
 export class HotelsProvider {
-  constructor(@InjectModel(Hotel.name) private hotelModel: Model<HotelDocument>) {}
+  constructor(
+    @InjectModel(Hotel.name) private hotelModel: Model<HotelDocument>,
+    @InjectModel(Room.name) private roomModel: Model<RoomDocument>
+  ) {}
 
   async createHotel(createHotel: CreateHotel): Promise<SendHotel> {
     const createdHotel = new this.hotelModel({
       title: createHotel.title,
       description: createHotel.description,
+      city: createHotel.city,
+      stars: createHotel.stars ?? 3,
+      rating: createHotel.rating ?? 0,
+      reviewsCount: createHotel.reviewsCount ?? 0,
+      amenities: createHotel.amenities ?? [],
       image: createHotel.image.toString("base64"),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -31,7 +45,9 @@ export class HotelsProvider {
     // $nin с null роняет запрос — массив подставляем только когда он непустой.
     if (reservedHotels?.length) query._id = { $nin: reservedHotels };
     if (queryParams.hotel?.trim()) {
-      query.title = { $regex: escapeRegex(queryParams.hotel.trim()), $options: "i" };
+      const term = escapeRegex(queryParams.hotel.trim());
+      // Поиск и по названию, и по городу: гость чаще ищет направление, а не отель
+      query.$or = [{ title: { $regex: term, $options: "i" } }, { city: { $regex: term, $options: "i" } }];
     }
     return query;
   }
@@ -40,10 +56,23 @@ export class HotelsProvider {
     const limit = Math.min(queryParams.limit || DEFAULT_LIMIT, MAX_LIMIT);
     const foundHotels = await this.hotelModel
       .find(this.buildQuery(queryParams, reservedHotels))
-      .sort({ _id: 1 })
+      .sort({ rating: -1, _id: 1 })
       .skip(queryParams.offset || 0)
       .limit(limit);
-    return foundHotels.map((el) => this.printFormatHotel(el));
+    if (!foundHotels.length) return [];
+
+    // Одна агрегация на весь список вместо запроса цен по каждому отелю
+    const prices = await this.priceIndex(foundHotels.map((h) => h._id));
+    return foundHotels.map((el) => this.printFormatHotel(el, prices.get(String(el._id))));
+  }
+
+  /** Минимальная цена и количество доступных номеров по каждому отелю. */
+  private async priceIndex(hotelIds: unknown[]): Promise<Map<string, PriceInfo>> {
+    const rows = await this.roomModel.aggregate<{ _id: unknown; minPrice: number; roomsCount: number }>([
+      { $match: { hotel: { $in: hotelIds }, isEnabled: true } },
+      { $group: { _id: "$hotel", minPrice: { $min: "$price" }, roomsCount: { $sum: 1 } } },
+    ]);
+    return new Map(rows.map((r) => [String(r._id), { minPrice: r.minPrice ?? 0, roomsCount: r.roomsCount }]));
   }
 
   async countHotels(queryParams: SearchHotelParams, reservedHotels: string[] | null): Promise<number> {
@@ -55,8 +84,9 @@ export class HotelsProvider {
       throw new NotFoundException("Отель не найден");
     }
     const patch: Record<string, unknown> = { updatedAt: new Date() };
-    if (data.title !== undefined) patch.title = data.title;
-    if (data.description !== undefined) patch.description = data.description;
+    for (const field of ["title", "description", "city", "stars", "rating", "reviewsCount", "amenities"] as const) {
+      if (data[field] !== undefined) patch[field] = data[field];
+    }
     // Картинку перезаписываем только если её действительно прислали.
     if (data.image) patch.image = data.image.toString("base64");
 
@@ -64,7 +94,8 @@ export class HotelsProvider {
     if (!edittedHotel) {
       throw new NotFoundException("Отель не найден");
     }
-    return this.printFormatHotel(edittedHotel);
+    const prices = await this.priceIndex([edittedHotel._id]);
+    return this.printFormatHotel(edittedHotel, prices.get(String(edittedHotel._id)));
   }
 
   async getIdHotel(id: HotelDocument | string): Promise<HotelDocument> {
@@ -77,6 +108,12 @@ export class HotelsProvider {
       throw new NotFoundException("Отель не найден");
     }
     return hotel;
+  }
+
+  async getHotelCard(id: string): Promise<SendHotel> {
+    const hotel = await this.getIdHotel(id);
+    const prices = await this.priceIndex([hotel._id]);
+    return this.printFormatHotel(hotel, prices.get(String(hotel._id)));
   }
 
   /** Пакетная загрузка отелей — заменяет запрос на каждый номер в списке (N+1). */
@@ -99,12 +136,19 @@ export class HotelsProvider {
   }
 
   // Нормализация живёт здесь, поэтому create/edit и список отдают картинку в одном формате.
-  printFormatHotel(hotel: HotelDocument): SendHotel {
+  printFormatHotel(hotel: HotelDocument, price?: PriceInfo): SendHotel {
     return {
       id: hotel._id,
       title: hotel.title,
       description: hotel.description,
       image: normalizeImageForClient(hotel.image),
+      city: hotel.city ?? "",
+      stars: hotel.stars ?? 3,
+      rating: hotel.rating ?? 0,
+      reviewsCount: hotel.reviewsCount ?? 0,
+      amenities: hotel.amenities ?? [],
+      minPrice: price?.minPrice ?? 0,
+      roomsCount: price?.roomsCount ?? 0,
     };
   }
 }

@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { distinctUntilChanged, map } from 'rxjs';
@@ -8,26 +8,31 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Actions, ofType } from '@ngrx/effects';
 
 import { RoomsActions } from '../../actions/rooms.actions';
 import { selectRoomsItems, selectRoomsLoading } from '../../selectors/rooms.selectors';
 import { selectAuthUser } from '../../selectors/auth.selectors';
 import { ReservationsActions } from '../../actions/reservations.actions';
 import { EmptyState } from '../../shared/empty-state';
+import { MoneyPipe } from '../../shared/money.pipe';
+import { AMENITY_META } from '../../shared/amenities';
+import { ApolloService } from '../../graphql/apollo.service';
+import { HotelDto, RoomDto } from '../../core/api';
 import { addDays, nightWord, nightsBetween, toLocalIsoDate } from '../../core/date.utils';
 
 @Component({
   selector: 'app-hotel-details',
   imports: [
-    AsyncPipe, RouterLink, ReactiveFormsModule,
-    MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
-    MatProgressBarModule, MatFormFieldModule, MatDatepickerModule, EmptyState,
+    AsyncPipe, DatePipe, RouterLink, ReactiveFormsModule, MoneyPipe,
+    MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule,
+    MatFormFieldModule, MatInputModule, MatDatepickerModule, EmptyState,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './hotel-details.html',
@@ -37,27 +42,40 @@ import { addDays, nightWord, nightsBetween, toLocalIsoDate } from '../../core/da
 export class HotelDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(Store);
+  private readonly apollo = inject(ApolloService);
+  private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
 
-  readonly items$ = this.store.select(selectRoomsItems);
+  readonly rooms$ = this.store.select(selectRoomsItems);
   readonly loading$ = this.store.select(selectRoomsLoading);
-  readonly user$ = this.store.select(selectAuthUser);
-  readonly isClient$ = this.user$.pipe(map((u) => u?.role === 'client'));
+  readonly isClient$ = this.store.select(selectAuthUser).pipe(map((u) => u?.role === 'client'));
 
+  readonly hotel = signal<HotelDto | null>(null);
   readonly minDate = new Date();
+  readonly amenity = AMENITY_META;
+
+  /** Мастер бронирования: даты → номер → подтверждение. */
+  readonly step = signal(0);
+  readonly selectedRoom = signal<RoomDto | null>(null);
+  readonly steps = ['Даты', 'Номер', 'Подтверждение'];
 
   readonly range = new FormGroup({
     start: new FormControl<Date | null>(new Date(), Validators.required),
     end: new FormControl<Date | null>(new Date(Date.now() + 2 * 86_400_000), Validators.required),
   });
 
-  readonly nights$ = this.range.valueChanges.pipe(
-    map(({ start, end }) => {
-      if (!start || !end) return null;
-      const n = nightsBetween(toLocalIsoDate(start), toLocalIsoDate(end));
-      return `${n} ${nightWord(n)}`;
-    })
-  );
+  readonly nightsCount = signal(2);
+  readonly total = computed(() => {
+    const room = this.selectedRoom();
+    return room ? room.price * this.nightsCount() : 0;
+  });
+
+  readonly guest = new FormGroup({
+    name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    phone: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    email: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+    note: new FormControl<string>('', { nonNullable: true }),
+  });
 
   ngOnInit(): void {
     this.route.paramMap
@@ -67,14 +85,65 @@ export class HotelDetails implements OnInit {
         takeUntilDestroyed()
       )
       .subscribe((hotelId) => {
-        if (hotelId) this.store.dispatch(RoomsActions.loadRooms({ hotelId }));
+        if (!hotelId) return;
+        this.store.dispatch(RoomsActions.loadRooms({ hotelId }));
+        this.apollo.getHotel(hotelId).subscribe((h) => this.hotel.set(h));
       });
+
+    this.store
+      .select(selectAuthUser)
+      .pipe(takeUntilDestroyed())
+      .subscribe((user) => {
+        if (!user) return;
+        this.guest.patchValue({ name: user.name, email: user.email, phone: user.contactPhone ?? '' });
+      });
+
+    this.range.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.recalcNights());
+
+    // Успешное бронирование закрывает мастер — уход на «Мои брони» делает эффект
+    this.actions$
+      .pipe(ofType(ReservationsActions.createReservationSuccess), takeUntilDestroyed())
+      .subscribe(() => {
+        this.step.set(0);
+        this.selectedRoom.set(null);
+      });
+
+    this.recalcNights();
   }
 
-  book(roomId: string): void {
-    if (this.range.invalid) {
-      this.range.markAllAsTouched();
-      this.snackBar.open('Выберите даты заезда и выезда', 'OK', { duration: 4000 });
+  private recalcNights(): void {
+    const { start, end } = this.range.value;
+    if (start && end) this.nightsCount.set(nightsBetween(toLocalIsoDate(start), toLocalIsoDate(end)));
+  }
+
+  nightsLabel(): string {
+    const n = this.nightsCount();
+    return `${n} ${nightWord(n)}`;
+  }
+
+  stars(n: number): number[] {
+    return Array.from({ length: Math.max(0, Math.min(5, n)) });
+  }
+
+  goToStep(index: number): void {
+    if (index === 2 && !this.selectedRoom()) return;
+    this.step.set(index);
+  }
+
+  pickRoom(room: RoomDto): void {
+    if (this.selectedRoom()?.id === room.id) {
+      this.step.set(2);
+      return;
+    }
+    this.selectedRoom.set(room);
+  }
+
+  confirm(): void {
+    const room = this.selectedRoom();
+    if (!room) return;
+    if (this.guest.invalid) {
+      this.guest.markAllAsTouched();
+      this.snackBar.open('Проверьте данные гостя', 'Понятно', { duration: 4000 });
       return;
     }
 
@@ -83,6 +152,8 @@ export class HotelDetails implements OnInit {
     const dateStart = toLocalIsoDate(start);
     const dateEnd = toLocalIsoDate(end) === dateStart ? addDays(1, start) : toLocalIsoDate(end);
 
-    this.store.dispatch(ReservationsActions.createReservation({ payload: { roomId, dateStart, dateEnd } }));
+    this.store.dispatch(
+      ReservationsActions.createReservation({ payload: { roomId: room.id, dateStart, dateEnd } })
+    );
   }
 }

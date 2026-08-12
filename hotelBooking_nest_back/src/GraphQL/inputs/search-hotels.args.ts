@@ -5,6 +5,9 @@ export class SearchHotelsArgs {
   @Field(() => Int, { nullable: true, defaultValue: 0 })
   offset: number;
 
+  @Field(() => Int, { nullable: true })
+  limit?: number;
+
   @Field({ nullable: true })
   hotel?: string;
 

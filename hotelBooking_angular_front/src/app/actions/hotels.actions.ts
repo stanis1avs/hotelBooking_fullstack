@@ -4,7 +4,9 @@ import { HotelDto } from '../core/api';
 export const HotelsActions = createActionGroup({
   source: 'Hotels',
   events: {
-    'Load Hotels': props<{ params: { offset: number; hotel?: string; dateArrival: string; dateDeparture: string } }>(),
+    'Load Hotels': props<{
+      params: { offset: number; limit?: number; hotel?: string; dateArrival: string; dateDeparture: string };
+    }>(),
     'Load Hotels Success': props<{ items: HotelDto[] }>(),
     'Load Hotels Failure': props<{ error: unknown }>(),
 

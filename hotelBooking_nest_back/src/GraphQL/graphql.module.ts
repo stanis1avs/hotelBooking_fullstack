@@ -18,6 +18,7 @@ import { UsersProvider } from "../Providers/users.provider";
 import { AuthProvider } from "../Providers/auth.provider";
 import { SupportProvider } from "../Providers/support.provider";
 import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
+import { StatsProvider } from "../Providers/stats.provider";
 
 import { JwtStrategy } from "../Auth/jwt.strategy";
 
@@ -27,6 +28,7 @@ import { RoomsResolver } from "./resolvers/rooms.resolver";
 import { ReservationsResolver } from "./resolvers/reservations.resolver";
 import { UsersResolver } from "./resolvers/users.resolver";
 import { SupportResolver } from "./resolvers/support.resolver";
+import { StatsResolver } from "./resolvers/stats.resolver";
 
 @Module({
   imports: [
@@ -56,6 +58,7 @@ import { SupportResolver } from "./resolvers/support.resolver";
     AuthProvider,
     SupportProvider,
     TokenBlacklistProvider,
+    StatsProvider,
     // JWT strategy — needed by GqlJwtAuthGuard (AuthGuard('jwt'))
     JwtStrategy,
     // Resolvers
@@ -65,6 +68,7 @@ import { SupportResolver } from "./resolvers/support.resolver";
     ReservationsResolver,
     UsersResolver,
     SupportResolver,
+    StatsResolver,
   ],
 })
 export class AppGraphQLModule {}

@@ -1,10 +1,21 @@
 import * as mongoose from "mongoose";
-import { IsBoolean, IsInt, IsMongoId, IsOptional, IsString, Length, Min } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsMongoId, IsNumber, IsOptional, IsString, Length, Max, Min } from "class-validator";
 import { Transform } from "class-transformer";
+
+export const AMENITIES = ["wifi", "parking", "breakfast", "pool", "spa", "pets"] as const;
+export type Amenity = (typeof AMENITIES)[number];
 
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 const toBool = ({ value }: { value: unknown }) =>
   value === "true" || value === true ? true : value === "false" || value === false ? false : value;
+const toNum = ({ value }: { value: unknown }) =>
+  value === "" || value === undefined || value === null ? undefined : Number(value);
+// FormData передаёт массив либо повторяющимся ключом, либо строкой через запятую
+const toArray = ({ value }: { value: unknown }) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") return value.split(",").map((v) => v.trim()).filter(Boolean);
+  return value;
+};
 
 export class CreateHotelDto {
   @Transform(trim)
@@ -17,20 +28,47 @@ export class CreateHotelDto {
   @IsString()
   @Length(0, 2000)
   description?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @Length(0, 80)
+  city?: string;
+
+  @IsOptional()
+  @Transform(toNum)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  stars?: number;
+
+  @IsOptional()
+  @Transform(toNum)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  rating?: number;
+
+  @IsOptional()
+  @Transform(toNum)
+  @IsInt()
+  @Min(0)
+  reviewsCount?: number;
+
+  @IsOptional()
+  @Transform(toArray)
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsIn(AMENITIES, { each: true, message: `Допустимые удобства: ${AMENITIES.join(", ")}` })
+  amenities?: Amenity[];
 }
 
-export class UpdateHotelDto {
+export class UpdateHotelDto extends CreateHotelDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
   @Length(2, 120)
-  title?: string;
-
-  @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @Length(0, 2000)
-  description?: string;
+  declare title: string;
 }
 
 export class CreateRoomDto {
@@ -40,16 +78,9 @@ export class CreateRoomDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
-  @Length(0, 2000)
-  description?: string;
+  @Length(0, 120)
+  title?: string;
 
-  @IsOptional()
-  @Transform(toBool)
-  @IsBoolean()
-  isEnabled?: boolean;
-}
-
-export class UpdateRoomDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
@@ -57,9 +88,40 @@ export class UpdateRoomDto {
   description?: string;
 
   @IsOptional()
+  @Transform(toNum)
+  @IsInt()
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @Transform(toNum)
+  @IsInt()
+  @Min(0)
+  size?: number;
+
+  @IsOptional()
+  @Transform(toNum)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  guests?: number;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @Length(0, 120)
+  bed?: string;
+
+  @IsOptional()
   @Transform(toBool)
   @IsBoolean()
   isEnabled?: boolean;
+}
+
+export class UpdateRoomDto extends CreateRoomDto {
+  @IsOptional()
+  @IsMongoId()
+  declare hotelId: string;
 }
 
 export class SearchHotelParams {
@@ -102,47 +164,54 @@ export class SearchRoomsParams {
 
 /* --- Внутренние типы уровня провайдеров --- */
 
-export interface CreateHotel {
-  title: string;
-  description?: string;
+export interface CreateHotel extends Omit<CreateHotelDto, "amenities"> {
   image: Buffer;
+  amenities?: string[];
 }
 
-export interface UpdateHotelParams {
-  title?: string;
-  description?: string;
+export interface UpdateHotelParams extends Partial<Omit<CreateHotelDto, "amenities">> {
   image?: Buffer;
+  amenities?: string[];
 }
 
-export interface CreateRoom {
-  hotelId: string;
-  description?: string;
+export interface CreateRoom extends CreateRoomDto {
   images: Buffer[];
-  isEnabled?: boolean;
 }
 
-export interface UpdateRoomParams {
-  description?: string;
-  isEnabled?: boolean;
+export interface UpdateRoomParams extends Partial<CreateRoomDto> {
   images?: Buffer[];
 }
 
 export class SendRoom {
   id: mongoose.Types.ObjectId;
+  title: string;
   description: string;
+  price: number;
+  size: number;
+  guests: number;
+  bed: string;
   images: string[];
   isEnabled?: boolean;
   hotel: {
     id: mongoose.Types.ObjectId;
     image: string;
     title: string;
+    city?: string;
     description?: string;
   };
 }
 
 export class SendHotel {
   id: mongoose.Types.ObjectId;
-  description: string;
   title: string;
+  description: string;
   image: string;
+  city: string;
+  stars: number;
+  rating: number;
+  reviewsCount: number;
+  amenities: string[];
+  /** Минимальная цена среди доступных номеров — «от N ₽ за ночь» в карточке. */
+  minPrice: number;
+  roomsCount: number;
 }

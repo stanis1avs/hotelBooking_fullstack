@@ -1,3 +1,11 @@
+.hero-card {
+  position: relative;
+  border-radius: var(--mat-sys-corner-large);
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-high);
+  min-height: 200px;
+}
+
 .hero-photo {
   width: 100%;
   aspect-ratio: 32 / 11;
@@ -5,9 +13,178 @@
   display: block;
 }
 
+.hero-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(6, 18, 20, 0.78) 0%, rgba(6, 18, 20, 0.15) 45%, transparent 70%);
+}
+
+.hero-stars { position: absolute; top: 14px; right: 14px; z-index: 2; }
+
+.hero-caption {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 18px;
+  z-index: 2;
+  color: #fcfefd;
+}
+.hero-caption .hotel-name {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+  line-height: 1.14;
+}
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 13.5px;
+  color: rgba(236, 246, 243, 0.86);
+}
+.pin { font-size: 15px; width: 15px; height: 15px; }
+.star-icon { font-size: 14px; width: 14px; height: 14px; }
+
+.amenities { display: flex; flex-wrap: wrap; gap: 7px; }
+.amenity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+.amenity-icon { font-size: 14px; width: 14px; height: 14px; }
+
+/* ============================================================ СТЕППЕР */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 15px 7px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--mat-sys-on-surface-variant);
+}
+.step:disabled { cursor: default; }
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+}
+.step-label { font-size: 13.5px; }
+
+.step.active { background: var(--mat-sys-primary-container); }
+.step.active .step-num { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
+.step.active .step-label { color: var(--mat-sys-on-primary-container); font-weight: 650; }
+
+.step.done .step-num { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.check { font-size: 15px; width: 15px; height: 15px; }
+
+.step-line {
+  width: 22px;
+  height: 1.5px;
+  background: var(--mat-sys-outline-variant);
+  flex: none;
+}
+
+/* ============================================================ НОМЕР */
+.room {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface);
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+.room:hover { border-color: var(--mat-sys-outline); box-shadow: var(--mat-sys-level1); }
+.room.picked {
+  border-color: var(--mat-sys-primary);
+  background: var(--mat-sys-primary-container);
+  box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+}
+
 .room-photo {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
+  border-radius: var(--mat-sys-corner-small);
   display: block;
+}
+.room-photo-empty {
+  display: grid;
+  place-items: center;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-outline);
+}
+
+.room-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 780px) {
+  .room { grid-template-columns: 1fr; }
+  .room-side { align-items: stretch; }
+  .room-side .text-right { text-align: left; }
+}
+
+/* ============================================================ ПОДТВЕРЖДЕНИЕ */
+.confirm-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .confirm-grid { grid-template-columns: 1fr; }
+  .confirm-grid form { grid-template-columns: 1fr !important; }
+}
+
+.summary { position: sticky; top: 8px; }
+
+.sum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--mat-sys-outline-variant);
+  font-size: 14px;
+}
+.sum-row:last-of-type { border-bottom: 0; }
+.sum-row.total {
+  border-top: 1.5px solid var(--mat-sys-outline);
+  border-bottom: 0;
+  margin-top: 6px;
+  padding-top: 14px;
+  font-weight: 600;
 }
