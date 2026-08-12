@@ -1,0 +1,140 @@
+<div class="flex flex-col gap-5">
+
+  <header class="flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="page-eyebrow">{{ isAdmin() ? 'Полный доступ' : 'Только просмотр' }}</p>
+      <h1 class="page-title">Пользователи</h1>
+      <p class="page-sub">
+        {{ isAdmin()
+          ? 'Создание учётных записей и назначение ролей'
+          : 'Клиентская база — редактирование недоступно' }}
+      </p>
+    </div>
+    @if (isAdmin()) {
+      <button mat-flat-button color="primary" (click)="openCreate()">
+        <mat-icon>person_add</mat-icon>
+        Новый пользователь
+      </button>
+    }
+  </header>
+
+  <mat-card appearance="outlined">
+    <mat-card-content class="flex flex-col gap-4 pt-4">
+      <div class="grid gap-3 items-end" style="grid-template-columns: minmax(0,1fr) auto">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Поиск по имени, почте или телефону</mat-label>
+          <input matInput [formControl]="search" autocomplete="off" placeholder="Начните вводить" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <button mat-stroked-button (click)="clear()" style="height: 56px">Сбросить</button>
+      </div>
+
+      @if (isAdmin()) {
+        <mat-chip-listbox
+          aria-label="Фильтр по роли"
+          [value]="roleFilter$ | async"
+          (change)="setRole($any($event).value)">
+          @for (f of roleFilters; track f.value) {
+            <mat-chip-option [value]="f.value">{{ f.label }}</mat-chip-option>
+          }
+        </mat-chip-listbox>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Полоса загрузки не убирает таблицу, поэтому макет не прыгает на каждом запросе -->
+  @if (loading$ | async) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (users$ | async; as users) {
+    @if (users.length) {
+      <mat-card appearance="outlined" class="overflow-hidden">
+        <div class="overflow-x-auto">
+          <table mat-table [dataSource]="users" class="w-full">
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Пользователь</th>
+              <td mat-cell *matCellDef="let user">
+                <span class="flex items-center gap-3">
+                  <span class="avatar">{{ user.name.charAt(0) }}</span>
+                  <strong>{{ user.name }}</strong>
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef>Электронная почта</th>
+              <td mat-cell *matCellDef="let user" class="muted">{{ user.email }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="phone">
+              <th mat-header-cell *matHeaderCellDef>Телефон</th>
+              <td mat-cell *matCellDef="let user" class="mono muted">{{ user.contactPhone || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef>Роль</th>
+              <td mat-cell *matCellDef="let user">
+                <span class="role-chip" [attr.data-role]="user.role || 'client'">
+                  {{ roleLabel[user.role || 'client'] }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>Идентификатор</th>
+              <td mat-cell *matCellDef="let user" class="mono faint">{{ user.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef aria-label="Действия"></th>
+              <td mat-cell *matCellDef="let user" class="text-right whitespace-nowrap">
+                <button mat-icon-button matTooltip="Изменить" [attr.aria-label]="'Изменить ' + user.name">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columns(); sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+          </table>
+        </div>
+
+        <div class="pager">
+          <label class="flex items-center gap-2 text-sm">
+            Строк на странице
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pager-select">
+              <mat-select [value]="limit$ | async" (valueChange)="setPageSize($event)">
+                @for (n of [10, 25, 50]; track n) {
+                  <mat-option [value]="n">{{ n }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </label>
+          <span class="text-sm muted">Страница {{ page$ | async }}</span>
+          <span class="flex gap-1">
+            <button mat-icon-button [disabled]="!(hasPrev$ | async)" (click)="prev()" aria-label="Предыдущая страница">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button mat-icon-button [disabled]="!(hasNext$ | async)" (click)="next()" aria-label="Следующая страница">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </span>
+        </div>
+      </mat-card>
+    } @else if ((loading$ | async) === false) {
+      <mat-card appearance="outlined">
+        <app-empty-state
+          icon="person_search"
+          title="Никого не нашли"
+          description="По текущему запросу совпадений нет. Проверьте написание или сбросьте фильтры.">
+          <button mat-stroked-button (click)="clear()">
+            <mat-icon>refresh</mat-icon>
+            Сбросить фильтры
+          </button>
+        </app-empty-state>
+      </mat-card>
+    }
+  }
+</div>

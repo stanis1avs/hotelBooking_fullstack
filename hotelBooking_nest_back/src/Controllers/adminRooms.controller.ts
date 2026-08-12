@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Put, Delete, Body, Param, Res, UseGuards, HttpStatus,
+  Controller, Post, Put, Delete, Get, Body, Param, Query, Res, UseGuards, HttpStatus,
   UseInterceptors, UploadedFiles, BadRequestException,
 } from "@nestjs/common";
 import { Response, Express } from "express";
@@ -7,7 +7,7 @@ import { RolesGuard } from "../Decorators/roles.decorator";
 import { Role } from "../Decorators/setmetadata.decorator";
 import { AuthGuard } from "@nestjs/passport";
 import { FilesInterceptor } from "@nestjs/platform-express";
-import { CreateRoomDto, UpdateRoomDto, UpdateRoomParams } from "../Interface/Hotels";
+import { CreateRoomDto, SearchRoomsParams, UpdateRoomDto, UpdateRoomParams } from "../Interface/Hotels";
 import { RoomsProvider } from "../Providers/rooms.provider";
 import { MAX_IMAGES_PER_ROOM, assertRealImage, imageUploadOptions } from "../utils/upload.options";
 
@@ -16,6 +16,14 @@ import { MAX_IMAGES_PER_ROOM, assertRealImage, imageUploadOptions } from "../uti
 @Role("admin")
 export class AdminRoomsController {
   constructor(private rooms: RoomsProvider) {}
+
+  // Публичный эндпоинт отдаёт только номера в продаже, а админке нужны все —
+  // иначе отключённый номер невозможно найти и включить обратно.
+  @Get("/")
+  async getRooms(@Query() query: SearchRoomsParams, @Res() res: Response): Promise<void> {
+    const rooms = await this.rooms.getAllRooms(query, false);
+    res.status(HttpStatus.OK).send(rooms);
+  }
 
   @Post("/")
   @UseInterceptors(FilesInterceptor("images", MAX_IMAGES_PER_ROOM, imageUploadOptions(MAX_IMAGES_PER_ROOM)))

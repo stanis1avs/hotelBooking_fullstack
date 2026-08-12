@@ -1,114 +1,143 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { catchError, concatMap, map, of, tap } from 'rxjs';
 import { AuthActions } from '../actions/auth.actions';
-import { Api } from '../core/api';
 import { AuthToken } from '../core/auth-token';
+import { AuthSession } from '../core/auth-session';
 import { ApolloService } from '../graphql/apollo.service';
+import { errorMessage } from '../core/error-message';
 
 @Injectable()
 export class AuthEffects {
-  readonly login$;
-  readonly register$;
-  readonly logout$;
-  readonly logoutSuccess$;
-  readonly loadCurrentUser$;
-  readonly refreshToken$;
+  private readonly actions$ = inject(Actions);
+  private readonly authToken = inject(AuthToken);
+  private readonly session = inject(AuthSession);
+  private readonly apolloService = inject(ApolloService);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
-  constructor(
-    private actions$: Actions,
-    private api: Api,
-    private authToken: AuthToken,
-    private apolloService: ApolloService,
-    private router: Router,
-  ) {
-    this.login$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(AuthActions.login),
-        concatMap(({ payload }) =>
-          this.apolloService.login(payload.email, payload.password).pipe(
-            tap((res) => {
-              this.authToken.setAccessToken(res.access_token);
-              this.authToken.setRefreshToken(res.refresh_token);
-            }),
-            map((res) => AuthActions.loginSuccess({ payload: res })),
-            catchError((error) => of(AuthActions.loginFailure({ error })))
-          )
+  readonly login$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.login),
+      concatMap(({ payload }) =>
+        this.apolloService.login(payload.email, payload.password).pipe(
+          // В стор кладём только access-токен; refresh пришёл в httpOnly-cookie.
+          tap((res) => this.authToken.setAccessToken(res.access_token)),
+          map((res) => AuthActions.loginSuccess({ payload: res })),
+          catchError((error) => of(AuthActions.loginFailure({ error })))
         )
       )
-    );
+    )
+  );
 
-    this.register$ = createEffect(() =>
+  readonly loginSuccess$ = createEffect(
+    () =>
       this.actions$.pipe(
-        ofType(AuthActions.register),
-        concatMap(({ payload }) =>
-          this.apolloService.register(payload).pipe(
-            map((res) => AuthActions.registerSuccess({ payload: res })),
-            catchError((error) => of(AuthActions.registerFailure({ error })))
-          )
-        )
-      )
-    );
-
-    // Logout stays on Api — backend endpoint is a no-op, just clear tokens locally
-    this.logout$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(AuthActions.logout),
-        concatMap(() =>
-          this.api.authLogout().pipe(
-            tap(() => this.authToken.clear()),
-            map(() => AuthActions.logoutSuccess()),
-            catchError(() => {
-              this.authToken.clear();
-              return of(AuthActions.logoutSuccess());
-            })
-          )
-        )
-      )
-    );
-
-    this.logoutSuccess$ = createEffect(
-      () =>
-        this.actions$.pipe(
-          ofType(AuthActions.logoutSuccess),
-          tap(() => this.router.navigateByUrl('/login'))
-        ),
-      { dispatch: false }
-    );
-
-    this.loadCurrentUser$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(AuthActions.loadCurrentUser),
-        concatMap(() =>
-          this.apolloService.getCurrentUser().pipe(
-            map((payload) => AuthActions.loadCurrentUserSuccess({ payload })),
-            catchError((error) => of(AuthActions.loadCurrentUserFailure({ error })))
-          )
-        )
-      )
-    );
-
-    this.refreshToken$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(AuthActions.refreshToken),
-        concatMap(() => {
-          const refreshToken = this.authToken.getRefreshToken();
-          if (!refreshToken) {
-            return of(AuthActions.refreshTokenFailure({ error: 'No refresh token' }));
-          }
-
-          return this.apolloService.refreshToken(refreshToken).pipe(
-            tap((res) => {
-              this.authToken.setAccessToken(res.access_token);
-              this.authToken.setRefreshToken(res.refresh_token);
-            }),
-            map((res) => AuthActions.refreshTokenSuccess({ accessToken: res.access_token })),
-            catchError((error) => of(AuthActions.refreshTokenFailure({ error })))
-          );
+        ofType(AuthActions.loginSuccess),
+        tap(({ payload }) => {
+          const home =
+            payload.role === 'admin' ? '/admin/hotels' : payload.role === 'manager' ? '/manager/reservations' : '/hotels';
+          this.router.navigateByUrl(home);
         })
+      ),
+    { dispatch: false }
+  );
+
+  readonly loginFailure$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.loginFailure),
+        tap(({ error }) => this.snackBar.open(errorMessage(error, 'Не удалось войти'), 'Понятно', { duration: 5000 }))
+      ),
+    { dispatch: false }
+  );
+
+  readonly register$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.register),
+      concatMap(({ payload }) =>
+        this.apolloService.register(payload).pipe(
+          map((res) => AuthActions.registerSuccess({ payload: res })),
+          catchError((error) => of(AuthActions.registerFailure({ error })))
+        )
       )
-    );
-  }
+    )
+  );
+
+  /**
+   * Переход на страницу входа выполняется здесь, а не в компоненте.
+   * Раньше редирект шёл сразу после dispatch — пользователь попадал на /login
+   * даже при ошибке и не видел причины.
+   */
+  readonly registerSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.registerSuccess),
+        tap(() => {
+          this.router.navigateByUrl('/login');
+          this.snackBar.open('Аккаунт создан. Теперь войдите под своей почтой', 'OK', { duration: 5000 });
+        })
+      ),
+    { dispatch: false }
+  );
+
+  readonly registerFailure$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.registerFailure),
+        tap(({ error }) =>
+          this.snackBar.open(errorMessage(error, 'Не удалось создать аккаунт'), 'Понятно', { duration: 6000 })
+        )
+      ),
+    { dispatch: false }
+  );
+
+  readonly logout$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.logout),
+      concatMap(() =>
+        // Сервер отзывает refresh и чистит cookie; локально в любом случае забываем токен.
+        this.session.logout().pipe(
+          map(() => AuthActions.logoutSuccess()),
+          catchError(() => of(AuthActions.logoutSuccess()))
+        )
+      )
+    )
+  );
+
+  readonly logoutSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.logoutSuccess),
+        tap(() => this.router.navigateByUrl('/login'))
+      ),
+    { dispatch: false }
+  );
+
+  readonly sessionExpired$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.sessionExpired),
+        tap(() => {
+          this.authToken.clear();
+          this.snackBar.open('Сессия истекла — войдите снова', 'OK', { duration: 5000 });
+        })
+      ),
+    { dispatch: false }
+  );
+
+  readonly loadCurrentUser$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.loadCurrentUser),
+      concatMap(() =>
+        this.apolloService.getCurrentUser().pipe(
+          map((payload) => AuthActions.loadCurrentUserSuccess({ payload })),
+          catchError((error) => of(AuthActions.loadCurrentUserFailure({ error })))
+        )
+      )
+    )
+  );
 }

@@ -1,25 +1,50 @@
 services:
   mongodb:
-    image: mongo
-    restart: always
+    image: mongo:7
+    restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${DB_NAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${DB_NAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+    # Без тома данные терялись при каждом пересоздании контейнера
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./hotelBooking_nest_back
+    restart: unless-stopped
     ports:
-      - 7000:7000
+      - "${SERVER_PORT:-7000}:7000"
     environment:
-      - SERVER_PORT=${SERVER_PORT}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      NODE_ENV: production
+      SERVER_PORT: 7000
+      # Внутри контейнера 127.0.0.1 — это сам контейнер, а не база.
+      # Раньше адрес был захардкожен в app.module.ts и подключение не работало.
+      MONGO_URI: mongodb://${DB_NAME}:${DB_PASSWORD}@mongodb:27017/nest?authSource=admin
+      # Без этих переменных jwtService подписывал токены секретом undefined
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
 
   frontend:
-    build: ./hotelBooking_react_front
+    # Раньше здесь стоял путь ./hotelBooking_react_front — такой директории нет,
+    # сборка падала сразу. Актуальный фронтенд — Angular.
+    build: ./hotelBooking_angular_front
+    restart: unless-stopped
     ports:
-      - 3000:3000
-    environment:
-      - CLIENT_PORT=${CLIENT_PORT}
+      - "${CLIENT_PORT:-4200}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:

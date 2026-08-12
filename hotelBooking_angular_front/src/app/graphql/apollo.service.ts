@@ -22,10 +22,10 @@ import { MY_RESERVATIONS, ALL_RESERVATIONS } from './queries/reservations.querie
 import { ADMIN_USERS, MANAGER_USERS } from './queries/users.queries';
 import { MY_SUPPORT_REQUESTS, ALL_SUPPORT_REQUESTS, SUPPORT_MESSAGES } from './queries/support.queries';
 
-import { LOGIN_MUTATION, REGISTER_MUTATION, REFRESH_TOKEN_MUTATION } from './mutations/auth.mutations';
+import { LOGIN_MUTATION, LOGOUT_MUTATION, REGISTER_MUTATION } from './mutations/auth.mutations';
 import { CREATE_RESERVATION, DELETE_RESERVATION } from './mutations/reservations.mutations';
 import { ADMIN_CREATE_USER } from './mutations/users.mutations';
-import { CLOSE_SUPPORT_REQUEST } from './mutations/support.mutations';
+import { CLOSE_SUPPORT_REQUEST, CREATE_SUPPORT_REQUEST, SEND_SUPPORT_MESSAGE } from './mutations/support.mutations';
 
 @Injectable({ providedIn: 'root' })
 export class ApolloService {
@@ -35,16 +35,21 @@ export class ApolloService {
 
   login(email: string, password: string): Observable<LoginResponseDto> {
     return this.apollo
-      .mutate<{ login: { access_token: string; refresh_token: string; user: UserDto } }>({
+      .mutate<{ login: { access_token: string; user: UserDto } }>({
         mutation: LOGIN_MUTATION,
         variables: { input: { email, password } },
       })
       .pipe(
         map((res) => {
-          const { access_token, refresh_token, user } = res.data!.login;
-          return { ...user, access_token, refresh_token } as LoginResponseDto;
+          // refresh_token сервер кладёт в httpOnly-cookie и в теле не возвращает.
+          const { access_token, user } = res.data!.login;
+          return { ...user, access_token } as LoginResponseDto;
         }),
       );
+  }
+
+  logout(): Observable<void> {
+    return this.apollo.mutate<{ logout: boolean }>({ mutation: LOGOUT_MUTATION }).pipe(map(() => undefined));
   }
 
   register(body: { email: string; password: string; name: string; contactPhone: string }): Observable<UserDto> {
@@ -65,19 +70,8 @@ export class ApolloService {
       .pipe(map((res) => res.data!.me));
   }
 
-  refreshToken(refreshToken: string): Observable<{ access_token: string; refresh_token: string }> {
-    return this.apollo
-      .mutate<{ refreshToken: { access_token: string; refresh_token: string; user: UserDto } }>({
-        mutation: REFRESH_TOKEN_MUTATION,
-        variables: { refreshToken },
-      })
-      .pipe(
-        map((res) => ({
-          access_token: res.data!.refreshToken.access_token,
-          refresh_token: res.data!.refreshToken.refresh_token,
-        })),
-      );
-  }
+  // Обновление токена делает AuthSession через REST: оно вызывается из
+  // HTTP-интерцептора, и маршрутизация его через Apollo дала бы рекурсию.
 
   // ── Hotels ──────────────────────────────────────────────────────────────────
 
@@ -230,5 +224,23 @@ export class ApolloService {
         variables: { id: requestId },
       })
       .pipe(map(() => undefined));
+  }
+
+  createSupportRequest(text: string): Observable<SupportRequestDto> {
+    return this.apollo
+      .mutate<{ createSupportRequest: SupportRequestDto }>({
+        mutation: CREATE_SUPPORT_REQUEST,
+        variables: { text },
+      })
+      .pipe(map((res) => res.data!.createSupportRequest));
+  }
+
+  sendSupportMessage(requestId: string, text: string): Observable<SupportMessageDto> {
+    return this.apollo
+      .mutate<{ sendSupportMessage: SupportMessageDto }>({
+        mutation: SEND_SUPPORT_MESSAGE,
+        variables: { requestId, text },
+      })
+      .pipe(map((res) => res.data!.sendSupportMessage));
   }
 }

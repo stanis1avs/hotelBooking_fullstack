@@ -1,18 +1,44 @@
 <!doctype html>
-<html lang="en">
+<!-- lang=ru: интерфейс русскоязычный, от этого зависят скринридеры и переносы -->
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <title>HotelBookingAngularFront</title>
+    <title>Пристань — бронирование отелей</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Поиск и бронирование отелей по России: свободные номера на выбранные даты, управление бронями и поддержка." />
+    <meta name="theme-color" content="#1b6a61" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1817" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet" />
+    <!-- Material Symbols вместо легаси-набора Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+      rel="stylesheet" />
+    <style>
+      .mat-icon,
+      mat-icon {
+        font-family: 'Material Symbols Outlined';
+        font-weight: normal;
+        font-style: normal;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-block;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+      }
+    </style>
   </head>
   <body>
     <app-root></app-root>

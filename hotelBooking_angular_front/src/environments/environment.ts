@@ -1,7 +1,9 @@
+// Продакшен-конфигурация. Хост задаётся при сборке под конкретный стенд —
+// localhost здесь означал бы неработоспособную сборку и открытый HTTP.
 export const environment = {
   production: true,
   api: {
-    host: 'http://localhost:7000',
+    host: 'https://api.hotelbooking.example',
     endpoints: {
       getRooms: '/api/common/hotel-rooms',
       getHotels: '/api/common/hotels',
@@ -11,6 +13,7 @@ export const environment = {
       reservationsOut: '/api/client/reservations',
       authLogin: '/api/auth/login',
       authLogout: '/api/auth/logout',
+      authRefresh: '/api/auth/refresh',
       register: '/api/client/register',
       support: '/api/client/support-requests/',
     },

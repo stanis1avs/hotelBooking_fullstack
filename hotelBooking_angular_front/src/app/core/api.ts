@@ -27,14 +27,14 @@ export interface UserDto {
 
 export interface LoginResponseDto extends UserDto {
   access_token: string;
-  refresh_token: string;
 }
 
 export interface SupportRequestDto {
   id: Id;
   isActive: boolean;
   createdAt: string;
-  title?: { text: string };
+  /** Текст первого сообщения. Раньше сервер отдавал сюда весь документ сообщения. */
+  title?: string;
   user?: { name: string; contactPhone: string };
 }
 
@@ -103,85 +103,8 @@ export class Api {
 
   constructor(private readonly http: HttpClient) {}
 
-  authLogin(body: LoginRequestDto) {
-    return this.http.post<LoginResponseDto>(`${this.host}${this.e.authLogin}`, body);
-  }
-
-  authLogout() {
-    return this.http.post<void>(`${this.host}${this.e.authLogout}`, {});
-  }
-
-  getCurrentUser() {
-    return this.http.post<UserDto>(`${this.host}/api/auth/user`, {});
-  }
-
-  register(body: RegisterRequestDto) {
-    return this.http.post<UserDto>(`${this.host}${this.e.register}`, body);
-  }
-
-  getHotels(params: { offset: number; hotel?: string; dateArrival: string; dateDeparture: string }) {
-    return this.http.get<HotelDto[]>(`${this.host}${this.e.getHotels}`, { params });
-  }
-
-  getRooms(params: { hotel: Id; isEnabled?: boolean }) {
-    return this.http.get<RoomDto[]>(`${this.host}${this.e.getRooms}`, { params: params as any });
-  }
-
-  getRoomById(roomId: Id) {
-    return this.http.get<RoomDto>(`${this.host}${this.e.getRooms}${roomId}`);
-  }
-
-  editHotel(hotelId: Id, body: unknown) {
-    return this.http.put<unknown>(`${this.host}${this.e.editHotels}${hotelId}`, body);
-  }
-
-  editRoom(roomId: Id, body: unknown) {
-    return this.http.put<unknown>(`${this.host}${this.e.editRooms}${roomId}`, body);
-  }
-
-  getReservations() {
-    return this.http.get<ReservationDto[]>(`${this.host}${this.e.reservationsOut}`);
-  }
-
-  createReservation(body: CreateReservationRequestDto) {
-    return this.http.post<ReservationDto>(`${this.host}${this.e.reservationsIn}`, body);
-  }
-
-  deleteReservation(reservationId: Id) {
-    return this.http.delete<void>(`${this.host}${this.e.reservationsOut}/${reservationId}`);
-  }
-
-  getClientSupportRequests() {
-    return this.http.get<SupportRequestDto[]>(`${this.host}/api/client/support-requests`);
-  }
-
-  getManagerSupportRequests() {
-    return this.http.get<SupportRequestDto[]>(`${this.host}/api/manager/support-requests`);
-  }
-
-  getSupportMessages(requestId: Id) {
-    return this.http.get<SupportMessageDto[]>(`${this.host}/api/common/support-requests/${requestId}/messages`);
-  }
-
-  sendSupportMessage(requestId: Id, text: string) {
-    return this.http.post<SupportMessageDto>(`${this.host}/api/common/support-requests/${requestId}/messages`, { text });
-  }
-
-  closeSupportRequest(requestId: Id) {
-    return this.http.put<void>(`${this.host}/api/manager/support-requests`, { id: requestId, isActive: false });
-  }
-
-  createSupportRequest(text: string) {
-    return this.http.post<SupportRequestDto>(`${this.host}/api/client/support-requests`, { text });
-  }
-
-  getManagerReservations(params?: { offset?: number; limit?: number }) {
-    return this.http.get<ManagerReservationDto[]>(`${this.host}/api/manager/reservations`, { params: params as any });
-  }
-
-  deleteManagerReservation(reservationId: Id) {
-    return this.http.delete<void>(`${this.host}/api/manager/reservations/${reservationId}`);
-  }
+  // Чтение и мутации данных идут через ApolloService.
+  // Здесь остаётся только то, что GraphQL не покрывает: загрузка файлов и удаление.
 
   createHotel(body: FormData) {
     return this.http.post<HotelDto>(`${this.host}/api/admin/hotels`, body);
@@ -207,19 +130,24 @@ export class Api {
     return this.http.delete<void>(`${this.host}/api/admin/hotel-rooms/${roomId}`);
   }
 
-  getAllHotels() {
-    return this.http.get<HotelDto[]>(`${this.host}/api/common/hotels`, { params: { offset: 0, dateArrival: '2024-01-01', dateDeparture: '2024-12-31' } });
+  /**
+   * Полный список отелей для админки — без фильтра по датам.
+   * Раньше сюда подставлялись фиктивные даты 2024 года, из-за чего админ видел
+   * только первые десять отелей, да ещё и отфильтрованных по броням того года.
+   */
+  getAllHotels(params: { offset?: number; limit?: number; hotel?: string } = {}) {
+    return this.http.get<HotelDto[]>(`${this.host}${this.e.getHotels}`, {
+      params: {
+        offset: params.offset ?? 0,
+        limit: params.limit ?? 50,
+        ...(params.hotel ? { hotel: params.hotel } : {}),
+      },
+      observe: 'response',
+    });
   }
 
-  adminGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }) {
-    return this.http.get<UserDto[]>(`${this.host}/api/admin/users`, { params });
-  }
-
-  adminCreateUser(body: { email: string; password: string; name: string; contactPhone: string; role?: string }) {
-    return this.http.post<UserDto>(`${this.host}/api/admin/users`, body);
-  }
-
-  managerGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }) {
-    return this.http.get<UserDto[]>(`${this.host}/api/manager/users`, { params });
+  /** Номера для админки — включая отключённые. */
+  getAdminRooms(params: { hotel: Id }) {
+    return this.http.get<RoomDto[]>(`${this.host}/api/admin/hotel-rooms`, { params: { hotel: params.hotel } });
   }
 }

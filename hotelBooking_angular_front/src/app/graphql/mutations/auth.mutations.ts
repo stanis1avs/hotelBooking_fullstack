@@ -1,10 +1,11 @@
 import { gql } from 'apollo-angular';
 
+// refresh_token в ответе больше не запрашивается: сервер кладёт его
+// в httpOnly-cookie, недоступную JavaScript.
 export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       access_token
-      refresh_token
       user {
         id
         email
@@ -28,18 +29,8 @@ export const REGISTER_MUTATION = gql`
   }
 `;
 
-export const REFRESH_TOKEN_MUTATION = gql`
-  mutation RefreshToken($refreshToken: String!) {
-    refreshToken(refreshToken: $refreshToken) {
-      access_token
-      refresh_token
-      user {
-        id
-        email
-        name
-        contactPhone
-        role
-      }
-    }
+export const LOGOUT_MUTATION = gql`
+  mutation Logout {
+    logout
   }
 `;

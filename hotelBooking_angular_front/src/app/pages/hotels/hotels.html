@@ -1,47 +1,87 @@
-<div class="flex items-center justify-between mb-4">
-  <div>
-    <h1 class="text-2xl font-semibold">Hotels</h1>
-    <div class="text-sm opacity-70">Search by name and availability window</div>
-  </div>
-  <button mat-raised-button color="primary" (click)="reload()">Reload</button>
-</div>
+<div class="flex flex-col gap-5">
 
-<form (ngSubmit)="reload()">
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-  <mat-form-field appearance="outline" class="w-full">
-    <mat-label>Search</mat-label>
-    <input matInput [formControl]="termControl" placeholder="Hotel name" />
-  </mat-form-field>
+  <header>
+    <p class="page-eyebrow">Свободно на выбранные даты</p>
+    <h1 class="page-title">Поиск отелей</h1>
+    <p class="page-sub">Отели, где все номера заняты на эти даты, в выдачу не попадают</p>
+  </header>
 
-  <mat-form-field appearance="outline" class="w-full">
-    <mat-label>Date arrival</mat-label>
-    <input matInput type="date" [formControl]="dateArrivalControl" />
-  </mat-form-field>
+  <mat-card appearance="outlined">
+    <mat-card-content class="pt-4">
+      <form class="grid gap-3 items-start" style="grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) auto"
+            (ngSubmit)="search()">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Название или город</mat-label>
+          <input matInput [formControl]="termControl" autocomplete="off" placeholder="Например: Сочи" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
 
-  <mat-form-field appearance="outline" class="w-full">
-    <mat-label>Date departure</mat-label>
-    <input matInput type="date" [formControl]="dateDepartureControl" />
-  </mat-form-field>
-</div>
-</form>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Даты проживания</mat-label>
+          <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
+            <input matStartDate formControlName="start" placeholder="Заезд" />
+            <input matEndDate formControlName="end" placeholder="Выезд" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="picker" />
+          <mat-date-range-picker #picker />
+          @if (nightsLabel$ | async; as nights) {
+            <mat-hint>{{ nights }}</mat-hint>
+          }
+        </mat-form-field>
 
-<div *ngIf="loading$ | async" class="flex justify-center py-8">
-  <mat-spinner diameter="40" />
-</div>
+        <button mat-flat-button color="primary" type="submit" style="height: 56px">Найти</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="!(loading$ | async)">
-  <ng-container *ngFor="let hotel of (items$ | async)">
-    <mat-card class="h-full flex flex-col">
-      <div class="flex-shrink-0">
-        <img *ngIf="hotel.image" mat-card-image [src]="hotel.image" alt="hotel" class="!h-64 !w-full !object-cover" />
+  @if (loading$ | async) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (items$ | async; as hotels) {
+    @if (hotels.length) {
+      <p class="text-sm muted">{{ countLabel(hotels.length) }}</p>
+
+      <div class="grid gap-5" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+        @for (hotel of hotels; track hotel.id) {
+          <a class="hotel-card" [routerLink]="['/hotels', hotel.id]">
+            @if (hotel.image) {
+              <!-- Осмысленный alt вместо одинакового «hotel» на всех карточках -->
+              <img
+                [src]="hotel.image"
+                [alt]="'Фотография отеля ' + hotel.title"
+                loading="lazy"
+                class="hotel-photo" />
+            } @else {
+              <div class="hotel-photo grid place-items-center" style="background: var(--mat-sys-surface-container-high)">
+                <mat-icon class="faint">apartment</mat-icon>
+              </div>
+            }
+
+            <div class="p-4 flex-1 flex flex-col gap-2">
+              <h2 class="text-lg font-semibold leading-snug">{{ hotel.title }}</h2>
+              <p class="text-sm muted line-clamp-3">{{ hotel.description }}</p>
+            </div>
+
+            <div class="hotel-footer">
+              <span class="text-sm muted">Подробности и номера</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </div>
+          </a>
+        }
       </div>
-      <mat-card-content class="!p-4 !flex-grow">
-        <mat-card-title class="!text-lg !mb-2">{{ hotel.title }}</mat-card-title>
-        <div class="!text-sm !opacity-80 !line-clamp-3">{{ hotel.description }}</div>
-      </mat-card-content>
-      <mat-card-actions align="end" class="!flex-shrink-0 !px-4 !pb-4 !pt-2">
-        <a mat-button color="primary" [routerLink]="['/hotels', hotel.id]" class="!px-4 !py-2">Details</a>
-      </mat-card-actions>
-    </mat-card>
-  </ng-container>
+    } @else if ((loading$ | async) === false) {
+      <mat-card appearance="outlined">
+        <app-empty-state
+          icon="travel_explore"
+          title="Ничего не нашлось"
+          description="На выбранные даты свободных отелей нет. Попробуйте изменить период или очистить строку поиска.">
+          <button mat-stroked-button (click)="resetSearch()">
+            <mat-icon>refresh</mat-icon>
+            Сбросить поиск
+          </button>
+        </app-empty-state>
+      </mat-card>
+    }
+  }
 </div>

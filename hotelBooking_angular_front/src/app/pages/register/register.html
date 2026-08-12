@@ -1,44 +1,95 @@
-<div class="max-w-md mx-auto">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Register</mat-card-title>
-      <mat-card-subtitle>Create a new client account</mat-card-subtitle>
-    </mat-card-header>
+<div class="min-h-screen grid place-items-center p-6">
+  <div class="w-full" style="max-width: 460px">
+    <mat-card appearance="outlined">
+      <mat-card-header class="pt-6 px-6">
+        <mat-card-title class="page-title">Регистрация</mat-card-title>
+        <mat-card-subtitle class="page-sub">Аккаунт создаётся с ролью «Клиент»</mat-card-subtitle>
+      </mat-card-header>
 
-    <mat-card-content>
-      <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
-        <mat-form-field appearance="outline">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" />
-        </mat-form-field>
+      <mat-card-content class="px-6 pt-5">
+        <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
+          <mat-form-field appearance="outline">
+            <mat-label>Имя и фамилия</mat-label>
+            <input matInput formControlName="name" autocomplete="name" />
+            @if (form.controls.name.hasError('required')) {
+              <mat-error>Укажите, как к вам обращаться</mat-error>
+            } @else if (form.controls.name.hasError('minlength')) {
+              <mat-error>Не короче двух символов</mat-error>
+            }
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" formControlName="password" />
-        </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Электронная почта</mat-label>
+            <input matInput type="email" formControlName="email" autocomplete="email" />
+            @if (form.controls.email.hasError('required')) {
+              <mat-error>Введите адрес электронной почты</mat-error>
+            } @else if (form.controls.email.hasError('email')) {
+              <mat-error>Проверьте формат адреса</mat-error>
+            }
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" />
-        </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Телефон</mat-label>
+            <input matInput formControlName="contactPhone" autocomplete="tel" placeholder="+7 900 000-00-00" />
+            @if (form.controls.contactPhone.hasError('required')) {
+              <mat-error>Укажите телефон для связи</mat-error>
+            } @else if (form.controls.contactPhone.hasError('pattern')) {
+              <mat-error>Только цифры, пробелы и знаки + ( ) -</mat-error>
+            }
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Contact phone</mat-label>
-          <input matInput formControlName="contactPhone" />
-        </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Пароль</mat-label>
+            <input
+              matInput
+              [type]="hidePassword() ? 'password' : 'text'"
+              formControlName="password"
+              autocomplete="new-password" />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="togglePassword()"
+              [attr.aria-label]="hidePassword() ? 'Показать пароль' : 'Скрыть пароль'"
+              [attr.aria-pressed]="!hidePassword()">
+              <mat-icon>{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            @if (form.controls.password.hasError('required')) {
+              <mat-error>Придумайте пароль</mat-error>
+            } @else if (form.controls.password.hasError('minlength')) {
+              <mat-error>Пароль не короче 8 символов</mat-error>
+            } @else {
+              <mat-hint>Минимум 8 символов</mat-hint>
+            }
+          </mat-form-field>
 
-        <button mat-raised-button color="primary" type="submit" [disabled]="(loading$ | async) === true">
-          <span *ngIf="(loading$ | async) !== true">Create account</span>
-          <span *ngIf="(loading$ | async) === true" class="inline-flex items-center gap-2">
-            <mat-spinner diameter="18" />
-            Loading
-          </span>
-        </button>
-      </form>
-    </mat-card-content>
+          <mat-form-field appearance="outline">
+            <mat-label>Повторите пароль</mat-label>
+            <input matInput type="password" formControlName="confirmPassword" autocomplete="new-password" />
+            @if (form.controls.confirmPassword.hasError('required')) {
+              <mat-error>Повторите пароль</mat-error>
+            } @else if (form.hasError('mismatch') && form.controls.confirmPassword.touched) {
+              <mat-error>Пароли не совпадают</mat-error>
+            }
+          </mat-form-field>
 
-    <mat-card-actions align="end">
-      <a mat-button routerLink="/login">Back to login</a>
-    </mat-card-actions>
-  </mat-card>
+          <button mat-flat-button color="primary" type="submit" [disabled]="(loading$ | async) === true">
+            @if ((loading$ | async) === true) {
+              <span class="inline-flex items-center gap-2">
+                <mat-spinner diameter="18" />
+                Создаём аккаунт
+              </span>
+            } @else {
+              <span>Создать аккаунт</span>
+            }
+          </button>
+        </form>
+      </mat-card-content>
+
+      <mat-card-actions class="justify-center pb-4">
+        <span class="text-sm muted">Уже зарегистрированы?</span>
+        <a mat-button color="primary" routerLink="/login">Войти</a>
+      </mat-card-actions>
+    </mat-card>
+  </div>
 </div>

@@ -20,8 +20,7 @@ export const AuthActions = createActionGroup({
     'Load Current User Success': props<{ payload: UserDto }>(),
     'Load Current User Failure': props<{ error: unknown }>(),
 
-    'Refresh Token': emptyProps(),
-    'Refresh Token Success': props<{ accessToken: string }>(),
-    'Refresh Token Failure': props<{ error: unknown }>(),
+    // Диспатчится интерцептором, когда обновить токен не удалось.
+    'Session Expired': emptyProps(),
   },
 });

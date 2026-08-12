@@ -1,43 +1,94 @@
-<div class="flex items-center justify-between mb-4">
-  <div>
-    <h1 class="text-2xl font-semibold">Hotel details</h1>
-    <div class="text-sm opacity-70">Rooms</div>
-  </div>
-  <a mat-button routerLink="/hotels">Back</a>
-</div>
+<div class="flex flex-col gap-5">
 
-<form class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" [formGroup]="form">
-  <mat-form-field appearance="outline">
-    <mat-label>Date start</mat-label>
-    <input matInput type="date" formControlName="dateStart" />
-  </mat-form-field>
+  <a mat-button routerLink="/hotels" class="self-start">
+    <mat-icon>arrow_back</mat-icon>
+    Все отели
+  </a>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Date end</mat-label>
-    <input matInput type="date" formControlName="dateEnd" />
-  </mat-form-field>
-</form>
-
-<div *ngIf="loading$ | async" class="flex justify-center py-8">
-  <mat-spinner diameter="40" />
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="!(loading$ | async)">
-  <ng-container *ngFor="let room of (items$ | async); let i = index">
-    <mat-card class="mb-4">
-      <img *ngIf="room.images && room.images.length > 0" mat-card-image [src]="room.images[0]" alt="room" class="h-48 object-cover" />
-      <mat-card-title class="p-4">{{ i === 0 ? 'Стандарт' : 'Люкс' }}</mat-card-title>
-      <mat-card-content class="p-4">
-        <div class="text-sm opacity-80">{{ room.description }}</div>
-      </mat-card-content>
-      <mat-card-actions align="end" class="px-4 pb-4 pt-2">
-        @if ((user$ | async)?.role === 'client') {
-          <button mat-raised-button color="primary" (click)="book(room.id)">Забронировать</button>
+  @if (items$ | async; as rooms) {
+    @if (rooms.length && rooms[0].hotel; as _) {
+      <mat-card appearance="outlined" class="overflow-hidden">
+        @if (rooms[0].hotel.image) {
+          <img
+            [src]="rooms[0].hotel.image"
+            [alt]="'Фотография отеля ' + rooms[0].hotel.title"
+            class="hero-photo" />
         }
-        @if ((user$ | async)?.role !== 'client') {
-          <span class="text-sm opacity-50">Бронирование доступно только для гостей</span>
+        <mat-card-content class="pt-5">
+          <h1 class="page-title">{{ rooms[0].hotel.title }}</h1>
+          @if (rooms[0].hotel.description) {
+            <p class="page-sub mt-2" style="max-width: 66ch">{{ rooms[0].hotel.description }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <mat-card appearance="outlined">
+    <mat-card-content class="pt-4 flex flex-col gap-3">
+      <h2 class="text-base font-semibold">Когда планируете приехать?</h2>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" style="max-width: 420px">
+        <mat-label>Даты проживания</mat-label>
+        <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
+          <input matStartDate formControlName="start" placeholder="Заезд" />
+          <input matEndDate formControlName="end" placeholder="Выезд" />
+        </mat-date-range-input>
+        <mat-datepicker-toggle matIconSuffix [for]="picker" />
+        <mat-date-range-picker #picker />
+        @if (nights$ | async; as nights) {
+          <mat-hint>{{ nights }}</mat-hint>
         }
-      </mat-card-actions>
-    </mat-card>
-  </ng-container>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <h2 class="text-lg font-semibold">Номера</h2>
+
+  @if (loading$ | async) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (items$ | async; as rooms) {
+    @if (rooms.length) {
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))">
+        @for (room of rooms; track room.id) {
+          <mat-card appearance="outlined" class="flex flex-col">
+            @if (room.images.length) {
+              <img
+                [src]="room.images[0]"
+                [alt]="'Фотография номера в отеле ' + room.hotel.title"
+                loading="lazy"
+                class="room-photo" />
+            }
+            <mat-card-content class="pt-4 flex-1 flex flex-col gap-3">
+              <!-- Название берётся из данных. Раньше первый номер всегда назывался
+                   «Стандарт», а все остальные — «Люкс», независимо от содержимого -->
+              <p class="text-sm">{{ room.description || 'Описание появится позже' }}</p>
+              @if (room.isEnabled === false) {
+                <span class="status-chip" data-status="closed">Временно недоступен</span>
+              }
+            </mat-card-content>
+            <mat-card-actions align="end">
+              @if (isClient$ | async) {
+                <button mat-flat-button color="primary" (click)="book(room.id)" [disabled]="room.isEnabled === false">
+                  Забронировать
+                </button>
+              } @else {
+                <span class="text-sm muted pr-2">Бронирование доступно гостям</span>
+              }
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    } @else if ((loading$ | async) === false) {
+      <mat-card appearance="outlined">
+        <app-empty-state
+          icon="meeting_room"
+          title="Свободных номеров нет"
+          description="На выбранные даты все номера этого отеля заняты. Попробуйте другой период.">
+          <a mat-stroked-button routerLink="/hotels">Вернуться к поиску</a>
+        </app-empty-state>
+      </mat-card>
+    }
+  }
 </div>

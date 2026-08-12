@@ -11,6 +11,7 @@ export const environment = {
       reservationsOut: '/api/client/reservations',
       authLogin: '/api/auth/login',
       authLogout: '/api/auth/logout',
+      authRefresh: '/api/auth/refresh',
       register: '/api/client/register',
       support: '/api/client/support-requests/',
     },

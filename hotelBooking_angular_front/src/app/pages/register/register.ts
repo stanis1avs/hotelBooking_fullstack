@@ -1,61 +1,74 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { AuthActions } from '../../actions/auth.actions';
-import { selectAuthLoading } from '../../selectors/auth.selectors';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
+import { AuthActions } from '../../actions/auth.actions';
+import { selectAuthLoading } from '../../selectors/auth.selectors';
+
+/** Пароли должны совпадать — раньше подтверждения пароля не было вовсе. */
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const password = group.get('password')?.value;
+  const confirm = group.get('confirmPassword')?.value;
+  return !confirm || password === confirm ? null : { mismatch: true };
+}
 
 @Component({
   selector: 'app-register',
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
+    AsyncPipe, ReactiveFormsModule, RouterLink,
+    MatCardModule, MatFormFieldModule, MatInputModule,
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
   ],
-  templateUrl: './register.html'
+  templateUrl: './register.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Register {
-  readonly loading$;
+  private readonly store = inject(Store);
 
-  readonly form = new FormGroup({
-    email: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
-    password: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
-    name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
-    contactPhone: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
-  });
+  readonly loading$ = this.store.select(selectAuthLoading);
+  readonly hidePassword = signal(true);
 
-  constructor(private readonly store: Store, private readonly router: Router) {
-    this.loading$ = this.store.select(selectAuthLoading);
+  readonly form = new FormGroup(
+    {
+      email: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+      password: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.minLength(8)],
+      }),
+      confirmPassword: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+      name: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.minLength(2)],
+      }),
+      contactPhone: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.pattern(/^[\d\s()+-]{5,20}$/)],
+      }),
+    },
+    { validators: passwordsMatch }
+  );
+
+  togglePassword(): void {
+    this.hidePassword.update((v) => !v);
   }
 
-  submit() {
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-
-    this.store.dispatch(
-      AuthActions.register({
-        payload: {
-          email: this.form.controls.email.value,
-          password: this.form.controls.password.value,
-          name: this.form.controls.name.value,
-          contactPhone: this.form.controls.contactPhone.value,
-        },
-      })
-    );
-
-    this.router.navigateByUrl('/login');
+    // Переход на /login выполняет эффект по ответу сервера.
+    // Раньше редирект шёл сразу после dispatch, поэтому ошибку регистрации
+    // (например, занятый адрес) пользователь не видел.
+    const { confirmPassword, ...payload } = this.form.getRawValue();
+    this.store.dispatch(AuthActions.register({ payload }));
   }
 }

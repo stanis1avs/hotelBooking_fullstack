@@ -1,84 +1,88 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AsyncPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { map, distinctUntilChanged } from 'rxjs';
+import { distinctUntilChanged, map } from 'rxjs';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
 import { RoomsActions } from '../../actions/rooms.actions';
 import { selectRoomsItems, selectRoomsLoading } from '../../selectors/rooms.selectors';
 import { selectAuthUser } from '../../selectors/auth.selectors';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ReservationsActions } from '../../actions/reservations.actions';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { EmptyState } from '../../shared/empty-state';
+import { addDays, nightWord, nightsBetween, toLocalIsoDate } from '../../core/date.utils';
 
 @Component({
   selector: 'app-hotel-details',
   imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatFormFieldModule,
-    MatInputModule,
+    AsyncPipe, RouterLink, ReactiveFormsModule,
+    MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
+    MatProgressBarModule, MatFormFieldModule, MatDatepickerModule, EmptyState,
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './hotel-details.html',
+  styleUrl: './hotel-details.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HotelDetails {
-  readonly hotelId$;
-  readonly items$;
-  readonly loading$;
-  readonly user$;
+export class HotelDetails implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly store = inject(Store);
+  private readonly snackBar = inject(MatSnackBar);
 
-  readonly form = new FormGroup({
-    dateStart: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
-    dateEnd: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+  readonly items$ = this.store.select(selectRoomsItems);
+  readonly loading$ = this.store.select(selectRoomsLoading);
+  readonly user$ = this.store.select(selectAuthUser);
+  readonly isClient$ = this.user$.pipe(map((u) => u?.role === 'client'));
+
+  readonly minDate = new Date();
+
+  readonly range = new FormGroup({
+    start: new FormControl<Date | null>(new Date(), Validators.required),
+    end: new FormControl<Date | null>(new Date(Date.now() + 2 * 86_400_000), Validators.required),
   });
 
-  constructor(private readonly route: ActivatedRoute, private readonly store: Store) {
-    this.hotelId$ = this.route.paramMap.pipe(
-      map((p) => p.get('hotelId')),
-      distinctUntilChanged(),
-    );
+  readonly nights$ = this.range.valueChanges.pipe(
+    map(({ start, end }) => {
+      if (!start || !end) return null;
+      const n = nightsBetween(toLocalIsoDate(start), toLocalIsoDate(end));
+      return `${n} ${nightWord(n)}`;
+    })
+  );
 
-    this.items$ = this.store.select(selectRoomsItems);
-    this.loading$ = this.store.select(selectRoomsLoading);
-    this.user$ = this.store.select(selectAuthUser);
-
-    const today = new Date();
-    const end = new Date();
-    end.setDate(today.getDate() + 7);
-    this.form.patchValue({
-      dateStart: today.toISOString().slice(0, 10),
-      dateEnd: end.toISOString().slice(0, 10),
-    });
-
-    this.hotelId$.subscribe((hotelId) => {
-      if (!hotelId) {
-        return;
-      }
-      this.store.dispatch(RoomsActions.loadRooms({ hotelId }));
-    });
+  ngOnInit(): void {
+    this.route.paramMap
+      .pipe(
+        map((p) => p.get('hotelId')),
+        distinctUntilChanged(),
+        takeUntilDestroyed()
+      )
+      .subscribe((hotelId) => {
+        if (hotelId) this.store.dispatch(RoomsActions.loadRooms({ hotelId }));
+      });
   }
 
-  book(roomId: string) {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+  book(roomId: string): void {
+    if (this.range.invalid) {
+      this.range.markAllAsTouched();
+      this.snackBar.open('Выберите даты заезда и выезда', 'OK', { duration: 4000 });
       return;
     }
 
-    this.store.dispatch(
-      ReservationsActions.createReservation({
-        payload: {
-          roomId,
-          dateStart: this.form.controls.dateStart.value,
-          dateEnd: this.form.controls.dateEnd.value,
-        },
-      })
-    );
+    const start = this.range.controls.start.value!;
+    const end = this.range.controls.end.value!;
+    const dateStart = toLocalIsoDate(start);
+    const dateEnd = toLocalIsoDate(end) === dateStart ? addDays(1, start) : toLocalIsoDate(end);
+
+    this.store.dispatch(ReservationsActions.createReservation({ payload: { roomId, dateStart, dateEnd } }));
   }
 }

@@ -1,68 +1,61 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { catchError, concatMap, map, of, switchMap, take } from 'rxjs';
 import { SupportActions } from '../actions/support.actions';
-import { Api } from '../core/api';
 import { ApolloService } from '../graphql/apollo.service';
 import { selectAuthUser } from '../selectors/auth.selectors';
 
 @Injectable()
 export class SupportEffects {
-  readonly loadSupportRequests$;
-  readonly closeSupportRequest$;
-  readonly createSupportRequest$;
+  private readonly actions$ = inject(Actions);
+  private readonly apolloService = inject(ApolloService);
+  private readonly store = inject(Store);
 
-  constructor(
-    private actions$: Actions,
-    private api: Api,
-    private apolloService: ApolloService,
-    private store: Store,
-  ) {
-    this.loadSupportRequests$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(SupportActions.loadSupportRequests),
-        switchMap(() =>
-          this.store.select(selectAuthUser).pipe(
-            take(1),
-            concatMap((user) => {
-              const call$ =
-                user?.role === 'manager'
-                  ? this.apolloService.getManagerSupportRequests()
-                  : this.apolloService.getClientSupportRequests();
-              return call$.pipe(
-                map((items) => SupportActions.loadSupportRequestsSuccess({ items })),
-                catchError((error) => of(SupportActions.loadSupportRequestsFailure({ error })))
-              );
-            })
-          )
+  readonly loadSupportRequests$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(SupportActions.loadSupportRequests),
+      switchMap(() =>
+        this.store.select(selectAuthUser).pipe(
+          take(1),
+          concatMap((user) => {
+            const call$ =
+              user?.role === 'manager'
+                ? this.apolloService.getManagerSupportRequests()
+                : this.apolloService.getClientSupportRequests();
+            return call$.pipe(
+              map((items) => SupportActions.loadSupportRequestsSuccess({ items })),
+              catchError((error) => of(SupportActions.loadSupportRequestsFailure({ error })))
+            );
+          })
         )
       )
-    );
+    )
+  );
 
-    this.closeSupportRequest$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(SupportActions.closeSupportRequest),
-        concatMap(({ id }) =>
-          this.apolloService.closeSupportRequest(id).pipe(
-            map(() => SupportActions.closeSupportRequestSuccess({ id })),
-            catchError((error) => of(SupportActions.closeSupportRequestFailure({ error })))
-          )
+  readonly closeSupportRequest$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(SupportActions.closeSupportRequest),
+      concatMap(({ id }) =>
+        this.apolloService.closeSupportRequest(id).pipe(
+          map(() => SupportActions.closeSupportRequestSuccess({ id })),
+          catchError((error) => of(SupportActions.closeSupportRequestFailure({ error })))
         )
       )
-    );
+    )
+  );
 
-    // createSupportRequest goes through WebSocket on the backend — keep on REST Api
-    this.createSupportRequest$ = createEffect(() =>
-      this.actions$.pipe(
-        ofType(SupportActions.createSupportRequest),
-        concatMap(({ text }) =>
-          this.api.createSupportRequest(text).pipe(
-            map((item) => SupportActions.createSupportRequestSuccess({ item })),
-            catchError((error) => of(SupportActions.createSupportRequestFailure({ error })))
-          )
+  // Создание обращения переведено на GraphQL: REST-эндпоинта, в который
+  // этот эффект ходил раньше, на сервере не существовало.
+  readonly createSupportRequest$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(SupportActions.createSupportRequest),
+      concatMap(({ text }) =>
+        this.apolloService.createSupportRequest(text).pipe(
+          map((item) => SupportActions.createSupportRequestSuccess({ item })),
+          catchError((error) => of(SupportActions.createSupportRequestFailure({ error })))
         )
       )
-    );
-  }
+    )
+  );
 }

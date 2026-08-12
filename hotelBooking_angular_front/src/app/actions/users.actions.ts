@@ -7,6 +7,7 @@ export interface UserSearchParams {
   email?: string;
   name?: string;
   contactPhone?: string;
+  role?: string;
 }
 
 export interface CreateUserRequest {
@@ -34,5 +35,10 @@ export const UsersActions = createActionGroup({
 
     'Set Search Params': props<{ payload: Partial<UserSearchParams> }>(),
     'Clear Search Params': emptyProps(),
+
+    // Пагинация выражена намерением; смещение вычисляет редьюсер.
+    'Next Page': emptyProps(),
+    'Prev Page': emptyProps(),
+    'Set Page Size': props<{ limit: number }>(),
   },
 });

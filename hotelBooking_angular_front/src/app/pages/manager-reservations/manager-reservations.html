@@ -1,55 +1,100 @@
-<div class="flex items-center justify-between mb-4">
-  <div>
-    <h1 class="text-2xl font-semibold">Все бронирования</h1>
-    <div class="text-sm opacity-70">Управление бронями гостей</div>
-  </div>
-  <button mat-raised-button color="primary" (click)="loadReservations()">Обновить</button>
-</div>
+<div class="flex flex-col gap-5">
 
-@if (loading) {
-  <div class="flex justify-center py-8"><mat-spinner diameter="40" /></div>
-}
-
-@if (!loading) {
-  @if (reservations.length === 0) {
-    <div class="text-center opacity-60 py-8">Бронирований нет</div>
-  }
-  @if (reservations.length > 0) {
-    <div class="overflow-auto">
-      <table mat-table [dataSource]="reservations" class="w-full">
-        <ng-container matColumnDef="hotel">
-          <th mat-header-cell *matHeaderCellDef>Отель</th>
-          <td mat-cell *matCellDef="let r">{{ r.hotel.title }}</td>
-        </ng-container>
-        <ng-container matColumnDef="room">
-          <th mat-header-cell *matHeaderCellDef>Номер</th>
-          <td mat-cell *matCellDef="let r">{{ r.room.description }}</td>
-        </ng-container>
-        <ng-container matColumnDef="user">
-          <th mat-header-cell *matHeaderCellDef>Гость</th>
-          <td mat-cell *matCellDef="let r">{{ r.user?.name ?? '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef>Телефон</th>
-          <td mat-cell *matCellDef="let r">{{ r.user?.contactPhone ?? '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="dateStart">
-          <th mat-header-cell *matHeaderCellDef>Заезд</th>
-          <td mat-cell *matCellDef="let r">{{ r.dateStart | date:'dd.MM.yyyy' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="dateEnd">
-          <th mat-header-cell *matHeaderCellDef>Выезд</th>
-          <td mat-cell *matCellDef="let r">{{ r.dateEnd | date:'dd.MM.yyyy' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let r">
-            <button mat-button color="warn" (click)="delete(r.id)">Удалить</button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
+  <header class="flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="page-eyebrow">Рабочая очередь</p>
+      <h1 class="page-title">Все бронирования</h1>
+      <p class="page-sub">Управление бронями гостей по всем отелям</p>
     </div>
+    <button mat-icon-button (click)="loadReservations()" matTooltip="Обновить" aria-label="Обновить список">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </header>
+
+  @if (loading) {
+    <mat-progress-bar mode="indeterminate" />
   }
-}
+
+  @if (reservations.length) {
+    <mat-card appearance="outlined" class="overflow-hidden">
+      <div class="overflow-x-auto">
+        <table mat-table [dataSource]="reservations" matSort (matSortChange)="sortData($event)" class="w-full">
+
+          <ng-container matColumnDef="hotel">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Отель</th>
+            <td mat-cell *matCellDef="let r"><strong>{{ r.hotel.title }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="room">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Номер</th>
+            <td mat-cell *matCellDef="let r" class="muted">{{ r.room.description }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="guest">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Гость</th>
+            <td mat-cell *matCellDef="let r">
+              <span class="flex items-center gap-2">
+                <span class="avatar" style="width: 28px; height: 28px; font-size: 11px">
+                  {{ (r.user?.name ?? '?').charAt(0) }}
+                </span>
+                {{ r.user?.name ?? '—' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="phone">
+            <th mat-header-cell *matHeaderCellDef>Телефон</th>
+            <td mat-cell *matCellDef="let r" class="mono muted">{{ r.user?.contactPhone || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateStart">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Заезд</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.dateStart | date: 'dd.MM.yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateEnd">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Выезд</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.dateEnd | date: 'dd.MM.yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nights">
+            <th mat-header-cell *matHeaderCellDef>Срок</th>
+            <td mat-cell *matCellDef="let r" class="muted">{{ nights(r.dateStart, r.dateEnd) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef aria-label="Действия"></th>
+            <td mat-cell *matCellDef="let r" class="text-right whitespace-nowrap">
+              <button mat-icon-button color="warn" (click)="delete(r)"
+                      matTooltip="Отменить бронь" aria-label="Отменить бронирование">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+
+      <div class="pager">
+        <span class="text-sm muted">Показано {{ reservations.length }}</span>
+        <span class="flex gap-1">
+          <button mat-icon-button [disabled]="!hasPrev" (click)="prevPage()" aria-label="Предыдущая страница">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <button mat-icon-button [disabled]="!hasNext" (click)="nextPage()" aria-label="Следующая страница">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </span>
+      </div>
+    </mat-card>
+  } @else if (!loading) {
+    <mat-card appearance="outlined">
+      <app-empty-state
+        icon="event_busy"
+        title="Бронирований нет"
+        description="Как только гости начнут бронировать номера, заявки появятся здесь." />
+    </mat-card>
+  }
+</div>

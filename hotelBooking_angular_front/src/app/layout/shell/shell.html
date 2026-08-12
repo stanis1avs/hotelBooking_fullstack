@@ -1,73 +1,74 @@
 <mat-sidenav-container class="h-screen">
-  <mat-sidenav mode="side" opened class="w-72">
-    <div class="px-4 py-4">
-      <div class="text-lg font-semibold">Hotel Booking</div>
-      @if (user$ | async; as user) {
-        <div class="text-sm opacity-60 mt-1">{{ user.name }}</div>
-      }
+  <mat-sidenav
+    #drawer
+    class="w-72"
+    [mode]="(isHandset$ | async) ? 'over' : 'side'"
+    [opened]="(isHandset$ | async) === false">
+    <div class="px-4 py-4 flex items-center gap-3">
+      <span class="brand-mark" aria-hidden="true">
+        <mat-icon>apartment</mat-icon>
+      </span>
+      <span>
+        <span class="block text-base font-semibold leading-tight">Пристань</span>
+        <span class="block text-xs uppercase tracking-wider faint">бронирование</span>
+      </span>
     </div>
 
     <mat-nav-list>
-      <a mat-list-item routerLink="/hotels" routerLinkActive="active">
+      <a mat-list-item routerLink="/hotels" routerLinkActive="active-link">
         <mat-icon matListItemIcon>hotel</mat-icon>
         <span matListItemTitle>Отели</span>
       </a>
 
       @if ((user$ | async)?.role === 'client') {
-        <a mat-list-item routerLink="/reservations" routerLinkActive="active">
+        <a mat-list-item routerLink="/reservations" routerLinkActive="active-link">
           <mat-icon matListItemIcon>event</mat-icon>
           <span matListItemTitle>Мои брони</span>
         </a>
-        <a mat-list-item routerLink="/support" routerLinkActive="active">
+        <a mat-list-item routerLink="/support" routerLinkActive="active-link">
           <mat-icon matListItemIcon>support_agent</mat-icon>
           <span matListItemTitle>Поддержка</span>
         </a>
       }
 
       @if ((user$ | async)?.role === 'manager') {
-        <a mat-list-item routerLink="/manager/reservations" routerLinkActive="active">
+        <a mat-list-item routerLink="/manager/reservations" routerLinkActive="active-link">
           <mat-icon matListItemIcon>table_view</mat-icon>
           <span matListItemTitle>Все брони</span>
         </a>
-        <a mat-list-item routerLink="/manager/users" routerLinkActive="active">
+        <a mat-list-item routerLink="/manager/users" routerLinkActive="active-link">
           <mat-icon matListItemIcon>people</mat-icon>
           <span matListItemTitle>Пользователи</span>
         </a>
-        <a mat-list-item routerLink="/support" routerLinkActive="active">
+        <a mat-list-item routerLink="/support" routerLinkActive="active-link">
           <mat-icon matListItemIcon>support_agent</mat-icon>
           <span matListItemTitle>Поддержка</span>
         </a>
       }
 
       @if ((user$ | async)?.role === 'admin') {
-        <div class="mt-4 px-4 text-xs font-semibold opacity-70">Администрирование</div>
-        <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active">
+        <div class="nav-caption">Администрирование</div>
+        <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active-link">
           <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
           <span matListItemTitle>Управление отелями</span>
         </a>
-        <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active">
+        <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active-link">
           <mat-icon matListItemIcon>meeting_room</mat-icon>
-          <span matListItemTitle>Управление комнатами</span>
+          <span matListItemTitle>Номера</span>
         </a>
-        <a mat-list-item routerLink="/admin/users" routerLinkActive="active">
+        <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link">
           <mat-icon matListItemIcon>people</mat-icon>
-          <span matListItemTitle>Управление пользователями</span>
+          <span matListItemTitle>Пользователи</span>
         </a>
       }
 
-      <mat-divider class="my-2" />
-
-      @if (user$ | async) {
-        <a mat-list-item (click)="logout()" style="cursor:pointer">
-          <mat-icon matListItemIcon>logout</mat-icon>
-          <span matListItemTitle>Выйти</span>
-        </a>
-      } @else {
-        <a mat-list-item routerLink="/login" routerLinkActive="active">
+      @if ((user$ | async) === null) {
+        <mat-divider class="my-2" />
+        <a mat-list-item routerLink="/login" routerLinkActive="active-link">
           <mat-icon matListItemIcon>login</mat-icon>
           <span matListItemTitle>Войти</span>
         </a>
-        <a mat-list-item routerLink="/register" routerLinkActive="active">
+        <a mat-list-item routerLink="/register" routerLinkActive="active-link">
           <mat-icon matListItemIcon>person_add</mat-icon>
           <span matListItemTitle>Регистрация</span>
         </a>
@@ -76,18 +77,42 @@
   </mat-sidenav>
 
   <mat-sidenav-content>
-    <mat-toolbar color="primary" class="sticky top-0 z-10">
+    <mat-toolbar class="sticky top-0 z-10 toolbar">
+      @if (isHandset$ | async) {
+        <button mat-icon-button (click)="drawer.toggle()" aria-label="Открыть меню">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+
       <span class="flex-1"></span>
+
       @if (user$ | async; as user) {
-        <span class="text-sm mr-4 opacity-80">{{ user.email }}</span>
-        <button mat-button (click)="logout()">Выйти</button>
+        <!-- Выход перенесён в меню пользователя: раньше кнопка дублировалась
+             в тулбаре и в боковой панели -->
+        <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
+          <span class="avatar">{{ initials(user.name) }}</span>
+          <span class="hidden sm:inline ml-2">{{ user.name }}</span>
+          <mat-icon>expand_more</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <div class="px-4 py-3">
+            <div class="text-sm font-semibold">{{ user.name }}</div>
+            <div class="text-xs muted">{{ user.email }}</div>
+            <div class="text-xs faint mt-1">{{ roleLabel[user.role ?? 'client'] }}</div>
+          </div>
+          <mat-divider />
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Выйти</span>
+          </button>
+        </mat-menu>
       } @else {
         <a mat-button routerLink="/login">Войти</a>
-        <a mat-button routerLink="/register">Регистрация</a>
+        <a mat-flat-button color="primary" routerLink="/register">Регистрация</a>
       }
     </mat-toolbar>
 
-    <div class="max-w-6xl mx-auto p-4">
+    <div class="mx-auto p-4 md:p-6" style="max-width: 1240px">
       <router-outlet />
     </div>
   </mat-sidenav-content>

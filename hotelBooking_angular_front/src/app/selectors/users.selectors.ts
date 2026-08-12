@@ -8,11 +8,10 @@ export const selectUsersLoading = createSelector(selectUsersState, (state) => st
 export const selectUsersError = createSelector(selectUsersState, (state) => state.error);
 export const selectUsersSearchParams = createSelector(selectUsersState, (state) => state.searchParams);
 
-export const selectUsersOffset = createSelector(selectUsersSearchParams, (params) => params.offset);
-export const selectUsersLimit = createSelector(selectUsersSearchParams, (params) => params.limit);
-export const selectUsersSearchEmail = createSelector(selectUsersSearchParams, (params) => params.email);
-export const selectUsersSearchName = createSelector(selectUsersSearchParams, (params) => params.name);
-export const selectUsersSearchPhone = createSelector(selectUsersSearchParams, (params) => params.contactPhone);
+export const selectUsersOffset = createSelector(selectUsersSearchParams, (p) => p.offset);
+export const selectUsersLimit = createSelector(selectUsersSearchParams, (p) => p.limit);
+export const selectUsersRole = createSelector(selectUsersSearchParams, (p) => p.role ?? 'all');
 
 export const selectHasNextPage = createSelector(selectUsers, selectUsersLimit, (users, limit) => users.length === limit);
 export const selectHasPrevPage = createSelector(selectUsersOffset, (offset) => offset > 0);
+export const selectPageNumber = createSelector(selectUsersOffset, selectUsersLimit, (o, l) => Math.floor(o / l) + 1);

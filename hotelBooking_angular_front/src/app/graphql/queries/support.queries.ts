@@ -1,14 +1,14 @@
 import { gql } from 'apollo-angular';
 
+// title теперь скалярная строка: сервер отдавал в этом поле весь документ
+// первого сообщения, и клиенту приходилось доставать text вручную.
 export const MY_SUPPORT_REQUESTS = gql`
   query MySupportRequests {
     mySupportRequests {
       id
       createdAt
       isActive
-      title {
-        text
-      }
+      title
     }
   }
 `;
@@ -19,9 +19,7 @@ export const ALL_SUPPORT_REQUESTS = gql`
       id
       createdAt
       isActive
-      title {
-        text
-      }
+      title
     }
   }
 `;

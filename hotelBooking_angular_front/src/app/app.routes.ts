@@ -1,66 +1,94 @@
 import { Routes } from '@angular/router';
 
-import { Shell } from './layout/shell/shell';
-import { Login } from './pages/login/login';
-import { Register } from './pages/register/register';
-import { Hotels } from './pages/hotels/hotels';
-import { HotelDetails } from './pages/hotel-details/hotel-details';
-import { Reservations } from './pages/reservations/reservations';
-import { Support } from './pages/support/support';
-import { AdminHotels } from './pages/admin-hotels/admin-hotels';
-import { AdminRooms } from './pages/admin-rooms/admin-rooms';
-import { ManagerReservations } from './pages/manager-reservations/manager-reservations';
-import { AdminUsersComponent } from './pages/admin-users/admin-users';
-import { ManagerUsersComponent } from './pages/manager-users/manager-users';
 import { authGuard } from './core/auth.guard';
 import { roleGuard } from './core/role.guard';
 
+/**
+ * Все страницы грузятся лениво: раньше админские экраны и менеджерские таблицы
+ * попадали в первоначальный бандл даже анонимному посетителю.
+ */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'hotels' },
-  { path: 'login', component: Login },
-  { path: 'register', component: Register },
+
+  {
+    path: 'login',
+    title: 'Вход — Пристань',
+    loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+  },
+  {
+    path: 'register',
+    title: 'Регистрация — Пристань',
+    loadComponent: () => import('./pages/register/register').then((m) => m.Register),
+  },
+
   {
     path: '',
-    component: Shell,
+    loadComponent: () => import('./layout/shell/shell').then((m) => m.Shell),
     children: [
-      { path: 'hotels', component: Hotels },
-      { path: 'hotels/:hotelId', component: HotelDetails },
+      {
+        path: 'hotels',
+        title: 'Поиск отелей — Пристань',
+        loadComponent: () => import('./pages/hotels/hotels').then((m) => m.Hotels),
+      },
+      {
+        path: 'hotels/:hotelId',
+        title: 'Отель — Пристань',
+        loadComponent: () => import('./pages/hotel-details/hotel-details').then((m) => m.HotelDetails),
+      },
       {
         path: 'reservations',
-        component: Reservations,
+        title: 'Мои бронирования — Пристань',
         canActivate: [authGuard, roleGuard(['client'])],
+        loadComponent: () => import('./pages/reservations/reservations').then((m) => m.Reservations),
       },
       {
         path: 'manager/reservations',
-        component: ManagerReservations,
+        title: 'Все бронирования — Пристань',
         canActivate: [authGuard, roleGuard(['manager'])],
+        loadComponent: () =>
+          import('./pages/manager-reservations/manager-reservations').then((m) => m.ManagerReservations),
       },
       {
         path: 'support',
-        component: Support,
+        title: 'Поддержка — Пристань',
         canActivate: [authGuard, roleGuard(['client', 'manager'])],
+        loadComponent: () => import('./pages/support/support').then((m) => m.Support),
       },
       {
         path: 'admin/hotels',
-        component: AdminHotels,
+        title: 'Управление отелями — Пристань',
         canActivate: [authGuard, roleGuard(['admin'])],
+        loadComponent: () => import('./pages/admin-hotels/admin-hotels').then((m) => m.AdminHotels),
       },
       {
         path: 'admin/rooms',
-        component: AdminRooms,
+        title: 'Управление номерами — Пристань',
         canActivate: [authGuard, roleGuard(['admin'])],
+        loadComponent: () => import('./pages/admin-rooms/admin-rooms').then((m) => m.AdminRooms),
       },
       {
         path: 'admin/users',
-        component: AdminUsersComponent,
+        title: 'Пользователи — Пристань',
         canActivate: [authGuard, roleGuard(['admin'])],
+        loadComponent: () => import('./pages/users/users').then((m) => m.UsersPage),
       },
       {
         path: 'manager/users',
-        component: ManagerUsersComponent,
+        title: 'Пользователи — Пристань',
         canActivate: [authGuard, roleGuard(['manager'])],
+        loadComponent: () => import('./pages/users/users').then((m) => m.UsersPage),
+      },
+      {
+        path: 'forbidden',
+        title: 'Нет доступа — Пристань',
+        loadComponent: () => import('./pages/error-page/error-page').then((m) => m.ForbiddenPage),
+      },
+      // Неизвестный адрес раньше молча уводил на главную — теперь показываем 404.
+      {
+        path: '**',
+        title: 'Страница не найдена — Пристань',
+        loadComponent: () => import('./pages/error-page/error-page').then((m) => m.NotFoundPage),
       },
     ],
   },
-  { path: '**', redirectTo: 'hotels' },
 ];

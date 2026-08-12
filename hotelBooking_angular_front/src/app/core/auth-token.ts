@@ -1,38 +1,26 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+/**
+ * Хранилище access-токена.
+ *
+ * Токен живёт только в памяти: localStorage читается любым JavaScript,
+ * поэтому XSS выгружал оттуда и access, и refresh (C-7 в BACKLOG.md).
+ * Refresh теперь вообще не приходит на клиент — он в httpOnly-cookie,
+ * а сессия после перезагрузки страницы восстанавливается вызовом /api/auth/refresh.
+ */
+@Injectable({ providedIn: 'root' })
 export class AuthToken {
-  private readonly accessKey = 'access_token';
-  private readonly refreshKey = 'refresh_token';
+  private readonly token = signal<string | null>(null);
 
   getAccessToken(): string | null {
-    return localStorage.getItem(this.accessKey);
+    return this.token();
   }
 
   setAccessToken(token: string | null): void {
-    if (!token) {
-      localStorage.removeItem(this.accessKey);
-      return;
-    }
-    localStorage.setItem(this.accessKey, token);
-  }
-
-  getRefreshToken(): string | null {
-    return localStorage.getItem(this.refreshKey);
-  }
-
-  setRefreshToken(token: string | null): void {
-    if (!token) {
-      localStorage.removeItem(this.refreshKey);
-      return;
-    }
-    localStorage.setItem(this.refreshKey, token);
+    this.token.set(token);
   }
 
   clear(): void {
-    localStorage.removeItem(this.accessKey);
-    localStorage.removeItem(this.refreshKey);
+    this.token.set(null);
   }
 }

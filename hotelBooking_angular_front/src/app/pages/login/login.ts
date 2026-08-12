@@ -1,59 +1,67 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { AuthActions } from '../../actions/auth.actions';
-import { selectAuthLoading, selectAuthUser } from '../../selectors/auth.selectors';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
+import { AuthActions } from '../../actions/auth.actions';
+import { selectAuthLoading, selectAuthRegistered } from '../../selectors/auth.selectors';
 
 @Component({
   selector: 'app-login',
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
+    AsyncPipe, ReactiveFormsModule, RouterLink,
+    MatCardModule, MatFormFieldModule, MatInputModule,
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
   ],
-  templateUrl: './login.html'
+  templateUrl: './login.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
-  readonly loading$;
+  private readonly store = inject(Store);
+
+  readonly loading$ = this.store.select(selectAuthLoading);
+  readonly justRegistered = signal(false);
+  readonly hidePassword = signal(true);
 
   readonly form = new FormGroup({
-    email: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
-    password: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    email: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }),
+    password: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(8)],
+    }),
   });
 
-  constructor(private readonly store: Store, private readonly router: Router) {
-    this.loading$ = this.store.select(selectAuthLoading);
-
+  constructor() {
+    // Переход после успешного входа выполняет эффект — компонент больше
+    // не редиректит по факту появления пользователя в сторе. Раньше из-за этого
+    // регистрация уводила на /hotels без токена.
     this.store
-      .select(selectAuthUser)
-      .pipe(filter((u) => !!u), takeUntilDestroyed())
-      .subscribe(() => this.router.navigateByUrl('/hotels'));
+      .select(selectAuthRegistered)
+      .pipe(filter(Boolean), takeUntilDestroyed())
+      .subscribe(() => this.justRegistered.set(true));
   }
 
-  submit() {
+  togglePassword(): void {
+    this.hidePassword.update((v) => !v);
+  }
+
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-
-    const payload = {
-      email: this.form.controls.email.value,
-      password: this.form.controls.password.value,
-    };
-    this.store.dispatch(AuthActions.login({ payload }));
+    this.store.dispatch(AuthActions.login({ payload: this.form.getRawValue() }));
   }
 }

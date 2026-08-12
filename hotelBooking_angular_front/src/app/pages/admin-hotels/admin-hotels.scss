@@ -1,0 +1,14 @@
+.card-photo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.preview {
+  width: 128px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: var(--mat-sys-corner-small);
+  border: 1px solid var(--mat-sys-outline-variant);
+}

@@ -14,6 +14,7 @@ export interface State {
     email?: string;
     name?: string;
     contactPhone?: string;
+    role?: string;
   };
 }
 
@@ -21,25 +22,23 @@ export const initialState: State = {
   users: [],
   loading: false,
   error: null,
-  searchParams: {
-    limit: 50,
-    offset: 0,
-    email: '',
-    name: '',
-    contactPhone: '',
-  },
+  searchParams: { limit: 10, offset: 0, email: '', name: '', contactPhone: '' },
 };
 
 export const reducer = createReducer(
   initialState,
 
-  on(UsersActions.adminLoadUsers, (state) => ({ ...state, loading: true, error: null })),
-  on(UsersActions.adminLoadUsersSuccess, (state, { payload }) => ({
+  on(UsersActions.adminLoadUsers, UsersActions.managerLoadUsers, (state) => ({ ...state, loading: true, error: null })),
+  on(UsersActions.adminLoadUsersSuccess, UsersActions.managerLoadUsersSuccess, (state, { payload }) => ({
     ...state,
     loading: false,
     users: payload,
   })),
-  on(UsersActions.adminLoadUsersFailure, (state, { error }) => ({ ...state, loading: false, error })),
+  on(UsersActions.adminLoadUsersFailure, UsersActions.managerLoadUsersFailure, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
 
   on(UsersActions.adminCreateUser, (state) => ({ ...state, loading: true, error: null })),
   on(UsersActions.adminCreateUserSuccess, (state, { payload }) => ({
@@ -49,25 +48,31 @@ export const reducer = createReducer(
   })),
   on(UsersActions.adminCreateUserFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
-  on(UsersActions.managerLoadUsers, (state) => ({ ...state, loading: true, error: null })),
-  on(UsersActions.managerLoadUsersSuccess, (state, { payload }) => ({
-    ...state,
-    loading: false,
-    users: payload,
-  })),
-  on(UsersActions.managerLoadUsersFailure, (state, { error }) => ({ ...state, loading: false, error })),
-
+  // Смена фильтра всегда сбрасывает страницу: иначе поиск открывался
+  // на несуществующей странице и показывал пустой результат.
   on(UsersActions.setSearchParams, (state, { payload }) => ({
     ...state,
-    searchParams: { ...state.searchParams, ...payload },
+    searchParams: { ...state.searchParams, offset: 0, ...payload },
   })),
-  on(UsersActions.clearSearchParams, (state) => ({
+  on(UsersActions.clearSearchParams, (state) => ({ ...state, searchParams: initialState.searchParams })),
+
+  // Смещение считает редьюсер. Раньше это делал компонент внутри подписки
+  // на те же параметры, что приводило к самозапускающемуся циклу диспатчей.
+  on(UsersActions.nextPage, (state) => ({
     ...state,
-    searchParams: initialState.searchParams,
+    searchParams: { ...state.searchParams, offset: state.searchParams.offset + state.searchParams.limit },
+  })),
+  on(UsersActions.prevPage, (state) => ({
+    ...state,
+    searchParams: {
+      ...state.searchParams,
+      offset: Math.max(0, state.searchParams.offset - state.searchParams.limit),
+    },
+  })),
+  on(UsersActions.setPageSize, (state, { limit }) => ({
+    ...state,
+    searchParams: { ...state.searchParams, limit, offset: 0 },
   })),
 );
 
-export const usersFeature = createFeature({
-  name: usersFeatureKey,
-  reducer,
-});
+export const usersFeature = createFeature({ name: usersFeatureKey, reducer });
