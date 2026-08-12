@@ -7,15 +7,18 @@ import { SearchUserParams } from "../Interface/Users";
 import { UsersProvider } from "../Providers/users.provider";
 
 @Controller("/api/manager/users/")
-@UseGuards(RolesGuard)
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(AuthGuard("jwt"), RolesGuard)
+@Role("manager")
 export class ManagerUsersController {
   constructor(private users: UsersProvider) {}
 
-  @Role("manager")
   @Get("/")
   async getUsers(@Query() query: SearchUserParams, @Res() res: Response): Promise<void> {
-    const users = await this.users.getAllUsers(query);
-    res.status(HttpStatus.OK).send(users);
+    // Менеджеру доступны только клиенты — ограничение задаётся здесь, а не в провайдере.
+    const [items, total] = await Promise.all([
+      this.users.getAllUsers(query, "client"),
+      this.users.countUsers(query, "client"),
+    ]);
+    res.status(HttpStatus.OK).set("X-Total-Count", String(total)).send(items);
   }
 }

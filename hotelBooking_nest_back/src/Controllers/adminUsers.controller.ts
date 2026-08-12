@@ -3,26 +3,29 @@ import { Response } from "express";
 import { RolesGuard } from "../Decorators/roles.decorator";
 import { Role } from "../Decorators/setmetadata.decorator";
 import { AuthGuard } from "@nestjs/passport";
-import { SearchUserParams, CreateUser } from "../Interface/Users";
+import { SearchUserParams, CreateUserDto } from "../Interface/Users";
 import { UsersProvider } from "../Providers/users.provider";
 
 @Controller("/api/admin/users/")
-@UseGuards(RolesGuard)
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(AuthGuard("jwt"), RolesGuard)
+@Role("admin")
 export class AdminUsersController {
   constructor(private users: UsersProvider) {}
 
-  @Role("admin")
   @Post("/")
-  async createUser(@Body() data: CreateUser, @Res() res: Response): Promise<void> {
+  async createUser(@Body() data: CreateUserDto, @Res() res: Response): Promise<void> {
     const createdUser = await this.users.createUser(data);
     res.status(HttpStatus.CREATED).send(createdUser);
   }
 
-  @Role("admin")
   @Get("/")
   async getUsers(@Query() query: SearchUserParams, @Res() res: Response): Promise<void> {
-    const users = await this.users.getAllUsers(query);
-    res.status(HttpStatus.OK).send(users);
+    // Администратор видит все роли — раньше фильтр role: "client" был вшит
+    // в провайдер, и созданный менеджер не появлялся в списке.
+    const [items, total] = await Promise.all([
+      this.users.getAllUsers(query),
+      this.users.countUsers(query),
+    ]);
+    res.status(HttpStatus.OK).set("X-Total-Count", String(total)).send(items);
   }
 }

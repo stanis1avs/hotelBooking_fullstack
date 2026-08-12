@@ -11,7 +11,8 @@ export class RoomsResolver {
     @Args("hotel") hotel: string,
     @Args("isEnabled", { nullable: true }) isEnabled?: boolean
   ): Promise<RoomType[]> {
-    const rooms = await this.roomsProvider.getAllRooms({ hotel, isEnabled });
+    // Публичный запрос — отключённые номера в выдачу не попадают.
+    const rooms = await this.roomsProvider.getAllRooms({ hotel, isEnabled }, true);
     return rooms.map((r) => ({
       id: String(r.id),
       description: r.description,

@@ -9,8 +9,7 @@ import { SupportChatGateway } from "../Providers/supportChat.gateway";
 import { ClientSupportController } from "../Controllers/clientSupport.controller";
 import { ManagerSupportController } from "../Controllers/managerSupport.controller";
 import { CommonSupportController } from "../Controllers/commonSupport.controller";
-import { WsGuardforRequest } from "../Auth/wsguardforrequest";
-import { WsGuardforSendMesg } from "../Auth/wsguardforsendmesg";
+import { WsAuthGuard } from "../Auth/ws-auth";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
@@ -29,6 +28,6 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     }),
   ],
   controllers: [CommonSupportController, ClientSupportController, ManagerSupportController],
-  providers: [SupportProvider, SupportChatGateway, WsGuardforSendMesg, WsGuardforRequest],
+  providers: [SupportProvider, SupportChatGateway, WsAuthGuard],
 })
 export class SupportModule {}

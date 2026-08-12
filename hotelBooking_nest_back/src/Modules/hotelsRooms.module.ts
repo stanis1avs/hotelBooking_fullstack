@@ -23,6 +23,8 @@ import { CommonHotelsController } from "../Controllers/commonHotels.controller";
       { name: Reservation.name, schema: ReservationSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    // Файлы держим в памяти: дальше они уходят в БД, на диск ничего не пишется.
+    // Ограничения размера и типа задаются на уровне интерцепторов — см. utils/upload.options.ts.
     MulterModule.register({ storage: memoryStorage() }),
   ],
   controllers: [AdminHotelsController, AdminRoomsController, CommonRoomsController, CommonHotelsController],

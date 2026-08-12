@@ -7,22 +7,20 @@ import { DisableRequest } from "../Interface/Support";
 import { SupportProvider } from "../Providers/support.provider";
 
 @Controller("/api/manager/support-requests")
-@UseGuards(RolesGuard)
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(AuthGuard("jwt"), RolesGuard)
+@Role("manager")
 export class ManagerSupportController {
   constructor(private support: SupportProvider) {}
 
-  @Role("manager")
   @Get("/")
   async getRequests(@Res() res: Response): Promise<void> {
     const requests = await this.support.getRequestsforManager();
     res.status(HttpStatus.OK).send(requests);
   }
 
-  @Role("manager")
   @Put("/")
   async editRequest(@Body() data: DisableRequest, @Res() res: Response): Promise<void> {
     const requests = await this.support.makeInactiveRequest(data);
-    res.status(HttpStatus.ACCEPTED).send(requests);
+    res.status(HttpStatus.OK).send(requests);
   }
 }

@@ -17,6 +17,7 @@ import { ReservationsProvider } from "../Providers/reservations.provider";
 import { UsersProvider } from "../Providers/users.provider";
 import { AuthProvider } from "../Providers/auth.provider";
 import { SupportProvider } from "../Providers/support.provider";
+import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
 
 import { JwtStrategy } from "../Auth/jwt.strategy";
 
@@ -54,6 +55,7 @@ import { SupportResolver } from "./resolvers/support.resolver";
     UsersProvider,
     AuthProvider,
     SupportProvider,
+    TokenBlacklistProvider,
     // JWT strategy — needed by GqlJwtAuthGuard (AuthGuard('jwt'))
     JwtStrategy,
     // Resolvers

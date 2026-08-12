@@ -1,17 +1,50 @@
 import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
+import { ValidationPipe, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import * as cookieParser from "cookie-parser";
+import helmet from "helmet";
+import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./Filters/all-exceptions.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const config = app.get(ConfigService);
+  const isProd = config.get("NODE_ENV") === "production";
+
+  // GraphQL-песочница подтягивает скрипты с CDN, поэтому CSP включаем только в проде.
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProd ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
+
   app.enableCors({
-    origin: ["http://localhost:3000", "http://10.8.144.42:3000", "http://localhost:4200"],
+    origin: (config.get<string>("CORS_ORIGINS") ?? "http://localhost:4200")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
     credentials: true,
   });
 
-  app.use(cookieParser());
+  app.use(cookieParser(config.get("COOKIE_SECRET")));
 
-  await app.listen(7000);
+  // whitelist срезает поля, которых нет в DTO, forbidNonWhitelisted отвечает 400 при их наличии.
+  // Именно это закрывает подстановку "role": "admin" в теле регистрации.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    })
+  );
+
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  const port = Number(config.get("SERVER_PORT")) || 7000;
+  await app.listen(port);
+  new Logger("Bootstrap").log(`Сервер слушает порт ${port}`);
 }
 
 bootstrap();

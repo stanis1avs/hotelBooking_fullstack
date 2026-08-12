@@ -1,12 +1,6 @@
 import { ObjectType, Field, ID } from "@nestjs/graphql";
 
 @ObjectType()
-export class SupportFirstMessageType {
-  @Field({ nullable: true })
-  text: string;
-}
-
-@ObjectType()
 export class SupportRequestType {
   @Field(() => ID)
   id: string;
@@ -14,10 +8,12 @@ export class SupportRequestType {
   @Field()
   createdAt: string;
 
-  @Field(() => SupportFirstMessageType, { nullable: true })
-  title: SupportFirstMessageType;
-
+  // Текст первого сообщения. Раньше здесь был вложенный объект, потому что
+  // провайдер отдавал в title весь документ сообщения целиком.
   @Field({ nullable: true })
+  title: string;
+
+  @Field()
   isActive: boolean;
 }
 

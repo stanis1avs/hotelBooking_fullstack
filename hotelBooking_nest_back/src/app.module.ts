@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { MongooseModule } from "@nestjs/mongoose";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { join } from "path";
 import { HotelRoomsModule } from "./Modules/hotelsRooms.module";
 import { UserManagementModule } from "./Modules/userManagement.module";
@@ -17,21 +19,36 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       envFilePath: [".env", "../.env"],
       isGlobal: true,
     }),
+    // Базовый потолок запросов; на login/register навешан отдельный жёсткий лимит.
+    // В @nestjs/throttler v4 ttl задаётся в секундах.
+    ThrottlerModule.forRoot({ ttl: 60, limit: 120 }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        uri: `mongodb+srv://${configService.get("DB_NAME")}:${configService.get("DB_PASSWORD")}@hotelbooking.q3qxgry.mongodb.net/nest`,
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-        // uri: "mongodb://127.0.0.1:27017/nest",
+        uri: configService.get<string>("MONGO_URI") ?? "mongodb://127.0.0.1:27017/nest",
       }),
       inject: [ConfigService],
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), "src/schema.gql"),
-      sortSchema: true,
-      context: ({ req }) => ({ req }),
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const isProd = configService.get("NODE_ENV") === "production";
+        return {
+          autoSchemaFile: join(process.cwd(), "src/schema.gql"),
+          sortSchema: true,
+          context: ({ req, res }) => ({ req, res }),
+          // В проде схему наружу не показываем и песочницу не поднимаем.
+          introspection: !isProd,
+          playground: !isProd,
+          formatError: (error) => ({
+            message: error.message,
+            path: error.path,
+            code: error.extensions?.code,
+          }),
+        };
+      },
+      inject: [ConfigService],
     }),
     AuthModule,
     HotelRoomsModule,
@@ -40,5 +57,6 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     SupportModule,
     AppGraphQLModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

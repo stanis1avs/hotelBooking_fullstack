@@ -1,7 +1,13 @@
+# Секреты
+.env
+.env.*
+!.env.example
+
 # compiled output
 /dist
 /node_modules
 /upload
+/src/schema.gql
 
 # Logs
 logs

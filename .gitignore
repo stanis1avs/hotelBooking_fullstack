@@ -1,0 +1,17 @@
+# Секреты — никогда не коммитим, шаблон лежит в .env.example
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+build/
+.angular/
+coverage/
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+.idea/

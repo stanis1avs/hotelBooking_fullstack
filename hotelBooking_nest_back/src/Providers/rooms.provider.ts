@@ -1,6 +1,6 @@
-import { Injectable, Inject, BadRequestException } from "@nestjs/common";
+import { Injectable, Inject, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import mongoose, { Model } from "mongoose";
+import mongoose, { FilterQuery, Model, isValidObjectId } from "mongoose";
 import { Room, RoomDocument } from "../Models/Rooms";
 import { HotelDocument } from "../Models/Hotels";
 import { HotelsProvider } from "./hotels.provider";
@@ -9,70 +9,114 @@ import { normalizeImageForClient } from "../utils/image.utils";
 
 @Injectable()
 export class RoomsProvider {
-  constructor(@InjectModel(Room.name) private roomModel: Model<RoomDocument>, @Inject(HotelsProvider) readonly hotelsProvider: HotelsProvider) {}
+  constructor(
+    @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
+    @Inject(HotelsProvider) readonly hotelsProvider: HotelsProvider
+  ) {}
 
   async createRoom(createRoom: CreateRoom): Promise<SendRoom> {
+    // Проверяем существование отеля до вставки, иначе получим номер-сироту.
+    const hotel = await this.hotelsProvider.getIdHotel(createRoom.hotelId);
     const createdRoom = new this.roomModel({
-      ...createRoom,
+      description: createRoom.description,
+      images: createRoom.images,
+      isEnabled: createRoom.isEnabled ?? true,
       hotel: new mongoose.Types.ObjectId(createRoom.hotelId),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     await createdRoom.save();
-    return await this.printFormatRoom(createdRoom, createRoom.hotelId, true, true);
+    return this.formatRoom(createdRoom, hotel, true, true);
   }
 
   async editRoom(id: string, data: UpdateRoomParams): Promise<SendRoom> {
-    const editedRoom = await this.roomModel.findByIdAndUpdate(
-      id,
-      {
-        ...data,
-        updatedAt: new Date().toISOString(),
-      },
-      { returnDocument: "after" }
-    );
-    if (!editedRoom) {
-      throw new BadRequestException();
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException("Номер не найден");
     }
-    return this.printFormatRoom(editedRoom, editedRoom.hotel, true, true);
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.isEnabled !== undefined) patch.isEnabled = data.isEnabled;
+    if (data.images?.length) patch.images = data.images;
+
+    const editedRoom = await this.roomModel.findByIdAndUpdate(id, patch, { new: true });
+    if (!editedRoom) {
+      throw new NotFoundException("Номер не найден");
+    }
+    const hotel = await this.hotelsProvider.getIdHotel(editedRoom.hotel);
+    return this.formatRoom(editedRoom, hotel, true, true);
   }
 
-  async getAllRooms(queryParams: SearchRoomsParams): Promise<SendRoom[]> {
-    const foundRooms = await this.roomModel.find({
-      hotel: new mongoose.Types.ObjectId(queryParams.hotel),
-    });
-    if (!foundRooms) {
-      throw new BadRequestException();
+  /**
+   * @param onlyEnabled true для публичных запросов: отключённые номера
+   *        не должны попадать в выдачу и быть доступными к бронированию.
+   */
+  async getAllRooms(queryParams: SearchRoomsParams, onlyEnabled = false): Promise<SendRoom[]> {
+    if (!isValidObjectId(queryParams.hotel)) {
+      throw new NotFoundException("Отель не найден");
     }
-    return await Promise.all(foundRooms.map(async (el) => await this.printFormatRoom(el, el.hotel, false, true)));
+    const query: FilterQuery<RoomDocument> = { hotel: new mongoose.Types.ObjectId(queryParams.hotel) };
+    if (onlyEnabled) query.isEnabled = true;
+    else if (queryParams.isEnabled !== undefined) query.isEnabled = queryParams.isEnabled;
+
+    const foundRooms = await this.roomModel.find(query).sort({ _id: 1 });
+    if (!foundRooms.length) return [];
+
+    // Один запрос за отелями на весь список вместо запроса на каждый номер.
+    const hotels = await this.hotelsProvider.getHotelsByIds(foundRooms.map((r) => r.hotel));
+    return foundRooms.map((el) => this.formatRoom(el, hotels.get(String(el.hotel)), !onlyEnabled, true));
+  }
+
+  async countRoomsInHotel(hotelId: string | mongoose.Types.ObjectId): Promise<number> {
+    return this.roomModel.countDocuments({ hotel: new mongoose.Types.ObjectId(String(hotelId)), isEnabled: true });
   }
 
   async getIdRoom(id: string): Promise<SendRoom> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException("Номер не найден");
+    }
     const foundRoom = await this.roomModel.findById(id);
     if (!foundRoom) {
-      throw new BadRequestException();
+      throw new NotFoundException("Номер не найден");
     }
-    return await this.printFormatRoom(foundRoom, foundRoom.hotel, false, true);
+    const hotel = await this.hotelsProvider.getIdHotel(foundRoom.hotel);
+    return this.formatRoom(foundRoom, hotel, true, true);
+  }
+
+  /** Номера пачкой по id — используется в списках бронирований. */
+  async getRoomsByIds(ids: Array<unknown>): Promise<Map<string, SendRoom>> {
+    const unique = [...new Set(ids.map(String))].filter((id) => isValidObjectId(id));
+    if (!unique.length) return new Map();
+    const rooms = await this.roomModel.find({ _id: { $in: unique } });
+    const hotels = await this.hotelsProvider.getHotelsByIds(rooms.map((r) => r.hotel));
+    return new Map(rooms.map((r) => [String(r._id), this.formatRoom(r, hotels.get(String(r.hotel)), true, true)]));
   }
 
   async removeRoom(id: string): Promise<void> {
-    await this.roomModel.findByIdAndDelete(id);
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException("Номер не найден");
+    }
+    const deleted = await this.roomModel.findByIdAndDelete(id);
+    if (!deleted) {
+      throw new NotFoundException("Номер не найден");
+    }
   }
 
-  async printFormatRoom(room: RoomDocument, hotelId: HotelDocument | string, isEnabl: boolean, isHotelDeskr: boolean): Promise<SendRoom> {
-    const { _id, title, description, image } = await this.hotelsProvider.getIdHotel(hotelId);
+  private formatRoom(
+    room: RoomDocument,
+    hotel: HotelDocument | undefined,
+    withEnabled: boolean,
+    withHotelDescription: boolean
+  ): SendRoom {
     return {
       id: room._id,
       description: room.description,
-      images: room.images?.map((img: any) => {        
-        return normalizeImageForClient(img);
-      }).filter((img) => img !== "") || [],
-      isEnabled: isEnabl ? room.isEnabled : undefined,
+      images: (room.images ?? []).map((img: any) => normalizeImageForClient(img)).filter(Boolean),
+      isEnabled: withEnabled ? room.isEnabled : undefined,
       hotel: {
-        id: _id,
-        image: normalizeImageForClient(image),
-        title,
-        description: isHotelDeskr ? description : undefined,
+        id: hotel?._id,
+        image: normalizeImageForClient(hotel?.image),
+        title: hotel?.title,
+        description: withHotelDescription ? hotel?.description : undefined,
       },
     };
   }

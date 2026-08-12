@@ -4,25 +4,28 @@ import { HotelDocument } from "./Hotels";
 
 @Schema({ versionKey: false })
 export class Room {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: "Hotel" })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: "Hotel", index: true })
   hotel: HotelDocument;
 
-  @Prop({ unique: false })
+  @Prop()
   description: string;
 
-  @Prop({ unique: false })
+  @Prop()
   images: [Buffer];
 
-  @Prop({ required: true, unique: false })
+  @Prop({ required: true })
   createdAt: Date;
 
-  @Prop({ required: true, unique: false })
+  @Prop({ required: true })
   updatedAt: Date;
 
-  @Prop({ required: true, unique: false, default: true })
+  @Prop({ required: true, default: true })
   isEnabled: boolean;
 }
 
 export type RoomDocument = Room & mongoose.Document;
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
+
+// Публичная выдача всегда фильтрует по отелю и признаку доступности.
+RoomSchema.index({ hotel: 1, isEnabled: 1 });

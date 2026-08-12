@@ -5,6 +5,7 @@ import { PassportModule } from "@nestjs/passport";
 import { UserSchema, User } from "../Models/Users";
 import { AuthProvider } from "../Providers/auth.provider";
 import { UsersProvider } from "../Providers/users.provider";
+import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
 import { LocalStrategy } from "../Auth/local.strategy";
 import { JwtStrategy } from "../Auth/jwt.strategy";
 import { JwtRefreshStrategy } from "../Auth/jwt-refresh.strategy";
@@ -25,6 +26,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     }),
   ],
   controllers: [AuthController, ClientAuthController],
-  providers: [AuthProvider, UsersProvider, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthProvider, UsersProvider, TokenBlacklistProvider, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
+  // Blacklist общий на всё приложение: GraphQL-модуль переиспользует тот же экземпляр.
+  exports: [AuthProvider, TokenBlacklistProvider],
 })
 export class AuthModule {}

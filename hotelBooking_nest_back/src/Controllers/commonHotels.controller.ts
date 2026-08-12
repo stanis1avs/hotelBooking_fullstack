@@ -10,8 +10,11 @@ export class CommonHotelsController {
 
   @Get("/")
   async getHotels(@Query() query: SearchHotelParams, @Res() res: Response): Promise<void> {
-    const reservations = await this.reservations.getReservationsInTime(query.dateArrival, query.dateDeparture);
-    const hotels = await this.hotels.getAllHotels(query, reservations);
-    res.status(HttpStatus.OK).send(hotels);
+    const reserved = await this.reservations.getReservationsInTime(query.dateArrival, query.dateDeparture);
+    const [items, total] = await Promise.all([
+      this.hotels.getAllHotels(query, reserved),
+      this.hotels.countHotels(query, reserved),
+    ]);
+    res.status(HttpStatus.OK).set("X-Total-Count", String(total)).send(items);
   }
 }

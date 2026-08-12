@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import mongoose, { Model, isValidObjectId } from "mongoose";
 import { SupportDocument, Support } from "../Models/Support";
 import { MessageDocument, Message } from "../Models/Messages";
 import { SendMessage } from "../Interface/Messages";
@@ -17,8 +17,8 @@ export class SupportProvider {
   async createRequest(createRequest: CreateRequest, currUser: UserToJWTPayload): Promise<SendSupportRequest> {
     const message = await this.newMessage(createRequest.text, currUser);
     const createdRequest = new this.supportModel({
-      user: currUser.id,
-      createdAt: new Date().toISOString(),
+      user: new mongoose.Types.ObjectId(currUser.id),
+      createdAt: new Date(),
       isActive: true,
       messages: [message],
     });
@@ -27,98 +27,116 @@ export class SupportProvider {
   }
 
   async getRequestById(id: string): Promise<SupportDocument> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException("Обращение не найдено");
+    }
     const supportRequest = await this.supportModel.findById(id);
     if (!supportRequest) {
-      throw new BadRequestException();
+      throw new NotFoundException("Обращение не найдено");
     }
     return supportRequest;
   }
 
-  async getRequestsforManager(): Promise<SendSupportRequest[]> {
-    const foundSupportRequest = await this.supportModel.find({
-      isActive: true,
-    });
-    if (!foundSupportRequest) {
-      throw new BadRequestException();
+  /**
+   * Единственная точка проверки доступа к обращению.
+   *
+   * Раньше её не было вовсе: и REST-эндпоинт, и GraphQL-резолвер отдавали переписку
+   * по одному только идентификатору, поэтому любой авторизованный клиент мог
+   * перебором ObjectId читать чужие обращения.
+   */
+  async getOwnedRequest(id: string, currUser: UserToJWTPayload): Promise<SupportDocument> {
+    const request = await this.getRequestById(id);
+    if (currUser.role !== "manager" && String(request.user) !== String(currUser.id)) {
+      throw new ForbiddenException("Это обращение принадлежит другому пользователю");
     }
-    return foundSupportRequest.map((el) => {
-      return {
-        ...this.printFormatSupport(el),
-      };
-    });
+    return request;
+  }
+
+  async getRequestsforManager(): Promise<SendSupportRequest[]> {
+    const found = await this.supportModel.find({ isActive: true }).sort({ createdAt: -1 });
+    return found.map((el) => this.printFormatSupport(el));
   }
 
   async getRequestsforClient(currUser: UserToJWTPayload): Promise<SendSupportRequest[]> {
-    const foundSupportRequest = await this.supportModel.find({
-      isActive: true,
-      user: currUser.id,
-    });
-    if (!foundSupportRequest) {
-      throw new BadRequestException();
-    }
-    return foundSupportRequest.map((el) => {
-      return {
-        ...this.printFormatSupport(el),
-      };
-    });
+    if (!isValidObjectId(currUser.id)) return [];
+    const found = await this.supportModel
+      .find({ user: new mongoose.Types.ObjectId(currUser.id) })
+      .sort({ createdAt: -1 });
+    return found.map((el) => this.printFormatSupport(el));
   }
 
-  async getHistory(id: string): Promise<SendMessage[]> {
-    const supportRequest = await this.getRequestById(id);
-    return supportRequest.messages.map((el) => this.printFormatMessage(el, supportRequest._id));
+  async getHistory(id: string, currUser: UserToJWTPayload): Promise<SendMessage[]> {
+    const supportRequest = await this.getOwnedRequest(id, currUser);
+    return (supportRequest.messages ?? []).map((el) => this.printFormatMessage(el, String(supportRequest._id)));
   }
 
   async makeInactiveRequest(data: DisableRequest): Promise<SendSupportRequest[]> {
-    await this.supportModel.findByIdAndUpdate(data.id, { isActive: false });
-    return await this.getRequestsforManager();
+    const updated = await this.supportModel.findByIdAndUpdate(data.id, { isActive: false }, { new: true });
+    if (!updated) {
+      throw new NotFoundException("Обращение не найдено");
+    }
+    return this.getRequestsforManager();
   }
 
   async newMessage(textMessage: string, currUser: UserToJWTPayload): Promise<MessageDocument> {
     const message = new this.messagesModel({
-      author: currUser.id,
-      sentAt: new Date().toISOString(),
+      author: new mongoose.Types.ObjectId(currUser.id),
+      sentAt: new Date(),
       text: textMessage,
     });
-    return await message.save();
+    return message.save();
   }
 
   async messagesRead(id: string, currUser: UserToJWTPayload): Promise<SendMessage[]> {
-    const supportRequest = await this.getRequestById(id);
-    supportRequest.messages.forEach((el: any) => {
-      if (el.author.toString() != currUser.id && !el.readAt) {
-        el.readAt = new Date().toISOString();
+    const supportRequest = await this.getOwnedRequest(id, currUser);
+    const now = new Date();
+
+    // Точечное обновление отметок вместо перезаписи всего массива:
+    // так параллельно пришедшее сообщение не затирается.
+    await this.supportModel.updateOne(
+      { _id: supportRequest._id },
+      { $set: { "messages.$[unread].readAt": now } },
+      {
+        arrayFilters: [
+          { "unread.author": { $ne: new mongoose.Types.ObjectId(currUser.id) }, "unread.readAt": { $exists: false } },
+        ],
       }
-    });
-    await this.supportModel.findByIdAndUpdate(id, {
-      messages: [...supportRequest.messages],
-    });
-    return supportRequest.messages.map((el) => this.printFormatMessage(el, supportRequest._id));
+    );
+
+    const fresh = await this.supportModel.findById(id);
+    return (fresh.messages ?? []).map((el) => this.printFormatMessage(el, String(fresh._id)));
   }
 
   async sendMessage(id: string, text: string, currUser: UserToJWTPayload): Promise<SendMessage> {
+    const supportRequest = await this.getOwnedRequest(id, currUser);
+    if (!supportRequest.isActive) {
+      throw new BadRequestException("Обращение закрыто — создайте новое");
+    }
     const message = await this.newMessage(text, currUser);
-    const supportRequest = await this.getRequestById(id);
-    await this.supportModel.findByIdAndUpdate(id, {
-      messages: [...supportRequest.messages, message],
-    });
-    return this.printFormatMessage(message, supportRequest._id);
+    // $push атомарен: одновременные сообщения клиента и менеджера не перетирают друг друга.
+    await this.supportModel.updateOne({ _id: supportRequest._id }, { $push: { messages: message } });
+    return this.printFormatMessage(message, String(supportRequest._id));
   }
 
-  printFormatSupport(counter: SupportDocument): SendSupportRequest {
+  printFormatSupport(request: SupportDocument): SendSupportRequest {
+    const first: any = request.messages?.[0];
     return {
-      id: counter.id,
-      createdAt: new Date(counter.createdAt).toISOString(),
-      title: counter.messages[0],
+      id: String(request._id),
+      createdAt: new Date(request.createdAt).toISOString(),
+      // Раньше сюда попадал весь документ сообщения, и фронтенду приходилось
+      // доставать текст через приведение типов.
+      title: first?.text ?? "",
+      isActive: request.isActive ?? false,
     };
   }
 
   printFormatMessage(message: any, requestId: string): SendMessage {
     return {
-      id: message._id,
+      id: String(message._id),
       createdAt: new Date(message.sentAt).toISOString(),
       text: message.text,
-      readAt: message.readAt ?? undefined,
-      author: message.author,
+      readAt: message.readAt ? new Date(message.readAt).toISOString() : undefined,
+      author: String(message.author),
       requestId,
     };
   }

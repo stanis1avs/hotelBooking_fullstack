@@ -1,26 +1,27 @@
-import { Controller, Post, Res, HttpStatus, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Res, HttpStatus, UseGuards, Request, Req } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
-import { Response } from "express";
+import { Throttle } from "@nestjs/throttler";
+import { ConfigService } from "@nestjs/config";
+import { Request as ExpressRequest, Response } from "express";
 import { AuthProvider } from "../Providers/auth.provider";
+import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from "../Auth/refresh-cookie";
 
 @Controller("/api/auth")
 export class AuthController {
-  constructor(private auth: AuthProvider) {}
+  constructor(private auth: AuthProvider, private config: ConfigService) {}
 
+  private get isProd(): boolean {
+    return this.config.get("NODE_ENV") === "production";
+  }
+
+  // Пять попыток входа в минуту с одного адреса — защита от подбора пароля.
+  @Throttle(5, 60)
   @UseGuards(AuthGuard("local"))
   @Post("/login")
   async login(@Request() req, @Res() res: Response): Promise<void> {
-    const dataMain = await this.auth.login(req.user);
-    const dataReserve = await this.auth.validateRefresh(dataMain);
-    res
-      .status(HttpStatus.OK)
-      // .cookie("access_token", dataMain.token, { httpOnly: true, secure: false, maxAge: 2 * 24 * 60 * 60 * 1000 })
-      // .cookie("refresh_token", dataReserve.token, { httpOnly: true, secure: false, maxAge: 10 * 24 * 60 * 60 * 1000 })
-      .send({
-        ...dataMain.userData,
-        access_token: dataMain.token,
-        refresh_token: dataReserve.token,
-      });
+    const { access_token, refresh_token, userData } = await this.auth.issueTokens(req.user);
+    setRefreshCookie(res, refresh_token, this.isProd);
+    res.status(HttpStatus.OK).send({ ...userData, access_token });
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -29,19 +30,20 @@ export class AuthController {
     res.status(HttpStatus.OK).send({ ...req.user });
   }
 
-  // @Post('/logout')
-  // logout(@Res() res: Response): void {
-  //   res
-  //   .status(HttpStatus.NO_CONTENT)
-  //   .clearCookie("access_token", { httpOnly: true, secure: false })
-  //   .clearCookie("refresh_token", { httpOnly: true, secure: false })
-  //   .send();
-  // }
-
+  @Throttle(30, 60)
   @UseGuards(AuthGuard("jwt-refresh-token"))
   @Post("/refresh")
   async refresh(@Request() req, @Res() res: Response): Promise<void> {
-    const data = await this.auth.refresh(req.user);
-    res.status(HttpStatus.OK).send({ ...data.userData, access_token: data.token });
+    const { access_token, refresh_token, userData } = await this.auth.refresh(req.user);
+    setRefreshCookie(res, refresh_token, this.isProd);
+    res.status(HttpStatus.OK).send({ ...userData, access_token });
+  }
+
+  @Post("/logout")
+  logout(@Req() req: ExpressRequest, @Res() res: Response): void {
+    // Отзываем refresh на сервере, иначе украденный токен работал бы до конца TTL.
+    this.auth.revokeRefresh(req.cookies?.[REFRESH_COOKIE]);
+    clearRefreshCookie(res, this.isProd);
+    res.status(HttpStatus.NO_CONTENT).send();
   }
 }
