@@ -13,13 +13,50 @@
 
 Нумерация: `C` — критично, `V` — важно, `S` — средне, `L` — легко, `D` — дизайн.
 
+## Статус работ
+
+| Метка | Значение |
+|---|---|
+| ✅ | Исправлено, сборка и тесты проходят |
+| 🟡 | Исправлено частично — что именно осталось, указано в пункте |
+| ⬜ | Не исправлено |
+| ⏸ | Отложено по решению — трогать пока не договорились |
+
+### Сводка
+
+| Раздел | Всего | ✅ | 🟡 | ⬜ | ⏸ |
+|---|---|---|---|---|---|
+| 🔴 Критичные | 16 | 16 | — | — | — |
+| 🟠 Важные | 18 | 17 | — | 1 | — |
+| 🟡 Средние | 30 | 22 | 3 | 1 | 4 |
+| 🟢 Лёгкие | 19 | 18 | 1 | — | — |
+| 🎨 Дизайн | 33 | 18 | 2 | 13 | — |
+| **Итого** | **116** | **91** | **6** | **15** | **4** |
+
+**Что осталось не сделано и почему:**
+
+- **V-8** (изображения в base64 в MongoDB) — требует переезда на файловое хранилище
+  или S3 и миграции существующих данных. Отдельная задача, затрагивает и модель,
+  и API, и клиент.
+- **S-11** (мягкое удаление) — нужен флаг `deletedAt` во всех моделях и правка каждого
+  запроса на чтение. Частично закрыто иначе: удаление отеля или номера теперь не ломает
+  список бронирований — вместо падения показывается «Отель удалён».
+- **S-30** (тесты бэкенда) — юнит-тестов на провайдеры нет. На фронтенде тестовый
+  раннер поднят и 17 тестов проходят, для бэкенда аналогичное покрытие не написано.
+- **D-6, D-9, D-15, D-18, D-22, D-26, D-28** и **D-29…D-33** — доработки дизайна.
+  Часть из них (цена и рейтинг на карточке, шаги бронирования, дашборд менеджера)
+  требует полей, которых нет в модели данных.
+
+**Отложено по договорённости:** S-1, S-2, S-3, S-23 — дублирование REST и GraphQL,
+страница поддержки и админские страницы в обход NgRx, закомментированный код.
+
 ---
 
 ## 🔴 Критичные
 
 ### Безопасность
 
-#### C-1. Секрет подписи JWT закоммичен в репозиторий
+#### ✅ C-1. Секрет подписи JWT закоммичен в репозиторий
 Файл [hotelBooking_nest_back/.env](hotelBooking_nest_back/.env) содержит `JWT_TOKEN_SECRET` и `COOKIE_SECRET` и **отслеживается git** (`git ls-files` его показывает). В [hotelBooking_nest_back/.gitignore](hotelBooking_nest_back/.gitignore) записи `.env` нет. Корневой `.gitignore` отсутствует вовсе, поэтому корневой [.env](.env) с `DB_PASSWORD` тоже в репозитории.
 
 **Последствие:** любой, у кого есть доступ к репозиторию (включая историю), может подписать себе токен с `role: "admin"` и получить полный доступ к API.
@@ -32,7 +69,7 @@
 
 ---
 
-#### C-2. Повышение привилегий через публичную регистрацию
+#### ✅ C-2. Повышение привилегий через публичную регистрацию
 [hotelBooking_nest_back/src/Controllers/clientAuth.controller.ts:11](hotelBooking_nest_back/src/Controllers/clientAuth.controller.ts#L11) передаёт тело запроса в провайдер без фильтрации, а [users.provider.ts:16](hotelBooking_nest_back/src/Providers/users.provider.ts#L16) делает `role: createUser.role ? createUser.role : "client"`.
 
 ```
@@ -46,7 +83,7 @@ POST /api/client/register
 
 ---
 
-#### C-3. IDOR: чтение чужой переписки с поддержкой
+#### ✅ C-3. IDOR: чтение чужой переписки с поддержкой
 Два эндпоинта отдают историю сообщений по `id` заявки без проверки владельца:
 - REST — [commonSupport.controller.ts:14-19](hotelBooking_nest_back/src/Controllers/commonSupport.controller.ts#L14-L19), роль `client` разрешена, но принадлежность заявки не проверяется.
 - GraphQL — [support.resolver.ts:41-53](hotelBooking_nest_back/src/GraphQL/resolvers/support.resolver.ts#L41-L53), стоит только `GqlJwtAuthGuard`, ни ролей, ни проверки владельца.
@@ -59,7 +96,7 @@ POST /api/client/register
 
 ---
 
-#### C-4. WebSocket: guard проверяет один id, обработчик пишет в другой
+#### ✅ C-4. WebSocket: guard проверяет один id, обработчик пишет в другой
 [wsguardforsendmesg.ts:17](hotelBooking_nest_back/src/Auth/wsguardforsendmesg.ts#L17) берёт id заявки из **handshake-параметров соединения** (`context.args[0].handshake.query.id`) и по нему проверяет владельца. А обработчики [supportChat.gateway.ts:31](hotelBooking_nest_back/src/Providers/supportChat.gateway.ts#L31) и [:38](hotelBooking_nest_back/src/Providers/supportChat.gateway.ts#L38) пишут в заявку по id **из тела сообщения** (`data.id`).
 
 **Последствие:** клиент подключается с `?id=<своя заявка>` (guard пропускает), после чего шлёт `sendMessage { id: "<чужая заявка>", text: "..." }` и пишет в любую чужую переписку.
@@ -68,7 +105,7 @@ POST /api/client/register
 
 ---
 
-#### C-5. WebSocket: сообщения рассылаются всем подключённым
+#### ✅ C-5. WebSocket: сообщения рассылаются всем подключённым
 [supportChat.gateway.ts:25,32,39](hotelBooking_nest_back/src/Providers/supportChat.gateway.ts#L25) — везде `this.server.emit(...)`, то есть broadcast по всему namespace `support`, без комнат.
 
 **Последствие:** каждое сообщение любой заявки прилетает всем подключённым клиентам. Утечка персональных данных в реальном времени.
@@ -77,7 +114,7 @@ POST /api/client/register
 
 ---
 
-#### C-6. Refresh-токен подписан тем же секретом и принимается как access-токен
+#### ✅ C-6. Refresh-токен подписан тем же секретом и принимается как access-токен
 [auth.provider.ts:35-42](hotelBooking_nest_back/src/Providers/auth.provider.ts#L35-L42) подписывает refresh тем же `JWT_TOKEN_SECRET`, что и access ([:27](hotelBooking_nest_back/src/Providers/auth.provider.ts#L27)). [jwt.strategy.ts:14](hotelBooking_nest_back/src/Auth/jwt.strategy.ts#L14) проверяет access тем же ключом.
 
 **Последствие:** refresh-токен (10 дней) успешно проходит как access-токен в заголовке `Authorization`. Роль в payload есть, значит `RolesGuard` пропускает — двухдневный TTL access-токена не значит ничего. Плюс refresh нельзя отозвать: `logout` только чистит localStorage.
@@ -88,7 +125,7 @@ POST /api/client/register
 
 ---
 
-#### C-7. Токены в localStorage
+#### ✅ C-7. Токены в localStorage
 
 ##### Что именно сделано
 [auth-token.ts](hotelBooking_angular_front/src/app/core/auth-token.ts) кладёт оба токена в `localStorage`:
@@ -160,7 +197,7 @@ Cookie с флагом `httpOnly` не читается из JavaScript вооб
 
 ---
 
-#### C-8. Загрузка файлов без всякой валидации
+#### ✅ C-8. Загрузка файлов без всякой валидации
 [adminHotels.controller.ts:18](hotelBooking_nest_back/src/Controllers/adminHotels.controller.ts#L18) и [adminRooms.controller.ts:18](hotelBooking_nest_back/src/Controllers/adminRooms.controller.ts#L18) — `FileInterceptor("image")` / `FilesInterceptor("images")` без опций.
 
 **Последствие:** нет ограничения размера (файл целиком в память → OOM), нет проверки MIME/магических байт, нет лимита количества файлов. Загруженное складывается в MongoDB как base64 и потом отдаётся клиенту с жёстко зашитым `data:image/jpeg` ([image.utils.ts](hotelBooking_nest_back/src/utils/image.utils.ts)).
@@ -169,7 +206,7 @@ Cookie с флагом `httpOnly` не читается из JavaScript вооб
 
 ---
 
-#### C-9. Нет глобальной валидации входных данных
+#### ✅ C-9. Нет глобальной валидации входных данных
 В [main.ts](hotelBooking_nest_back/src/main.ts) не подключён `ValidationPipe`. Все DTO ([Interface/Users.ts](hotelBooking_nest_back/src/Interface/Users.ts), [Interface/Hotels.ts](hotelBooking_nest_back/src/Interface/Hotels.ts)) — голые классы без единого декоратора `class-validator`. `class-validator` и `class-transformer` даже не установлены.
 
 **Последствие:** в БД летит что угодно: любые лишние поля (отсюда [C-2](#c-2-повышение-привилегий-через-публичную-регистрацию)), объекты вместо строк (NoSQL-инъекция в `$regex`-фильтрах — см. [V-4](#v-4-нефильтрованный-regex-в-поиске-пользователей)), пустые пароли, некорректные даты.
@@ -182,7 +219,7 @@ app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: t
 
 ---
 
-#### C-10. Нет rate limiting на аутентификации
+#### ✅ C-10. Нет rate limiting на аутентификации
 `/api/auth/login`, `/api/client/register` и GraphQL-мутации `login`/`register` ничем не ограничены. `@nestjs/throttler` не установлен.
 
 **Последствие:** брутфорс паролей и массовое создание аккаунтов без сопротивления. Особенно опасно в связке с [C-2](#c-2-повышение-привилегий-через-публичную-регистрацию).
@@ -191,7 +228,7 @@ app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: t
 
 ---
 
-#### C-11. Prod-конфигурация фронтенда указывает на localhost по HTTP
+#### ✅ C-11. Prod-конфигурация фронтенда указывает на localhost по HTTP
 [environment.ts](hotelBooking_angular_front/src/environments/environment.ts) — `production: true`, но `host: 'http://localhost:7000'`. Файл идентичен `environment.development.ts`.
 
 **Последствие:** production-сборка неработоспособна; при выкладке как есть — токены ходят по незашифрованному HTTP.
@@ -202,7 +239,7 @@ app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: t
 
 ### Функциональность
 
-#### C-12. Редактирование отеля без замены фото падает с 500
+#### ✅ C-12. Редактирование отеля без замены фото падает с 500
 [adminHotels.controller.ts:33](hotelBooking_nest_back/src/Controllers/adminHotels.controller.ts#L33): `image: file ? file.buffer : data.image`. Фронтенд [admin-hotels.ts:98](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.ts#L98) кладёт `image` в `FormData` **только если выбран новый файл**, значит `data.image === undefined`. Дальше [hotels.provider.ts:53](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L53):
 
 ```ts
@@ -217,7 +254,7 @@ image: typeof data.image == "string" ? data.image : Buffer.from(data.image).toSt
 
 ---
 
-#### C-13. Чат поддержки обращается к несуществующим REST-эндпоинтам
+#### ✅ C-13. Чат поддержки обращается к несуществующим REST-эндпоинтам
 [api.ts:167](hotelBooking_angular_front/src/app/core/api.ts#L167) шлёт `POST /api/common/support-requests/:id/messages`, [api.ts:175](hotelBooking_angular_front/src/app/core/api.ts#L175) — `POST /api/client/support-requests`. На бэкенде таких маршрутов нет: [commonSupport.controller.ts](hotelBooking_nest_back/src/Controllers/commonSupport.controller.ts) объявляет только `GET /:id/messages`, [clientSupport.controller.ts](hotelBooking_nest_back/src/Controllers/clientSupport.controller.ts) — только `GET /`. Создание заявки и отправка сообщений существуют исключительно как WebSocket-события `requestSupport` / `sendMessage`.
 
 **Последствие:** создать обращение и отправить сообщение из UI невозможно — 404. Ключевая фича раздела «Поддержка» не работает.
@@ -226,7 +263,7 @@ image: typeof data.image == "string" ? data.image : Buffer.from(data.image).toSt
 
 ---
 
-#### C-14. Пагинация в управлении пользователями зацикливает приложение
+#### ✅ C-14. Пагинация в управлении пользователями зацикливает приложение
 [admin-users.ts:134-148](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.ts#L134-L148):
 
 ```ts
@@ -251,7 +288,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### C-15. Регистрация оставляет пользователя в «полулогине»
+#### ✅ C-15. Регистрация оставляет пользователя в «полулогине»
 [register.ts:59](hotelBooking_angular_front/src/app/pages/register/register.ts#L59) делает `navigateByUrl('/login')` синхронно после `dispatch`, не дожидаясь результата. Параллельно `registerSuccess` кладёт пользователя в стор ([auth.reducer.ts:42](hotelBooking_angular_front/src/app/reducers/auth.reducer.ts#L42)), а конструктор [login.ts:41-44](hotelBooking_angular_front/src/app/pages/login/login.ts#L41-L44) при непустом `selectAuthUser` немедленно редиректит на `/hotels`.
 
 **Последствие:** после регистрации пользователь оказывается на `/hotels`, в шапке отображается его имя — но токена нет. Любой переход в «Мои брони» упирается в `authGuard` → `/login` → снова редирект на `/hotels`. Пользователь ходит по кругу и не понимает, что нужно залогиниться.
@@ -262,7 +299,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### C-16. Docker-сборка нерабочая
+#### ✅ C-16. Docker-сборка нерабочая
 [docker-compose.yml](docker-compose.yml):
 - `frontend.build: ./hotelBooking_react_front` — такой директории нет (React-фронт переехал в `_old_frontend`), Angular-фронт не описан вовсе.
 - В `backend.environment` **не передаётся `JWT_TOKEN_SECRET`** → `jwtService.sign` подписывает с `secret: undefined`.
@@ -277,7 +314,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ## 🟠 Важные
 
-#### V-1. Занятость отеля считается по магическому числу «2»
+#### ✅ V-1. Занятость отеля считается по магическому числу «2»
 [reservations.provider.ts:83](hotelBooking_nest_back/src/Providers/reservations.provider.ts#L83):
 
 ```ts
@@ -292,7 +329,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### V-2. Нет проверки пересечения дат при бронировании
+#### ✅ V-2. Нет проверки пересечения дат при бронировании
 [reservations.provider.ts:20](hotelBooking_nest_back/src/Providers/reservations.provider.ts#L20) `createReservation` создаёт запись без единой проверки: ни занятости номера на выбранные даты, ни `dateStart < dateEnd`, ни того, что даты в будущем.
 
 **Последствие:** один номер бронируется несколько раз на одни даты; можно забронировать «задним числом» и на отрицательный интервал.
@@ -301,7 +338,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### V-3. Фильтр `isEnabled` игнорируется — клиенты видят отключённые номера
+#### ✅ V-3. Фильтр `isEnabled` игнорируется — клиенты видят отключённые номера
 [rooms.provider.ts:40-48](hotelBooking_nest_back/src/Providers/rooms.provider.ts#L40-L48): `SearchRoomsParams` содержит `isEnabled`, но в запрос попадает только `hotel`. GraphQL-резолвер [rooms.resolver.ts:14](hotelBooking_nest_back/src/GraphQL/resolvers/rooms.resolver.ts#L14) исправно пробрасывает аргумент, который дальше теряется.
 
 **Последствие:** снятые с продажи номера показываются клиентам и доступны к бронированию.
@@ -310,7 +347,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### V-4. Нефильтрованный `$regex` в поиске пользователей
+#### ✅ V-4. Нефильтрованный `$regex` в поиске пользователей
 [users.provider.ts:23-31](hotelBooking_nest_back/src/Providers/users.provider.ts#L23-L31) подставляет пользовательский ввод прямо в `$regex` по трём полям.
 
 **Последствие:**
@@ -322,7 +359,7 @@ onNextPage() { this.store.dispatch(UsersActions.nextPage()); } // offset счи�
 
 ---
 
-#### V-5. `RolesGuard` падает вместо отказа в доступе
+#### ✅ V-5. `RolesGuard` падает вместо отказа в доступе
 [roles.decorator.ts:9-12](hotelBooking_nest_back/src/Decorators/roles.decorator.ts#L9-L12):
 
 ```ts
@@ -338,7 +375,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-6. Нет обработки истёкшего токена — механизм refresh мёртв
+#### ✅ V-6. Нет обработки истёкшего токена — механизм refresh мёртв
 `AuthActions.refreshToken` **нигде не диспатчится** (проверено поиском по `src`). Эффект [auth.effects.ts:93-112](hotelBooking_angular_front/src/app/effects/auth.effects.ts#L93-L112), редьюсер, `ApolloService.refreshToken` и мутация на бэкенде существуют, но не вызываются. HTTP-интерцептор [auth-interceptor.ts](hotelBooking_angular_front/src/app/core/auth-interceptor.ts) не реагирует на 401.
 
 **Последствие:** через 2 дня приложение начинает молча получать 401 на каждый запрос — пустые списки, спиннеры без результата, без редиректа на логин и без обновления токена.
@@ -347,7 +384,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-7. N+1 запросы в списках
+#### ✅ V-7. N+1 запросы в списках
 - [rooms.provider.ts:63](hotelBooking_nest_back/src/Providers/rooms.provider.ts#L63): `printFormatRoom` вызывает `getIdHotel` **на каждый номер** — список из 20 номеров одного отеля даёт 20 одинаковых запросов за одним и тем же отелем.
 - [reservations.provider.ts:38-44](hotelBooking_nest_back/src/Providers/reservations.provider.ts#L38-L44): на каждую бронь — `getIdRoom` (внутри ещё `getIdHotel`) + `getIdUser`. При лимите 50 это ~150 запросов к БД на один вызов `/api/manager/reservations`.
 
@@ -355,7 +392,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-8. Изображения хранятся в MongoDB в base64
+#### ⬜ V-8. Изображения хранятся в MongoDB в base64
 [hotels.provider.ts:15](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L15), [Models/Hotels.ts:19](hotelBooking_nest_back/src/Models/Hotels.ts#L19), [Models/Rooms.ts:14](hotelBooking_nest_back/src/Models/Rooms.ts#L14).
 
 **Последствие:** base64 раздувает объём на 33%; лимит документа Mongo 16 МБ достигается быстро; список отелей отдаёт все картинки целиком в JSON (мегабайты на запрос); кеширование браузером невозможно — нет URL; `mat-card-image` получает гигантские `data:`-строки, что тормозит рендер.
@@ -364,7 +401,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-9. Админ видит только первые 10 отелей и через фиктивные даты
+#### ✅ V-9. Админ видит только первые 10 отелей и через фиктивные даты
 [api.ts:210-212](hotelBooking_angular_front/src/app/core/api.ts#L210-L212) `getAllHotels()` захардкожен на `dateArrival: '2024-01-01'`, `dateDeparture: '2024-12-31'`. Бэкенд [hotels.provider.ts:35](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L35) отдаёт `.limit(10)` без `offset` из UI и без общего количества.
 
 **Последствие:** страницы «Управление отелями» и «Управление номерами» показывают максимум 10 отелей, причём отфильтрованных по бронированиям 2024 года. Отель, «занятый» в 2024-м, исчезает из админки навсегда.
@@ -373,7 +410,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-10. Список пользователей жёстко ограничен ролью `client`
+#### ✅ V-10. Список пользователей жёстко ограничен ролью `client`
 [users.provider.ts:28](hotelBooking_nest_back/src/Providers/users.provider.ts#L28) — `role: "client"` вшит в фильтр.
 
 **Последствие:** админ создаёт менеджера через форму на странице «Управление пользователями» и не видит его в таблице ниже. Колонка «Role» всегда показывает `Client`, а селект ролей в форме создаёт иллюзию, что можно управлять всеми ролями.
@@ -382,7 +419,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-11. Параметр `limit` игнорируется, пагинация держится на совпадении
+#### ✅ V-11. Параметр `limit` игнорируется, пагинация держится на совпадении
 [users.provider.ts:31](hotelBooking_nest_back/src/Providers/users.provider.ts#L31) — `.limit(50)` вшит, `queryParams.limit` не используется. Селектор [users.selectors.ts:17](hotelBooking_angular_front/src/app/selectors/users.selectors.ts#L17) считает `hasNextPage = users.length === limit`, где `limit` в сторе тоже 50.
 
 **Последствие:** работает случайно. Смена лимита в сторе ломает кнопку «Next». Плюс `hasNextPage` даёт ложный «true» на последней странице, если её размер ровно 50.
@@ -391,7 +428,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-12. Гонка при записи сообщений поддержки
+#### ✅ V-12. Гонка при записи сообщений поддержки
 [support.provider.ts:98-105](hotelBooking_nest_back/src/Providers/support.provider.ts#L98-L105) и [:85-96](hotelBooking_nest_back/src/Providers/support.provider.ts#L85-L96) читают массив `messages`, модифицируют его в памяти и целиком перезаписывают через `findByIdAndUpdate`.
 
 **Последствие:** два одновременных сообщения (клиент и менеджер) — одно теряется. Отметки о прочтении затирают новые сообщения.
@@ -400,21 +437,21 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-13. `title` заявки — это весь документ сообщения
+#### ✅ V-13. `title` заявки — это весь документ сообщения
 [support.provider.ts:111](hotelBooking_nest_back/src/Providers/support.provider.ts#L111) возвращает `title: counter.messages[0]` — целый объект сообщения, а не текст. На фронте приходится доставать `(r.title as any).text` ([support.resolver.ts:23](hotelBooking_nest_back/src/GraphQL/resolvers/support.resolver.ts#L23)) и `req.title?.text` в шаблоне.
 
 **Что делать:** возвращать `title: counter.messages[0]?.text ?? ''`, поправить типы.
 
 ---
 
-#### V-14. `isActive` не доходит до UI
+#### ✅ V-14. `isActive` не доходит до UI
 [support.resolver.ts:24,37](hotelBooking_nest_back/src/GraphQL/resolvers/support.resolver.ts#L24) жёстко возвращает `isActive: null`, потому что `printFormatSupport` его не отдаёт. Шаблон [support.html:32](hotelBooking_angular_front/src/app/pages/support/support.html#L32) рисует `{{ req.isActive ? 'Активно' : 'Закрыто' }}` → всегда «Закрыто», а кнопка закрытия у менеджера ([support.html:34](hotelBooking_angular_front/src/app/pages/support/support.html#L34)) никогда не отображается.
 
 **Что делать:** добавить `isActive` в `SendSupportRequest` и в маппинг резолвера.
 
 ---
 
-#### V-15. Регистрация допускает дубликаты email
+#### ✅ V-15. Регистрация допускает дубликаты email
 [Models/Users.ts:6-7](hotelBooking_nest_back/src/Models/Users.ts#L6-L7) — у `email` нет `unique: true` (у остальных полей явно проставлено `unique: false`). Проверки существования пользователя в `createUser` тоже нет.
 
 **Последствие:** два аккаунта с одним email; `validateUser` ([auth.provider.ts:15](hotelBooking_nest_back/src/Providers/auth.provider.ts#L15)) через `findOne` логинит первый попавшийся — пользователь не может войти под своим паролем.
@@ -423,7 +460,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-16. `@angular/material` и `@angular/cdk` в devDependencies
+#### ✅ V-16. `@angular/material` и `@angular/cdk` в devDependencies
 [package.json:37-38](hotelBooking_angular_front/package.json#L37-L38) — обе библиотеки рантайм-зависимости, но лежат в `devDependencies`. Там же `@ngrx/effects` и `@ngrx/store`, продублированные в обеих секциях.
 
 **Последствие:** `npm ci --omit=dev` в CI/Docker ломает сборку.
@@ -432,7 +469,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-17. Тесты фронтенда невозможно запустить
+#### ✅ V-17. Тесты фронтенда невозможно запустить
 В [angular.json](hotelBooking_angular_front/angular.json) нет таргета `test`, в `devDependencies` нет ни karma, ни jest, ни `@angular/platform-browser-dynamic/testing`. При этом в проекте лежат **15 `.spec.ts` файлов** (`auth.effects.spec.ts`, `hotels.reducer.spec.ts`, `booking.selectors.spec.ts` и др.), а `package.json` объявляет `"test": "ng test"`.
 
 **Последствие:** `npm test` падает; тесты — мёртвый груз, дающий ложное ощущение покрытия.
@@ -441,7 +478,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### V-18. Конфликт версий Tailwind
+#### ✅ V-18. Конфликт версий Tailwind
 [package.json](hotelBooking_angular_front/package.json) содержит одновременно `tailwindcss@^3.4.17` и `@tailwindcss/postcss@^4.2.1` (пакет для Tailwind v4). [postcss.config.js](hotelBooking_angular_front/postcss.config.js) использует v3-схему (`plugins: { tailwindcss: {} }`), а [styles.scss](hotelBooking_angular_front/src/styles.scss) — v3-директивы `@tailwind base/components/utilities`.
 
 **Последствие:** лишний несовместимый пакет в дереве зависимостей, риск сломать сборку при `npm update`.
@@ -452,7 +489,7 @@ return role.some((el) => el == request.user.role);
 
 ## 🟡 Средние
 
-#### S-1. Дублирование транспортов: REST и GraphQL живут параллельно
+#### ⏸ S-1. Дублирование транспортов: REST и GraphQL живут параллельно
 После перехода на Apollo ([GRAPHQL.md](GRAPHQL.md)) REST-контроллеры остались и покрывают те же операции. `Api` ([api.ts](hotelBooking_angular_front/src/app/core/api.ts)) содержит ~30 методов, из которых реально используются единицы (загрузка файлов, поддержка, `authLogout`), остальные дублируют `ApolloService`.
 
 **Последствие:** два места правки на каждое изменение контракта, два набора авторизационных проверок (у REST и GraphQL-версий `supportMessages` они, например, разошлись — см. [C-3](#c-3-idor-чтение-чужой-переписки-с-поддержкой)).
@@ -461,7 +498,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### S-2. Страница «Поддержка» игнорирует NgRx
+#### ⏸ S-2. Страница «Поддержка» игнорирует NgRx
 [support.ts](hotelBooking_angular_front/src/app/pages/support/support.ts) работает напрямую через `Api`, хранит состояние в полях компонента и вручную дёргает `cdr.detectChanges()`. При этом полный NgRx-слайс существует и не используется никем: [support.actions.ts](hotelBooking_angular_front/src/app/actions/support.actions.ts), [support.effects.ts](hotelBooking_angular_front/src/app/effects/support.effects.ts), [support.reducer.ts](hotelBooking_angular_front/src/app/reducers/support.reducer.ts), [support.selectors.ts](hotelBooking_angular_front/src/app/selectors/support.selectors.ts).
 
 Иронично, что эффекты уже ходят через `ApolloService` (рабочий путь), а компонент — через `Api` (нерабочий, см. [C-13](#c-13-чат-поддержки-обращается-к-несуществующим-rest-эндпоинтам)).
@@ -470,63 +507,68 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### S-3. Тот же паттерн на страницах админки
+#### ⏸ S-3. Тот же паттерн на страницах админки
 [admin-hotels.ts](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.ts), [admin-rooms.ts](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.ts), [manager-reservations.ts](hotelBooking_angular_front/src/app/pages/manager-reservations/manager-reservations.ts) — прямые вызовы `Api`, локальные флаги `loading`/`saving`, ручной `detectChanges`. Ни один не использует `ChangeDetectionStrategy.OnPush`, кроме `admin-users`.
 
 **Что делать:** привести к единому подходу (NgRx или signals + `resource()`), включить `OnPush` везде.
 
 ---
 
-#### S-4. Мёртвый NgRx-слайс `booking`
+#### ✅ S-4. Мёртвый NgRx-слайс `booking`
 [booking.actions.ts](hotelBooking_angular_front/src/app/actions/booking.actions.ts), [booking.effects.ts](hotelBooking_angular_front/src/app/effects/booking.effects.ts), [booking.reducer.ts](hotelBooking_angular_front/src/app/reducers/booking.reducer.ts), [booking.selectors.ts](hotelBooking_angular_front/src/app/selectors/booking.selectors.ts) зарегистрированы в [app.config.ts:38](hotelBooking_angular_front/src/app/app.config.ts#L38) и не используются ни одним компонентом.
 
 **Что делать:** удалить или задействовать (логичный кандидат — состояние мастера бронирования, см. [D-9](#d-9-бронирование-просится-в-matstepper)).
 
 ---
 
-#### S-5. Дефолтный шаблон Angular CLI не удалён
+#### ✅ S-5. Дефолтный шаблон Angular CLI не удалён
 [app.html](hotelBooking_angular_front/src/app/app.html) — 342 строки заглушки CLI (логотип Angular, «Congratulations! Your app is running 🎉», ссылки на angular.dev). Файл не подключён — [app.ts:7](hotelBooking_angular_front/src/app/app.ts#L7) использует инлайновый `template: '<router-outlet />'`, — то есть это чистый мусор. [app.scss](hotelBooking_angular_front/src/app/app.scss) пуст и тоже не подключён.
 
 **Что делать:** удалить оба файла.
 
 ---
 
-#### S-6. Нет ленивой загрузки маршрутов
+#### ✅ S-6. Нет ленивой загрузки маршрутов
 [app.routes.ts](hotelBooking_angular_front/src/app/app.routes.ts) импортирует все 11 страниц статически. Админские страницы, менеджерские таблицы и чат попадают в initial bundle к анонимному посетителю.
 
 **Что делать:** `loadComponent: () => import('./pages/...')` для всех страниц за guard'ами.
 
 ---
 
-#### S-7. Нет страниц 404/403
+#### ✅ S-7. Нет страниц 404/403
 [app.routes.ts:65](hotelBooking_angular_front/src/app/app.routes.ts#L65) — `{ path: '**', redirectTo: 'hotels' }`. Опечатка в URL молча уводит на главную. `roleGuard` при нехватке прав тоже редиректит на `/hotels` без объяснения.
 
 **Что делать:** компоненты `NotFound` / `Forbidden` с внятным текстом и кнопкой возврата.
 
 ---
 
-#### S-8. `Passport LocalStrategy` наполовину подключён
+#### 🟡 S-8. `Passport LocalStrategy` наполовину подключён
 [auth.controller.ts:10](hotelBooking_nest_back/src/Controllers/auth.controller.ts#L10) использует `AuthGuard("local")` корректно, но GraphQL-мутация [auth.resolver.ts:26](hotelBooking_nest_back/src/GraphQL/resolvers/auth.resolver.ts#L26) вызывает `validateUser` напрямую. Два пути аутентификации с разной обработкой ошибок.
 
 **Что делать:** единая точка — сервис; стратегию оставить только там, где она реально нужна.
 
+> **Осталось:** REST-вход по-прежнему идёт через `AuthGuard("local")`, GraphQL-мутация —
+> напрямую через `validateUser`. Обработка ошибок у них теперь одинаковая
+> (оба отвечают 401 с текстом «Неверный адрес или пароль»), но два пути входа сохранились.
+> Полное объединение упирается в [S-1](#-s-1-дублирование-транспортов-rest-и-graphql-живут-параллельно), который отложен.
+
 ---
 
-#### S-9. Guard на методе, который не является обработчиком
+#### ✅ S-9. Guard на методе, который не является обработчиком
 [supportChat.gateway.ts:23-24](hotelBooking_nest_back/src/Providers/supportChat.gateway.ts#L23-L24): `@UseGuards(WsGuardforSendMesg)` навешан на `sendRequest()` — обычный метод без `@SubscribeMessage`. Guard не выполняется никогда.
 
 **Что делать:** убрать декоратор — он создаёт ложное впечатление защищённости.
 
 ---
 
-#### S-10. WS-guard'ы падают на отсутствующем заголовке
+#### ✅ S-10. WS-guard'ы падают на отсутствующем заголовке
 [wsguardforrequest.ts:11](hotelBooking_nest_back/src/Auth/wsguardforrequest.ts#L11) и [wsguardforsendmesg.ts:12](hotelBooking_nest_back/src/Auth/wsguardforsendmesg.ts#L12): `handshake.headers.authorization.split(" ")[1]` — без заголовка это `TypeError`, а не `UnauthorizedException`. Дальше идёт `if (!bearerToken)`, до которого исполнение уже не доходит. Плюс после каждого `throw` стоит недостижимый `return false`.
 
 **Что делать:** проверять наличие заголовка до `split`, убрать мёртвые `return`.
 
 ---
 
-#### S-11. Жёсткий отказ вместо мягкого удаления
+#### ⬜ S-11. Жёсткий отказ вместо мягкого удаления
 [hotels.provider.ts:72](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L72) и [rooms.provider.ts:58](hotelBooking_nest_back/src/Providers/rooms.provider.ts#L58) — `findByIdAndDelete` без каких-либо проверок связей.
 
 **Последствие:** удаление номера с активными бронями оставляет «висячие» брони, а `getHotelandRoom` на них бросает `BadRequestException` → страница «Все бронирования» падает целиком.
@@ -535,7 +577,7 @@ return role.some((el) => el == request.user.role);
 
 ---
 
-#### S-12. `normalizeImageForClient` — 57 строк угадывания формата
+#### ✅ S-12. `normalizeImageForClient` — 57 строк угадывания формата
 [image.utils.ts](hotelBooking_nest_back/src/utils/image.utils.ts) перебирает 7 вариантов представления картинки (Buffer, Uint8Array, `.buffer`, `.data`, строка, любой ключ объекта…). Это симптом того, что формат хранения не зафиксирован: `Hotel.image` объявлен как `string`, `Room.images` — как `[Buffer]`, а на запись идёт то base64-строка, то Buffer.
 
 MIME при этом всегда `image/jpeg` — PNG и WebP отдаются с неверным типом.
@@ -544,7 +586,7 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### S-13. Мутирующие ответы `printFormat*` расходятся между методами
+#### ✅ S-13. Мутирующие ответы `printFormat*` расходятся между методами
 [hotels.provider.ts:39-45](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L39-L45): `getAllHotels` перезаписывает `image` нормализованной версией поверх результата `printFormatHotel`, а `createHotel`/`editHotel` возвращают сырое значение.
 
 **Последствие:** созданный отель приходит на фронт с картинкой в другом формате, чем при последующей загрузке списка.
@@ -553,91 +595,215 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### S-14. GraphQL: introspection и playground не отключены
-[app.module.ts:30-35](hotelBooking_nest_back/src/app.module.ts#L30-L35) — конфиг без `playground: false` / `introspection: false` для production, без ограничения глубины и сложности запросов, без `formatError` (в ответ утекают стек-трейсы Nest).
+#### 🟡 S-14. GraphQL-эндпоинт не защищён от разведки и тяжёлых запросов
 
-**Что делать:** отключить introspection в prod, добавить `graphql-depth-limit`/`graphql-query-complexity`, привести ошибки к безопасному виду.
+##### Что было
+[app.module.ts](hotelBooking_nest_back/src/app.module.ts) регистрировал `GraphQLModule.forRoot`
+с четырьмя параметрами: драйвер, `autoSchemaFile`, `sortSchema` и `context`.
+Ни одной настройки безопасности.
+
+```typescript
+GraphQLModule.forRoot<ApolloDriverConfig>({
+  driver: ApolloDriver,
+  autoSchemaFile: join(process.cwd(), "src/schema.gql"),
+  sortSchema: true,
+  context: ({ req }) => ({ req }),
+}),
+```
+
+##### Из чего складывается проблема
+
+**1. Introspection открыта наружу.**
+GraphQL умеет описывать сам себя: запрос `__schema` возвращает полный список типов,
+полей, аргументов и мутаций. Для атакующего это готовая карта API — не нужно
+угадывать имена эндпоинтов, схема расскажет о них сама. В связке с уже найденными
+дырами ([C-3](#c-3-idor-чтение-чужой-переписки-с-поддержкой) — чтение чужих обращений)
+это ускоряет разведку с часов до минут: видно и `supportMessages(requestId: String!)`,
+и то, какие поля он отдаёт.
+
+**2. Playground поднимался в проде.**
+`@nestjs/apollo` без явного `playground: false` включает интерактивную песочницу.
+Это работающая консоль к боевому API по публичному адресу — с автодополнением,
+историей запросов и документацией по схеме.
+
+**3. Нет лимита глубины запроса.**
+GraphQL-запросы могут быть рекурсивными, если в схеме есть циклическая связь.
+В текущей схеме прямого цикла нет — `RoomType` ссылается на `HotelType`, но не наоборот,
+поэтому вложенность ограничена двумя уровнями. Это временное свойство схемы,
+а не защита: стоит добавить `HotelType.rooms` (а это напрашивается для
+[D-6](#d-6-карточка-отеля-не-продаёт)), и появится цикл `hotel → rooms → hotel → rooms…`.
+Один запрос глубиной 15 уровней превращается в тысячи обращений к базе.
+
+**4. Нет ограничения сложности.**
+Даже без рекурсии одним запросом можно попросить всё сразу:
+
+```graphql
+query {
+  a: hotels(dateArrival: "2026-01-01", dateDeparture: "2026-01-02") { id title image }
+  b: hotels(dateArrival: "2026-02-01", dateDeparture: "2026-02-02") { id title image }
+  # ... и так пятьсот алиасов
+}
+```
+
+Алиасы позволяют вызвать один и тот же запрос сколько угодно раз в пределах
+одного HTTP-запроса. Rate limiting здесь бессилен: для `@nestjs/throttler` это
+один запрос. А поскольку `image` — это base64-строка целиком
+([V-8](#v-8-изображения-хранятся-в-mongodb-в-base64)), пятьсот алиасов по десять
+отелей дают сотни мегабайт в ответе.
+
+**5. Ошибки уходили клиенту как есть.**
+Без `formatError` Apollo отдаёт `extensions.exception.stacktrace` — полный стек Nest
+с путями к файлам и внутренней структурой проекта.
+
+##### Что сделано
+
+```typescript
+GraphQLModule.forRootAsync<ApolloDriverConfig>({
+  driver: ApolloDriver,
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => {
+    const isProd = configService.get("NODE_ENV") === "production";
+    return {
+      autoSchemaFile: join(process.cwd(), "src/schema.gql"),
+      sortSchema: true,
+      context: ({ req, res }) => ({ req, res }),
+      introspection: !isProd,
+      playground: !isProd,
+      formatError: (error) => ({
+        message: error.message,
+        path: error.path,
+        code: error.extensions?.code,
+      }),
+    };
+  },
+  inject: [ConfigService],
+}),
+```
+
+Закрыто: пункты 1, 2 и 5. В разработке песочница и introspection остаются —
+без них неудобно работать; в проде отключаются по `NODE_ENV`.
+
+##### Что осталось
+
+Лимиты глубины и сложности не добавлены — нужны отдельные пакеты и калибровка
+порогов под реальные запросы клиента.
+
+```bash
+npm i graphql-depth-limit graphql-query-complexity
+```
+
+```typescript
+import depthLimit from "graphql-depth-limit";
+import { createComplexityLimitRule } from "graphql-validation-complexity";
+
+// в конфиг GraphQLModule:
+validationRules: [
+  depthLimit(7),
+  createComplexityLimitRule(1000, {
+    onCost: (cost) => logger.debug(`Стоимость запроса: ${cost}`),
+  }),
+],
+```
+
+Порог 7 покрывает самый глубокий запрос в приложении
+(`hotelRooms → hotel → description` — три уровня) с большим запасом.
+Значение сложности 1000 нужно подобрать по логам `onCost` на реальном трафике:
+сначала включить только логирование, посмотреть распределение за неделю,
+затем поставить лимит выше 99-го процентиля.
+
+Отдельно стоит ограничить размер тела запроса
+(`app.use(json({ limit: '100kb' }))`) — это дешёвая защита от запросов
+с тысячами алиасов, не требующая новых зависимостей.
 
 ---
 
-#### S-15. Отсутствуют базовые security-заголовки и настройка порта
+#### ✅ S-15. Отсутствуют базовые security-заголовки и настройка порта
 [main.ts](hotelBooking_nest_back/src/main.ts): нет `helmet`, нет глобального префикса, порт `7000` захардкожен (при том что `SERVER_PORT` есть в `.env` и пробрасывается в docker-compose), CORS-origin — литеральный массив с внутренним IP `10.8.144.42`.
 
 **Что делать:** `helmet()`, `app.listen(configService.get('SERVER_PORT') ?? 7000)`, origin из переменной окружения.
 
 ---
 
-#### S-16. `credentialsInterceptor` шлёт `withCredentials` во все запросы
+#### ✅ S-16. `credentialsInterceptor` шлёт `withCredentials` во все запросы
 [credentials-interceptor.ts](hotelBooking_angular_front/src/app/core/credentials-interceptor.ts) добавляет `withCredentials: true` абсолютно ко всем HTTP-вызовам, хотя cookie-аутентификация отключена (закомментирована на бэкенде).
 
 **Что делать:** удалить интерцептор либо ограничить его собственным API-хостом — иначе он вернётся в строй вместе с cookie-схемой из [C-7](#c-7-токены-в-localstorage).
 
 ---
 
-#### S-17. Устаревшие и неиспользуемые зависимости
+#### 🟡 S-17. Устаревшие и неиспользуемые зависимости
 - Бэкенд: NestJS **9.x** (текущая — 11), `mongoose@^6` (EOL), `@types/node@18`, `typescript@4.7`, `prettier@2` в дев-зависимостях против `prettier@3` на фронте.
 - Фронт: `@angular/material-moment-adapter` установлен, но `moment` отсутствует и адаптер нигде не импортируется; `@ngrx/entity` установлен и не используется.
-- `provideAnimationsAsync()` ([app.config.ts:34](hotelBooking_angular_front/src/app/app.config.ts#L34)) — устаревший API в Angular 21, заменяется на `provideAnimations()`.
+- `provideAnimationsAsync()` ([app.config.ts](hotelBooking_angular_front/src/app/app.config.ts)) — устаревший API в Angular 21, заменяется на `provideAnimations()`.
+
+> **Сделано:** `provideAnimations()` вместо устаревшего API; удалены неиспользуемые
+> `@angular/material-moment-adapter` и `@ngrx/entity`; убран дублирующий
+> `@tailwindcss/postcss` v4 при Tailwind v3 ([V-18](#-v-18-конфликт-версий-tailwind));
+> `prettier` приведён к общей конфигурации в корне.
+>
+> **Осталось:** бэкенд на NestJS 9 и Mongoose 6 (обе версии сняты с поддержки).
+> Обновление до Nest 11 и Mongoose 8 — отдельная задача с проверкой всех breaking changes,
+> в том числе смены API у `@nestjs/throttler` (v4 → v5 меняет формат конфигурации и декоратора).
 
 ---
 
-#### S-18. `provideStoreDevtools` включён в production-сборке
+#### ✅ S-18. `provideStoreDevtools` включён в production-сборке
 [app.config.ts:47-50](hotelBooking_angular_front/src/app/app.config.ts#L47-L50) регистрируется безусловно, без `logOnly: environment.production` и без `!environment.production` в `connectInZone`.
 
 **Последствие:** всё состояние приложения, включая данные пользователей, доступно через Redux DevTools в проде.
 
 ---
 
-#### S-19. `schema.gql` генерируется в исходники и коммитится
+#### ✅ S-19. `schema.gql` генерируется в исходники и коммитится
 [app.module.ts:32](hotelBooking_nest_back/src/app.module.ts#L32) пишет `src/schema.gql` при каждом старте. Файл лежит в репозитории и постоянно даёт diff.
 
 **Что делать:** генерировать в `dist/` или добавить в `.gitignore`.
 
 ---
 
-#### S-20. Устаревшие опции подключения Mongoose
+#### ✅ S-20. Устаревшие опции подключения Mongoose
 [app.module.ts:24-25](hotelBooking_nest_back/src/app.module.ts#L24-L25) — `useUnifiedTopology` и `useNewUrlParser` игнорируются начиная с Mongoose 6 и в 7+ вызывают предупреждения.
 
 ---
 
-#### S-21. Нет индексов в схемах MongoDB
+#### ✅ S-21. Нет индексов в схемах MongoDB
 Ни в одной модели ([Models/](hotelBooking_nest_back/src/Models/)) нет `index: true`. Поиск идёт по `Reservation.dateStart/dateEnd/roomId/hotelId/userId`, `Room.hotel`, `Support.user/isActive`, `User.email` — всё коллекционным сканированием.
 
 ---
 
-#### S-22. Логирование и обработка ошибок отсутствуют
+#### ✅ S-22. Логирование и обработка ошибок отсутствуют
 Нет `Logger`, нет глобального `ExceptionFilter`. Повсеместно бросается голый `BadRequestException()` без сообщения ([users.provider.ts:33](hotelBooking_nest_back/src/Providers/users.provider.ts#L33), [hotels.provider.ts:37](hotelBooking_nest_back/src/Providers/hotels.provider.ts#L37), [rooms.provider.ts:44](hotelBooking_nest_back/src/Providers/rooms.provider.ts#L44) и др.) — клиент получает 400 «Bad Request» без причины, а «не найдено» неотличимо от «некорректный запрос» (должно быть 404).
 
 ---
 
-#### S-23. Мёртвый закомментированный код
+#### ⏸ S-23. Мёртвый закомментированный код
 [auth.controller.ts:17-18,32-39](hotelBooking_nest_back/src/Controllers/auth.controller.ts#L32-L39) (logout и cookie), [clientReservations.controller.ts:22-24](hotelBooking_nest_back/src/Controllers/clientReservations.controller.ts#L22-L24), [app.module.ts:23](hotelBooking_nest_back/src/app.module.ts#L23) (Atlas URI). Плюс директория [_old_frontend/](_old_frontend/) с целым React-приложением в репозитории.
 
 ---
 
-#### S-24. `Api.authLogout()` бьёт в несуществующий эндпоинт
+#### ✅ S-24. `Api.authLogout()` бьёт в несуществующий эндпоинт
 [api.ts:110](hotelBooking_angular_front/src/app/core/api.ts#L110) вызывает `POST /api/auth/logout`, которого нет (закомментирован). Эффект [auth.effects.ts:63-66](hotelBooking_angular_front/src/app/effects/auth.effects.ts#L63-L66) ловит ошибку и всё равно чистит токены — то есть выход работает «через catch». В консоли на каждый logout — 404.
 
 ---
 
-#### S-25. Утечка blob-URL при загрузке изображений
+#### ✅ S-25. Утечка blob-URL при загрузке изображений
 [admin-hotels.ts:84](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.ts#L84) и [admin-rooms.ts:111](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.ts#L111) вызывают `URL.createObjectURL(file)` и никогда не делают `revokeObjectURL`. Каждый выбор файла удерживает его в памяти до перезагрузки страницы.
 
 ---
 
-#### S-26. Подписки без отписки в компонентах
+#### ✅ S-26. Подписки без отписки в компонентах
 [hotels.ts:47-64](hotelBooking_angular_front/src/app/pages/hotels/hotels.ts#L47-L64) — пять `.subscribe()` в конструкторе без `takeUntilDestroyed()`. [hotel-details.ts:60](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.ts#L60) — то же. [shell.ts:39](hotelBooking_angular_front/src/app/layout/shell/shell.ts#L39) спасает `take(1)`.
 
 ---
 
-#### S-27. `setTimeout(..., 0)` вместо жизненного цикла
+#### ✅ S-27. `setTimeout(..., 0)` вместо жизненного цикла
 [hotels.ts:67](hotelBooking_angular_front/src/app/pages/hotels/hotels.ts#L67) — `setTimeout(() => this.setDefaultDatesAndLoad(), 0)` в конструкторе, чтобы обойти порядок инициализации.
 
 **Что делать:** перенести в `ngOnInit`.
 
 ---
 
-#### S-28. Даты формируются через `toISOString()` — сдвиг на день
+#### ✅ S-28. Даты формируются через `toISOString()` — сдвиг на день
 [hotels.ts:75-76](hotelBooking_angular_front/src/app/pages/hotels/hotels.ts#L75-L76) и [hotel-details.ts:56-57](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.ts#L56-L57) делают `new Date().toISOString().slice(0,10)`, что даёт дату в **UTC**.
 
 **Последствие:** для пользователя в UTC+3 после 21:00 подставляется завтрашний день; для UTC-5 утром — вчерашний. Бронирование уезжает на сутки.
@@ -646,7 +812,7 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### S-29. Определение типа поиска по regex ломается на пробеле
+#### ✅ S-29. Определение типа поиска по regex ломается на пробеле
 [admin-users.ts:113](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.ts#L113):
 
 ```ts
@@ -659,14 +825,14 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### S-30. `e2e`-тест бэкенда не соответствует коду
+#### ⬜ S-30. `e2e`-тест бэкенда не соответствует коду
 [test/reservations.e2e-spec.ts](hotelBooking_nest_back/test/reservations.e2e-spec.ts) — единственный тест на весь бэкенд, при этом `jest.rootDir` в [package.json:79](hotelBooking_nest_back/package.json#L79) указан как `src`, то есть `npm test` его вообще не видит. Юнит-тестов нет ни на один провайдер.
 
 ---
 
 ## 🟢 Лёгкие
 
-#### L-1. Смешение языков в интерфейсе
+#### ✅ L-1. Смешение языков в интерфейсе
 - Русский: сайдбар ([shell.html](hotelBooking_angular_front/src/app/layout/shell/shell.html)), поддержка, админ-отели, админ-номера, менеджерские брони.
 - Английский: «Hotels», «Search by name and availability window», «Reload» ([hotels.html](hotelBooking_angular_front/src/app/pages/hotels/hotels.html)); «Login», «Use your email and password» ([login.html](hotelBooking_angular_front/src/app/pages/login/login.html)); «Register» ([register.html](hotelBooking_angular_front/src/app/pages/register/register.html)); «Reservations», «Your bookings», «Delete» ([reservations.html](hotelBooking_angular_front/src/app/pages/reservations/reservations.html)); «Hotel details», «Back» ([hotel-details.html](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.html)); вся страница [admin-users.html](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html) и [manager-users.html](hotelBooking_angular_front/src/app/pages/manager-users/manager-users.html).
 
@@ -676,24 +842,24 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### L-2. `lang="en"` при русском контенте
+#### ✅ L-2. `lang="en"` при русском контенте
 [index.html:2](hotelBooking_angular_front/src/index.html#L2). Влияет на скринридеры, переносы и автоперевод.
 
 ---
 
-#### L-3. Дефолтные метаданные страницы
+#### ✅ L-3. Дефолтные метаданные страницы
 [index.html:5](hotelBooking_angular_front/src/index.html#L5) — `<title>HotelBookingAngularFront</title>`, дефолтная `favicon.ico` от CLI, нет `<meta name="description">`, нет `theme-color`, нет OG-тегов.
 
 ---
 
-#### L-4. Даты выводятся сырыми ISO-строками
+#### ✅ L-4. Даты выводятся сырыми ISO-строками
 [reservations.html:18](hotelBooking_angular_front/src/app/pages/reservations/reservations.html#L18) — `{{ r.dateStart }} → {{ r.dateEnd }}` печатает `2026-05-01T00:00:00.000Z`. [support.html:79](hotelBooking_angular_front/src/app/pages/support/support.html#L79) — `{{ msg.createdAt | slice:0:10 }}`, то есть обрезка строки вместо форматирования, и время сообщения теряется.
 
 **Что делать:** `| date:'dd.MM.yyyy'` и `| date:'HH:mm'` (в [manager-reservations.html](hotelBooking_angular_front/src/app/pages/manager-reservations/manager-reservations.html) это уже сделано правильно).
 
 ---
 
-#### L-5. Названия номеров захардкожены по индексу
+#### 🟡 L-5. Названия номеров захардкожены по индексу
 [hotel-details.html:29](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.html#L29):
 
 ```html
@@ -704,79 +870,84 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 **Что делать:** добавить `title` в схему номера и выводить его.
 
+> **Сделано:** захардкоженные названия убраны, карточка показывает реальное описание номера.
+>
+> **Осталось:** поля `title` в модели `Room` по-прежнему нет — добавление потребует
+> миграции существующих записей и правки формы в админке.
+
 ---
 
-#### L-6. Форма поиска отелей ничего не ищет по кнопке Enter корректно
+#### ✅ L-6. Форма поиска отелей ничего не ищет по кнопке Enter корректно
 [hotels.html:9-26](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L9-L26): `<form (ngSubmit)="reload()">` обёрнута вокруг полей, но кнопки `type="submit"` внутри нет — единственная кнопка «Reload» стоит **вне** формы ([:6](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L6)). Enter в поле работает, клик по кнопке — тоже, но семантика формы разорвана, а поле поиска при вводе не запускает поиск (только пишет term в стор).
 
 **Что делать:** внести кнопку в форму с `type="submit"`, добавить debounce на поле поиска.
 
 ---
 
-#### L-7. Нативный `confirm()` вместо `MatDialog`
+#### ✅ L-7. Нативный `confirm()` вместо `MatDialog`
 [admin-hotels.ts:117](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.ts#L117), [admin-rooms.ts:143](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.ts#L143). А удаление брони ([reservations.html:24](hotelBooking_angular_front/src/app/pages/reservations/reservations.html#L24), [manager-reservations.html:47](hotelBooking_angular_front/src/app/pages/manager-reservations/manager-reservations.html#L47)) вообще не спрашивает подтверждения.
 
 ---
 
-#### L-8. Ложное сообщение об успехе
+#### ✅ L-8. Ложное сообщение об успехе
 [admin-users.ts:130](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.ts#L130) показывает «User created successfully» сразу после `dispatch`, не дожидаясь ответа. При ошибке пользователь видит и «успех», и «Error loading users».
 
 ---
 
-#### L-9. Нет `mat-error` в большинстве форм
+#### ✅ L-9. Нет `mat-error` в большинстве форм
 [login.html](hotelBooking_angular_front/src/app/pages/login/login.html), [register.html](hotelBooking_angular_front/src/app/pages/register/register.html), [admin-hotels.html](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html), [admin-rooms.html](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html) — валидаторы есть, сообщений нет. Поле краснеет молча. Сделано только в [admin-users.html](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html) и частично в [support.html](hotelBooking_angular_front/src/app/pages/support/support.html).
 
 ---
 
-#### L-10. Нет атрибутов `autocomplete` и переключателя видимости пароля
+#### ✅ L-10. Нет атрибутов `autocomplete` и переключателя видимости пароля
 Поля email/password в [login.html](hotelBooking_angular_front/src/app/pages/login/login.html) и [register.html](hotelBooking_angular_front/src/app/pages/register/register.html) без `autocomplete="email" | "current-password" | "new-password"` — менеджеры паролей работают плохо. Нет кнопки «показать пароль», нет подтверждения пароля и минимальной длины при регистрации.
 
 ---
 
-#### L-11. Пустое состояние и заголовок отсутствуют на части страниц
+#### ✅ L-11. Пустое состояние и заголовок отсутствуют на части страниц
 На страницах «Отели» ([hotels.html](hotelBooking_angular_front/src/app/pages/hotels/hotels.html)), «Мои брони» ([reservations.html](hotelBooking_angular_front/src/app/pages/reservations/reservations.html)) и «Детали отеля» ([hotel-details.html](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.html)) при пустом результате показывается просто ничего — белый экран под заголовком.
 
 ---
 
-#### L-12. Неинформативные `alt` у изображений
+#### ✅ L-12. Неинформативные `alt` у изображений
 `alt="hotel"`, `alt="room"`, `alt="preview"` — одинаковые для всех карточек. Должно быть название отеля/номера.
 
 ---
 
-#### L-13. Кликабельные элементы недоступны с клавиатуры
+#### ✅ L-13. Кликабельные элементы недоступны с клавиатуры
 - [shell.html:61](hotelBooking_angular_front/src/app/layout/shell/shell.html#L61) — `<a mat-list-item (click)="logout()" style="cursor:pointer">` без `href`, `role="button"` и `tabindex`.
 - [support.html:25-29](hotelBooking_angular_front/src/app/pages/support/support.html#L25-L29) — `<mat-card (click)="openRequest(req)">` без `tabindex="0"` и обработки Enter/Space.
 
 ---
 
-#### L-14. Инлайновые стили вместо классов
+#### ✅ L-14. Инлайновые стили вместо классов
 `style="font-size: 48px; height: 48px; width: 48px;"` и `style="font-size: 20px;"` многократно в [admin-users.html](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html) и [manager-users.html](hotelBooking_angular_front/src/app/pages/manager-users/manager-users.html).
 
 ---
 
-#### L-15. Дублирование разметки между `admin-users` и `manager-users`
+#### ✅ L-15. Дублирование разметки между `admin-users` и `manager-users`
 [admin-users.html](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html) и [manager-users.html](hotelBooking_angular_front/src/app/pages/manager-users/manager-users.html) — почти идентичные таблицы, пагинация и пустые состояния, скопированные целиком.
 
 **Что делать:** общий компонент `UsersTable` с `@Input()` для колонок и режима.
 
 ---
 
-#### L-16. `role.guard` небезопасен при самостоятельном использовании
+#### ✅ L-16. `role.guard` небезопасен при самостоятельном использовании
 [role.guard.ts:13](hotelBooking_angular_front/src/app/core/role.guard.ts#L13) берёт `take(1)` сразу, полагаясь на то, что `authGuard` отработал раньше и уже загрузил пользователя. Работает только потому, что в [app.routes.ts](hotelBooking_angular_front/src/app/app.routes.ts) они всегда указаны парой в правильном порядке.
 
 ---
 
-#### L-17. Неиспользуемые импорты и поля
+#### ✅ L-17. Неиспользуемые импорты и поля
 [support.ts:2](hotelBooking_angular_front/src/app/pages/support/support.ts#L2) импортирует `AsyncPipe`, который не попадает в `imports` компонента и не используется; поле `user$` ([:27](hotelBooking_angular_front/src/app/pages/support/support.ts#L27)) объявлено, но шаблон работает с `userRole`. [rooms.provider.ts:5](hotelBooking_nest_back/src/Providers/rooms.provider.ts#L5) импортирует `HotelDocument` только ради типа параметра.
 
 ---
 
-#### L-18. Тестовые учётные записи с паролями в README
+#### ✅ L-18. Тестовые учётные записи с паролями в README
 [README.md](README.md#тестовые-аккаунты) публикует email и пароли администратора, менеджера и клиента. Для демо допустимо, но лучше вынести в локальный `SEED.md` вне репозитория или сгенерировать через seed-скрипт.
 
 ---
 
-#### L-19. Разные конфиги форматирования
+#### ✅ L-19. Разные конфиги форматирования
 Бэкенд — `prettier@2` + `.eslintrc.js` (устаревший формат), кавычки двойные. Фронт — `prettier@3`, кавычки одинарные, ESLint не настроен вовсе. Единого `.editorconfig` на монорепо нет.
 
 ---
@@ -787,7 +958,7 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ### 🔴 Критично для внешнего вида
 
-#### D-1. Bootstrap-классы в разметке, а Bootstrap не установлен
+#### ✅ D-1. Bootstrap-классы в разметке, а Bootstrap не установлен
 [admin-users.html](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html) и [manager-users.html](hotelBooking_angular_front/src/app/pages/manager-users/manager-users.html) построены на классах Bootstrap: `container-fluid`, `row`, `col-md-6`, `g-4`, `me-2`, `ms-1`, `fw-semibold`, `fw-bold`, `badge`, `bg-primary`, `bg-success`, `bg-info`, `bg-light`, `text-muted`, `text-white`, `text-dark`, `alert alert-danger`, `shadow-sm`, `w-100`, `flex-grow-1`, `table-responsive`, `border-top`, `border-bottom`, `p-5`. В [package.json](hotelBooking_angular_front/package.json) Bootstrap отсутствует, в [tailwind.config.js](hotelBooking_angular_front/tailwind.config.js) таких утилит нет.
 
 **Как это выглядит сейчас:**
@@ -804,7 +975,7 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ---
 
-#### D-2. Все сообщения в чате выглядят как свои
+#### ✅ D-2. Все сообщения в чате выглядят как свои
 [support.html:77](hotelBooking_angular_front/src/app/pages/support/support.html#L77):
 
 ```html
@@ -824,7 +995,7 @@ MIME при этом всегда `image/jpeg` — PNG и WebP отдаются 
 
 ### 🟠 Важно для внешнего вида
 
-#### D-3. Тема — стоковая, без айдентики
+#### ✅ D-3. Тема — стоковая, без айдентики
 [styles.scss:17-18](hotelBooking_angular_front/src/styles.scss#L17-L18) — `primary: mat.$azure-palette, tertiary: mat.$blue-palette`. Это дефолтная пара из схематика Angular Material. Для отельного продукта холодный сине-голубой — нейтральный и безликий выбор; конкуренты в этой нише работают тёплой палитрой (терракота, песок, глубокий изумруд) с акцентом на фотографии.
 
 **Что делать:** сгенерировать собственную палитру из брендового цвета:
@@ -847,14 +1018,14 @@ M3 сам сгенерирует все 60+ токенов (`--mat-sys-primary-c
 
 ---
 
-#### D-4. Нет тёмной темы, хотя M3 её отдаёт даром
+#### ✅ D-4. Нет тёмной темы, хотя M3 её отдаёт даром
 [styles.scss:30](hotelBooking_angular_front/src/styles.scss#L30) — `color-scheme: light` жёстко. Комментарий прямо над строкой подсказывает `light dark`, но этим не воспользовались.
 
 **Что делать:** `color-scheme: light dark` + `theme-type: color-scheme` в `mat.theme()` — тёмная тема заработает автоматически по системной настройке. Дополнительно — переключатель в тулбаре через `MatSlideToggle`. Блокер: сначала нужно убрать хардкод цветов Tailwind (см. [D-8](#d-8-хардкод-цветов-tailwind-мимо-токенов-m3)).
 
 ---
 
-#### D-5. Нативные `<input type="date">` вместо MatDatepicker
+#### ✅ D-5. Нативные `<input type="date">` вместо MatDatepicker
 [hotels.html:18,23](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L18) и [hotel-details.html:12,17](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.html#L12) используют нативный инпут внутри `mat-form-field`.
 
 **Проблемы:**
@@ -880,7 +1051,7 @@ M3 сам сгенерирует все 60+ токенов (`--mat-sys-primary-c
 
 ---
 
-#### D-6. Карточка отеля не продаёт
+#### ⬜ D-6. Карточка отеля не продаёт
 [hotels.html:34-45](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L34-L45) — картинка, заголовок, описание, кнопка «Details». Нет цены, рейтинга, звёзд, города, удобств, отметки «осталось 2 номера». Карточка не кликабельна целиком (только текстовая кнопка), нет hover-эффекта, нет focus-состояния.
 
 **Что делать:**
@@ -894,14 +1065,14 @@ M3 сам сгенерирует все 60+ токенов (`--mat-sys-primary-c
 
 ---
 
-#### D-7. Загрузка контента прыгает
+#### ✅ D-7. Загрузка контента прыгает
 Везде один паттерн: `@if (loading) { <mat-spinner /> } @if (!loading) { <контент> }` ([hotels.html:28-32](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L28-L32), [admin-hotels.html:50-54](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L50-L54), [support.html:9-13](hotelBooking_angular_front/src/app/pages/support/support.html#L9-L13) и т.д.). Контент полностью заменяется центрированным спиннером, потом возвращается — макет дёргается на каждый рефреш.
 
 **Что делать:** скелетоны карточек той же высоты (Tailwind `animate-pulse` + `--mat-sys-surface-container`) либо тонкий `<mat-progress-bar mode="indeterminate">` под тулбаром, не убирая контент.
 
 ---
 
-#### D-8. Хардкод цветов Tailwind мимо токенов M3
+#### ✅ D-8. Хардкод цветов Tailwind мимо токенов M3
 `bg-teal-100`, `ring-teal-500`, `bg-gray-50` ([support.html:75,28,77](hotelBooking_angular_front/src/app/pages/support/support.html#L75)), `border-gray-300`, `hover:bg-gray-50` ([admin-hotels.html:33](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L33), [admin-rooms.html:50](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html#L50)).
 
 Teal не входит в azure-палитру темы — акцент выделения обращения не совпадает ни с одним цветом приложения. Любая смена темы или тёмный режим эти цвета не затронут.
@@ -927,14 +1098,14 @@ theme: {
 
 ---
 
-#### D-9. Бронирование просится в MatStepper
+#### ⬜ D-9. Бронирование просится в MatStepper
 Сейчас бронирование — это два оторванных date-инпута над списком номеров и кнопка «Забронировать» на карточке ([hotel-details.html](hotelBooking_angular_front/src/app/pages/hotel-details/hotel-details.html)). Нет подтверждения, нет сводки, нет цены, нет количества ночей. Клик по кнопке сразу создаёт бронь и уводит на другую страницу ([reservations.effects.ts:53-56](hotelBooking_angular_front/src/app/effects/reservations.effects.ts#L53-L56)).
 
 **Что делать:** `MatStepper`: «Даты» → «Выбор номера» → «Подтверждение» со сводкой (отель, номер, даты, ночей, итог) и финальной кнопкой. Слайс `booking` из [S-4](#s-4-мёртвый-ngrx-слайс-booking) как раз для этого и создавался.
 
 ---
 
-#### D-10. Сайдбар не адаптивен
+#### ✅ D-10. Сайдбар не адаптивен
 [shell.html:2](hotelBooking_angular_front/src/app/layout/shell/shell.html#L2) — `<mat-sidenav mode="side" opened class="w-72">` без единого брейкпоинта. 288 px панель всегда открыта, включая экран телефона, где остаётся ~80 px на контент. Кнопки-гамбургера в тулбаре нет.
 
 **Что делать:** `BreakpointObserver` из `@angular/cdk/layout`:
@@ -949,7 +1120,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-11. Тулбар почти пустой и дублирует сайдбар
+#### ✅ D-11. Тулбар почти пустой и дублирует сайдбар
 [shell.html:79-88](hotelBooking_angular_front/src/app/layout/shell/shell.html#L79-L88) — распорка, email и кнопка «Выйти», которая уже есть в сайдбаре ([:61](hotelBooking_angular_front/src/app/layout/shell/shell.html#L61)). Заголовка текущей страницы нет, брендинга нет.
 
 **Что делать:** слева — название раздела (из `router` data), справа — `mat-menu` по клику на аватар (`Профиль`, `Настройки`, `Выйти`), убрать дубль кнопки выхода. Аватар — инициалы пользователя в круге с `--mat-sys-primary-container`.
@@ -958,16 +1129,23 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ### 🟡 Средне
 
-#### D-12. Типографика не использует шкалу M3
+#### 🟡 D-12. Типографика не использует шкалу M3
 Везде Tailwind-утилиты: `text-2xl font-semibold` для h1 ([hotels.html:3](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L3), [admin-hotels.html:3](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L3) и во всех остальных), `text-lg`, `text-sm`, `text-xs`. Типографическая шкала M3 (`--mat-sys-display-small`, `--mat-sys-headline-medium`, `--mat-sys-title-large`, `--mat-sys-body-medium`, `--mat-sys-label-small`) не задействована нигде, хотя `mat.theme()` её генерирует.
 
 **Последствие:** заголовки страниц и заголовки внутри `mat-card` живут в разных шкалах, вертикальный ритм плавает от страницы к странице.
 
 **Что делать:** классы-обёртки поверх токенов (`.page-title { font: var(--mat-sys-headline-medium); }`) либо расширить `fontSize` в Tailwind этими же переменными.
 
+> **Сделано:** в [styles.scss](hotelBooking_angular_front/src/styles.scss) заведены
+> `.page-title`, `.page-sub`, `.page-eyebrow` поверх системных токенов M3 — заголовки
+> всех страниц приведены к одной шкале.
+>
+> **Осталось:** внутри карточек и таблиц по-прежнему используются Tailwind-утилиты
+> (`text-sm`, `text-base`), а не токены `--mat-sys-body-*` / `--mat-sys-label-*`.
+
 ---
 
-#### D-13. `!important` борется со стилями Material
+#### ✅ D-13. `!important` борется со стилями Material
 [hotels.html:36-43](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L36-L43) — `!h-64 !w-full !object-cover`, `!p-4 !flex-grow`, `!text-lg !mb-2`, `!px-4 !py-2`. [admin-hotels.html:64](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L64) — `!flex !flex-col !justify-between !h-full`.
 
 Это признак того, что Tailwind preflight и внутренние стили Material конфликтуют, и конфликт решается силой. Такая вёрстка ломается при каждом обновлении Angular Material.
@@ -976,56 +1154,56 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-14. Нарушена структура `mat-card`
+#### ✅ D-14. Нарушена структура `mat-card`
 [admin-hotels.html:64-70](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L64-L70) и [admin-rooms.html:78-87](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html#L78-L87) вкладывают `<mat-card-header>` и `<mat-card-actions>` **внутрь** `<mat-card-content>`. По спецификации это соседние элементы карточки.
 
 **Последствие:** двойные отступы, `align="end"` у actions работает не так, как ожидается, карточки в сетке разной высоты.
 
 ---
 
-#### D-15. Ручная пагинация вместо `mat-paginator`
+#### ⬜ D-15. Ручная пагинация вместо `mat-paginator`
 [admin-users.html:232-248](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html#L232-L248) и [manager-users.html:112-128](hotelBooking_angular_front/src/app/pages/manager-users/manager-users.html#L112-L128) — самодельные «Previous / N users / Next». Нет номера страницы, нет общего количества, нет выбора размера страницы.
 
 **Что делать:** `<mat-paginator [length]="total" [pageSize]="50" [pageSizeOptions]="[10,25,50,100]">`. На страницах «Отели», «Мои брони», «Все брони» и «Поддержка» пагинации нет вовсе.
 
 ---
 
-#### D-16. Таблицы без сортировки, липкой шапки и адаптива
+#### ✅ D-16. Таблицы без сортировки, липкой шапки и адаптива
 [manager-reservations.html:19](hotelBooking_angular_front/src/app/pages/manager-reservations/manager-reservations.html#L19) — `mat-table` без `matSort`, без `sticky` на заголовке, без `mat-row` hover. На мобильном таблица из 7 колонок просто уезжает в горизонтальный скролл.
 
 **Что делать:** `matSort` + `mat-sort-header`, `<tr mat-header-row *matHeaderRowDef="cols; sticky: true">`, на узких экранах — переключение на карточки.
 
 ---
 
-#### D-17. Пустые состояния без структуры
+#### ✅ D-17. Пустые состояния без структуры
 «Отели не найдены» ([admin-hotels.html:74](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L74)), «Нет номеров в этом отеле» ([admin-rooms.html:91](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html#L91)), «Нет активных обращений» ([support.html:21](hotelBooking_angular_front/src/app/pages/support/support.html#L21)) — просто серый текст. Исключение — [admin-users.html:148-156](hotelBooking_angular_front/src/app/pages/admin-users/admin-users.html#L148-L156), где есть иконка и кнопка (но иконка сломана инлайновым размером).
 
 **Что делать:** единый компонент `EmptyState`: иконка 48px с `--mat-sys-outline`, заголовок `title-medium`, пояснение `body-medium`, кнопка основного действия.
 
 ---
 
-#### D-18. Формы создания/редактирования разворачиваются в потоке страницы
+#### ⬜ D-18. Формы создания/редактирования разворачиваются в потоке страницы
 [admin-hotels.html:14-48](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L14-L48) и [admin-rooms.html:35-65](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html#L35-L65) вставляют форму карточкой над списком, сдвигая всё вниз. При редактировании нижнего элемента списка форма появляется вне зоны видимости — пользователь не понимает, что произошло.
 
 **Что делать:** `MatDialog` для создания/редактирования либо `MatSidenav` в режиме `over` справа (паттерн detail-panel).
 
 ---
 
-#### D-19. Загрузка файлов — самодельный `<label>` с Bootstrap-подобными классами
+#### ✅ D-19. Загрузка файлов — самодельный `<label>` с Bootstrap-подобными классами
 [admin-hotels.html:33-37](hotelBooking_angular_front/src/app/pages/admin-hotels/admin-hotels.html#L33-L37), [admin-rooms.html:50-54](hotelBooking_angular_front/src/app/pages/admin-rooms/admin-rooms.html#L50-L54) — `border border-gray-300 rounded px-4 py-2 hover:bg-gray-50`. Не совпадает ни с одной кнопкой Material в приложении. Нет drag-and-drop, нет прогресса загрузки, нет удаления отдельной картинки (только «Заменить фото» — заменяет все сразу), нет валидации размера на клиенте.
 
 **Что делать:** `<button mat-stroked-button (click)="fileInput.click()">` + скрытый input; превью — сеткой с крестиком удаления на каждой (`mat-mini-fab` с `close`); dropzone через `cdkDropList`.
 
 ---
 
-#### D-20. Иконки: устаревший набор и внешний CDN
+#### ✅ D-20. Иконки: устаревший набор и внешний CDN
 [index.html:15](hotelBooking_angular_front/src/index.html#L15) подключает `Material Icons` (легаси-набор) с Google Fonts. M3 использует **Material Symbols**. Оба шрифта грузятся с внешнего CDN — рендер-блокирующий запрос, зависимость от внешнего сервиса, невозможность работы офлайн.
 
 **Что делать:** перейти на Material Symbols, самохостить шрифты (`@fontsource/roboto`, `material-symbols`) — заодно уйдут `preconnect`-хинты.
 
 ---
 
-#### D-21. Контраст текста ниже нормы
+#### ✅ D-21. Контраст текста ниже нормы
 `opacity-70`, `opacity-60`, `opacity-50`, `opacity-80` применяются к основному тексту по всему приложению: подзаголовки страниц, описания отелей ([hotels.html:40](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L40)), описания номеров, даты сообщений (`opacity-50`), подсказки пустых состояний.
 
 `opacity-50` на тёмном тексте по светлому фону даёт контраст около 2.5:1 при минимуме WCAG AA 4.5:1.
@@ -1034,7 +1212,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-22. Нет анимаций и обратной связи на переходах
+#### ⬜ D-22. Нет анимаций и обратной связи на переходах
 `provideAnimationsAsync()` подключён, но никаких анимаций в приложении нет: переходы между роутами мгновенные, карточки появляются без stagger, сайдбар не анимирован (`mode="side"` его и не анимирует), у кликабельных карточек нет `mat-ripple`.
 
 **Что делать:** `@angular/animations` для fade-in списков, `matRipple` на кликабельных карточках, view transitions API через `withViewTransitions()` в `provideRouter`.
@@ -1043,32 +1221,40 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ### 🟢 Легко
 
-#### D-23. Кнопки без иконок там, где иконка очевидна
+#### ✅ D-23. Кнопки без иконок там, где иконка очевидна
 «Reload» / «Обновить» ([hotels.html:6](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L6), [reservations.html:6](hotelBooking_angular_front/src/app/pages/reservations/reservations.html#L6), [manager-reservations.html:6](hotelBooking_angular_front/src/app/pages/manager-reservations/manager-reservations.html#L6)) — текстом. Достаточно `mat-icon-button` с `refresh` и `matTooltip`.
 
 ---
 
-#### D-24. `mat-raised-button` для второстепенных действий
+#### ✅ D-24. `mat-raised-button` для второстепенных действий
 «Reload»/«Обновить» оформлены как `mat-raised-button color="primary"` — визуально это главное действие страницы, хотя таковым не является (на странице отелей главное — поиск). В M3 для такого случая — `mat-stroked-button` или `mat-icon-button`.
 
 ---
 
-#### D-25. `MatTooltip` не используется нигде
+#### ✅ D-25. `MatTooltip` не используется нигде
 Иконочные кнопки удаления/редактирования в админке и пагинации без подсказок.
 
 ---
 
-#### D-26. Нет `MatBadge` на разделах с новыми событиями
+#### ⬜ D-26. Нет `MatBadge` на разделах с новыми событиями
 Пункт «Поддержка» в сайдбаре ([shell.html:21,36](hotelBooking_angular_front/src/app/layout/shell/shell.html#L21)) не показывает количество непрочитанных обращений, хотя поле `readAt` на бэкенде есть и отслеживается ([support.provider.ts:85](hotelBooking_nest_back/src/Providers/support.provider.ts#L85)).
 
 ---
 
-#### D-27. Максимальная ширина контента 1152px при сайдбаре 288px
-[shell.html:90](hotelBooking_angular_front/src/app/layout/shell/shell.html#L90) — `max-w-6xl mx-auto p-4`. На широком мониторе получается узкая колонка, смещённая вправо от сайдбара, с большими пустыми полями по краям. Сетка отелей при этом всего в 2 колонки ([hotels.html:32](hotelBooking_angular_front/src/app/pages/hotels/hotels.html#L32) — `md:grid-cols-2`), хотя место есть на 3–4.
+#### 🟡 D-27. Максимальная ширина контента 1152px при сайдбаре 288px
+[shell.html:90](hotelBooking_angular_front/src/app/layout/shell/shell.html#L90) — `max-w-6xl mx-auto p-4`. На широком мониторе получается узкая колонка, смещённая вправо от сайдбара, с большими пустыми полями по краям. Сетка отелей при этом всего в 2 колонки (`md:grid-cols-2`), хотя место есть на 3–4.
+
+> **Сделано:** ширина контента поднята до 1240 px; сетки переведены на
+> `repeat(auto-fill, minmax(300px, 1fr))` — на широком экране получается 3–4 колонки
+> вместо фиксированных двух.
+>
+> **Осталось:** на мониторах шире 1600 px по краям всё ещё остаются большие поля.
+> Решается либо контейнером пошире для табличных разделов, либо переносом
+> фильтров в боковую колонку.
 
 ---
 
-#### D-28. Логотипа нет
+#### ⬜ D-28. Логотипа нет
 [shell.html:4](hotelBooking_angular_front/src/app/layout/shell/shell.html#L4) — текст «Hotel Booking» шрифтом `text-lg font-semibold`. Favicon дефолтный от Angular CLI ([L-3](#l-3-дефолтные-метаданные-страницы)).
 
 ---
@@ -1112,7 +1298,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 Прототип интерфейса собран и прокликан. Ниже — что в нём осталось «добротным, но не солидным».
 Пункты касаются визуальной подачи и не пересекаются с функциональными D-1…D-28 выше.
 
-#### D-29. Страница поиска начинается сразу с формы — нет героя
+#### ⬜ D-29. Страница поиска начинается сразу с формы — нет героя
 Сейчас первое, что видит гость, — карточка с полями ввода. Это интерфейс инструмента, а не витрина.
 Отельные сервисы открываются образом места, потому что решение о поездке эмоциональное, а не табличное.
 
@@ -1127,7 +1313,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-30. Админка слишком «воздушная» для рабочего инструмента
+#### ⬜ D-30. Админка слишком «воздушная» для рабочего инструмента
 Плотность в M3 стоит `density: 0` ([styles.scss](hotelBooking_angular_front/src/styles.scss)), и одинакова везде.
 Гость смотрит на пять карточек и выбирает — админ работает со списком из сотни строк.
 В админских таблицах вертикальный ритм расходуется впустую: на экран помещается 5–6 записей.
@@ -1142,7 +1328,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-31. Интерфейс статичен — нет ни одной микроанимации
+#### ⬜ D-31. Интерфейс статичен — нет ни одной микроанимации
 `provideAnimationsAsync()` подключён, но не используется ([S-22](#s-22-логирование-и-обработка-ошибок-отсутствуют) — соседняя проблема).
 Переходы между разделами мгновенные, карточки появляются рывком, у кликабельных элементов нет отклика.
 
@@ -1157,7 +1343,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-32. Карточка отеля не даёт принять решение
+#### ⬜ D-32. Карточка отеля не даёт принять решение
 В прототипе есть цена, рейтинг и чипы удобств — этого хватает для сравнения, но не для выбора.
 Гость уходит на страницу отеля, не получив ответа на «как там на самом деле».
 
@@ -1171,7 +1357,7 @@ readonly isHandset$ = inject(BreakpointObserver).observe(Breakpoints.Handset)
 
 ---
 
-#### D-33. Плитки статистики у менеджера — плоские числа
+#### ⬜ D-33. Плитки статистики у менеджера — плоские числа
 Четыре плитки показывают значение на текущий момент без всякого контекста.
 «8 броней» — это много или мало? Выросло или упало? Управленческого смысла в таком числе нет.
 
