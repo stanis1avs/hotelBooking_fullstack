@@ -65,6 +65,43 @@ export class SupportProvider {
     return found.map((el) => this.printFormatSupport(el));
   }
 
+  /**
+   * Непрочитанные сообщения собеседника — для счётчика в меню.
+   *
+   * Считается одной агрегацией: сообщения лежат внутри документа обращения,
+   * поэтому вытаскивать переписки на сервер приложения ради подсчёта не нужно.
+   */
+  async countUnread(currUser: UserToJWTPayload): Promise<number> {
+    if (!isValidObjectId(currUser.id)) return 0;
+    const userId = new mongoose.Types.ObjectId(currUser.id);
+    // Менеджер отвечает на все открытые обращения, клиент видит только свои.
+    const scope = currUser.role === "manager" ? { isActive: true } : { user: userId };
+
+    const [row] = await this.supportModel.aggregate<{ total: number }>([
+      { $match: scope },
+      {
+        $project: {
+          unread: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$messages", []] },
+                as: "m",
+                cond: {
+                  $and: [
+                    { $ne: ["$$m.author", userId] },
+                    { $eq: [{ $ifNull: ["$$m.readAt", null] }, null] },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$unread" } } },
+    ]);
+    return row?.total ?? 0;
+  }
+
   async getHistory(id: string, currUser: UserToJWTPayload): Promise<SendMessage[]> {
     const supportRequest = await this.getOwnedRequest(id, currUser);
     return (supportRequest.messages ?? []).map((el) => this.printFormatMessage(el, String(supportRequest._id)));

@@ -19,6 +19,13 @@ export const CREATE_SUPPORT_REQUEST = gql`
   }
 `;
 
+// Возвращает новое число непрочитанных — для отметки на пункте меню
+export const MARK_SUPPORT_MESSAGES_READ = gql`
+  mutation MarkSupportMessagesRead($requestId: String!) {
+    markSupportMessagesRead(requestId: $requestId)
+  }
+`;
+
 export const SEND_SUPPORT_MESSAGE = gql`
   mutation SendSupportMessage($requestId: String!, $text: String!) {
     sendSupportMessage(requestId: $requestId, text: $text) {

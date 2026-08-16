@@ -23,12 +23,22 @@ import { GET_HOTEL_ROOMS } from './queries/rooms.queries';
 import { MANAGER_STATS } from './queries/stats.queries';
 import { MY_RESERVATIONS, ALL_RESERVATIONS } from './queries/reservations.queries';
 import { ADMIN_USERS, MANAGER_USERS } from './queries/users.queries';
-import { MY_SUPPORT_REQUESTS, ALL_SUPPORT_REQUESTS, SUPPORT_MESSAGES } from './queries/support.queries';
+import {
+  MY_SUPPORT_REQUESTS,
+  ALL_SUPPORT_REQUESTS,
+  SUPPORT_MESSAGES,
+  UNREAD_SUPPORT_COUNT,
+} from './queries/support.queries';
 
 import { LOGIN_MUTATION, LOGOUT_MUTATION, REGISTER_MUTATION } from './mutations/auth.mutations';
 import { CREATE_RESERVATION, DELETE_RESERVATION } from './mutations/reservations.mutations';
 import { ADMIN_CREATE_USER, ADMIN_UPDATE_USER } from './mutations/users.mutations';
-import { CLOSE_SUPPORT_REQUEST, CREATE_SUPPORT_REQUEST, SEND_SUPPORT_MESSAGE } from './mutations/support.mutations';
+import {
+  CLOSE_SUPPORT_REQUEST,
+  CREATE_SUPPORT_REQUEST,
+  MARK_SUPPORT_MESSAGES_READ,
+  SEND_SUPPORT_MESSAGE,
+} from './mutations/support.mutations';
 
 @Injectable({ providedIn: 'root' })
 export class ApolloService {
@@ -267,6 +277,15 @@ export class ApolloService {
       .pipe(map((res) => res.data!.allSupportRequests));
   }
 
+  getUnreadSupportCount(): Observable<number> {
+    return this.apollo
+      .query<{ unreadSupportCount: number }>({
+        query: UNREAD_SUPPORT_COUNT,
+        fetchPolicy: 'network-only',
+      })
+      .pipe(map((res) => res.data!.unreadSupportCount));
+  }
+
   getSupportMessages(requestId: string): Observable<SupportMessageDto[]> {
     return this.apollo
       .query<{ supportMessages: SupportMessageDto[] }>({
@@ -275,6 +294,16 @@ export class ApolloService {
         fetchPolicy: 'network-only',
       })
       .pipe(map((res) => res.data!.supportMessages));
+  }
+
+  /** Возвращает оставшееся число непрочитанных по всем обращениям. */
+  markSupportMessagesRead(requestId: string): Observable<number> {
+    return this.apollo
+      .mutate<{ markSupportMessagesRead: number }>({
+        mutation: MARK_SUPPORT_MESSAGES_READ,
+        variables: { requestId },
+      })
+      .pipe(map((res) => res.data!.markSupportMessagesRead));
   }
 
   closeSupportRequest(requestId: string): Observable<void> {

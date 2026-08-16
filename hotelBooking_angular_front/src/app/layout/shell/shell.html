@@ -16,7 +16,11 @@
           [routerLink]="item.link"
           routerLinkActive="active"
           (click)="drawer.close()">
-          <mat-icon>{{ item.icon }}</mat-icon>
+          <mat-icon
+            [matBadge]="unread()"
+            [matBadgeHidden]="!item.badge || unread() === 0"
+            matBadgeSize="small"
+            matBadgeColor="warn">{{ item.icon }}</mat-icon>
           {{ item.label }}
         </a>
       }
@@ -55,7 +59,13 @@
               [routerLink]="item.link"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: item.link === '/hotels' }">
-              <mat-icon>{{ item.icon }}</mat-icon>
+              <!-- Отметка о непрочитанных: без неё новое сообщение поддержки
+                   было видно только после захода в раздел -->
+              <mat-icon
+                [matBadge]="unread()"
+                [matBadgeHidden]="!item.badge || unread() === 0"
+                matBadgeSize="small"
+                matBadgeColor="warn">{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
             </a>
           }

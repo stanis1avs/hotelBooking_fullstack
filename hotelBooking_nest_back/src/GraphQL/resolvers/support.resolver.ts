@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from "@nestjs/graphql";
+import { Resolver, Query, Mutation, Args, Int } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 import { SupportProvider } from "../../Providers/support.provider";
 import { SupportRequestType, SupportMessageType } from "../types/support.type";
@@ -31,6 +31,14 @@ export class SupportResolver {
   async allSupportRequests(): Promise<SupportRequestType[]> {
     const requests = await this.supportProvider.getRequestsforManager();
     return requests.map((r) => this.toType(r));
+  }
+
+  /** Счётчик для отметки в меню: доступен обеим ролям, область считает провайдер. */
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("client", "manager")
+  @Query(() => Int)
+  async unreadSupportCount(@CurrentUser() user: UserToJWTPayload): Promise<number> {
+    return this.supportProvider.countUnread(user);
   }
 
   /**
@@ -83,6 +91,22 @@ export class SupportResolver {
       author: String(m.author),
       requestId: String(m.requestId),
     };
+  }
+
+  /**
+   * Отметка о прочтении. Провайдер умел это давно, но наружу метод выведен не был:
+   * переписка открывалась, а сообщения оставались непрочитанными навсегда.
+   * Возвращаем новое число непрочитанных — клиенту оно нужно сразу для отметки в меню.
+   */
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("client", "manager")
+  @Mutation(() => Int)
+  async markSupportMessagesRead(
+    @Args("requestId") requestId: string,
+    @CurrentUser() user: UserToJWTPayload
+  ): Promise<number> {
+    await this.supportProvider.messagesRead(requestId, user);
+    return this.supportProvider.countUnread(user);
   }
 
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)

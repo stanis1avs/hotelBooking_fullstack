@@ -9,15 +9,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AuthActions } from '../../actions/auth.actions';
 import { selectAuthUser } from '../../selectors/auth.selectors';
+import { SupportUnread } from '../../core/support-unread';
 
 interface NavItem {
   link: string;
   icon: string;
   label: string;
+  /** Раздел показывает счётчик непрочитанных. */
+  badge?: boolean;
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -32,13 +36,13 @@ const NAV: Record<string, NavItem[]> = {
   client: [
     { link: '/hotels', icon: 'hotel', label: 'Отели' },
     { link: '/reservations', icon: 'event', label: 'Мои брони' },
-    { link: '/support', icon: 'support_agent', label: 'Поддержка' },
+    { link: '/support', icon: 'support_agent', label: 'Поддержка', badge: true },
   ],
   manager: [
     { link: '/hotels', icon: 'hotel', label: 'Отели' },
     { link: '/manager/reservations', icon: 'table_view', label: 'Все брони' },
     { link: '/manager/users', icon: 'people', label: 'Пользователи' },
-    { link: '/support', icon: 'support_agent', label: 'Поддержка' },
+    { link: '/support', icon: 'support_agent', label: 'Поддержка', badge: true },
   ],
   admin: [
     { link: '/hotels', icon: 'hotel', label: 'Отели' },
@@ -60,7 +64,7 @@ const NAV: Record<string, NavItem[]> = {
   selector: 'app-shell',
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive,
-    MatSidenavModule, MatIconModule, MatButtonModule,
+    MatSidenavModule, MatIconModule, MatButtonModule, MatBadgeModule,
     MatDividerModule, MatMenuModule, MatTooltipModule,
   ],
   templateUrl: './shell.html',
@@ -79,6 +83,9 @@ export class Shell {
   );
 
   readonly navItems = computed<NavItem[]>(() => NAV[this.user()?.role ?? 'guest'] ?? NAV['guest']);
+
+  /** Непрочитанные сообщения поддержки — отметка на пункте меню. */
+  readonly unread = inject(SupportUnread).count;
 
   readonly roleLabel = ROLE_LABEL;
 

@@ -24,6 +24,12 @@ export const ALL_SUPPORT_REQUESTS = gql`
   }
 `;
 
+export const UNREAD_SUPPORT_COUNT = gql`
+  query UnreadSupportCount {
+    unreadSupportCount
+  }
+`;
+
 export const SUPPORT_MESSAGES = gql`
   query SupportMessages($requestId: String!) {
     supportMessages(requestId: $requestId) {

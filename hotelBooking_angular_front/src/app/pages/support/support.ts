@@ -15,6 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { take } from 'rxjs';
 
 import { ApolloService } from '../../graphql/apollo.service';
+import { SupportUnread } from '../../core/support-unread';
 import { SupportMessageDto, SupportRequestDto } from '../../core/api';
 import { selectAuthUser } from '../../selectors/auth.selectors';
 import { EmptyState } from '../../shared/empty-state';
@@ -34,6 +35,7 @@ import { errorMessage } from '../../core/error-message';
 export class Support implements OnInit, AfterViewChecked {
   private readonly store = inject(Store);
   private readonly apollo = inject(ApolloService);
+  readonly unread = inject(SupportUnread);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -123,6 +125,12 @@ export class Support implements OnInit, AfterViewChecked {
         this.messagesLoading = false;
         this.scrollPending = true;
         this.cdr.markForCheck();
+        // Переписку открыли — сообщения собеседника считаются прочитанными,
+        // и отметка в меню гаснет на оставшееся количество.
+        this.apollo.markSupportMessagesRead(request.id).subscribe({
+          next: (left) => this.unread.count.set(left),
+          error: () => undefined,
+        });
       },
       error: (error) => {
         this.messagesLoading = false;
