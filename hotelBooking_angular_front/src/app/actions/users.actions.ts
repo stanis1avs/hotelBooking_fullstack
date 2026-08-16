@@ -18,6 +18,13 @@ export interface CreateUserRequest {
   role?: string;
 }
 
+/** Почты и пароля нет: адрес меняется с подтверждением, пароль — отдельно. */
+export interface UpdateUserRequest {
+  name?: string;
+  contactPhone?: string;
+  role?: string;
+}
+
 export const UsersActions = createActionGroup({
   source: 'Users',
   events: {
@@ -28,6 +35,10 @@ export const UsersActions = createActionGroup({
     'Admin Create User': props<{ payload: CreateUserRequest }>(),
     'Admin Create User Success': props<{ payload: UserDto }>(),
     'Admin Create User Failure': props<{ error: unknown }>(),
+
+    'Admin Update User': props<{ id: string; payload: UpdateUserRequest }>(),
+    'Admin Update User Success': props<{ payload: UserDto }>(),
+    'Admin Update User Failure': props<{ error: unknown }>(),
 
     'Manager Load Users': props<{ payload: UserSearchParams }>(),
     'Manager Load Users Success': props<{ payload: UserDto[] }>(),

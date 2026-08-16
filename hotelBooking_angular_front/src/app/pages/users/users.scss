@@ -63,6 +63,18 @@
   overflow-wrap: anywhere;
 }
 
+/* Кнопка правки прижата к правому краю строки, чтобы не тянуть на себя
+   ширину у колонок с данными */
+.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.user-card-edit {
+  margin-left: auto;
+}
+
 /* Пагинация вне карточки — на телефоне она идёт отдельным блоком */
 .pager-standalone {
   border: 1px solid var(--mat-sys-outline-variant);

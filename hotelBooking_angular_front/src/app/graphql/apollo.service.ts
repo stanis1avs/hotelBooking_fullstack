@@ -26,7 +26,7 @@ import { MY_SUPPORT_REQUESTS, ALL_SUPPORT_REQUESTS, SUPPORT_MESSAGES } from './q
 
 import { LOGIN_MUTATION, LOGOUT_MUTATION, REGISTER_MUTATION } from './mutations/auth.mutations';
 import { CREATE_RESERVATION, DELETE_RESERVATION } from './mutations/reservations.mutations';
-import { ADMIN_CREATE_USER } from './mutations/users.mutations';
+import { ADMIN_CREATE_USER, ADMIN_UPDATE_USER } from './mutations/users.mutations';
 import { CLOSE_SUPPORT_REQUEST, CREATE_SUPPORT_REQUEST, SEND_SUPPORT_MESSAGE } from './mutations/support.mutations';
 
 @Injectable({ providedIn: 'root' })
@@ -203,6 +203,15 @@ export class ApolloService {
         variables: { input: body },
       })
       .pipe(map((res) => res.data!.adminCreateUser));
+  }
+
+  adminUpdateUser(id: string, input: { name?: string; contactPhone?: string; role?: string }): Observable<UserDto> {
+    return this.apollo
+      .mutate<{ adminUpdateUser: UserDto }>({
+        mutation: ADMIN_UPDATE_USER,
+        variables: { id, input },
+      })
+      .pipe(map((res) => res.data!.adminUpdateUser));
   }
 
   managerGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }): Observable<UserDto[]> {

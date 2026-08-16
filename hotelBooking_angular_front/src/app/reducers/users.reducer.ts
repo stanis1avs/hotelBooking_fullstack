@@ -48,6 +48,16 @@ export const reducer = createReducer(
   })),
   on(UsersActions.adminCreateUserFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
+  // Обновлённую запись подставляем на место прежней, не перезапрашивая страницу:
+  // список отсортирован по дате создания, и порядок от правки не меняется.
+  on(UsersActions.adminUpdateUser, (state) => ({ ...state, loading: true, error: null })),
+  on(UsersActions.adminUpdateUserSuccess, (state, { payload }) => ({
+    ...state,
+    loading: false,
+    users: state.users.map((u) => (u.id === payload.id ? { ...u, ...payload } : u)),
+  })),
+  on(UsersActions.adminUpdateUserFailure, (state, { error }) => ({ ...state, loading: false, error })),
+
   // Смена фильтра всегда сбрасывает страницу: иначе поиск открывался
   // на несуществующей странице и показывал пустой результат.
   on(UsersActions.setSearchParams, (state, { payload }) => ({

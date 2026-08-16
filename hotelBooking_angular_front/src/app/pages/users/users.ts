@@ -24,10 +24,12 @@ import {
   selectHasNextPage, selectHasPrevPage, selectPageNumber, selectUsers,
   selectUsersLimit, selectUsersLoading, selectUsersRole, selectUsersSearchParams,
 } from '../../selectors/users.selectors';
-import { selectAuthRole } from '../../selectors/auth.selectors';
+import { selectAuthRole, selectAuthUser } from '../../selectors/auth.selectors';
 import { EmptyState } from '../../shared/empty-state';
 import { errorMessage } from '../../core/error-message';
+import type { UserDto } from '../../core/api';
 import type { CreateUserForm } from './create-user-dialog';
+import type { EditUserForm } from './edit-user-dialog';
 
 export const ROLE_LABEL: Record<string, string> = {
   client: 'Клиент',
@@ -73,6 +75,11 @@ export class UsersPage {
   readonly isAdmin = signal(false);
   readonly columns = signal<string[]>([]);
 
+  /** Себе роль менять нельзя: сервер откажет, поле в форме блокируем заранее. */
+  readonly currentUserId = toSignal(this.store.select(selectAuthUser).pipe(map((u) => u?.id ?? null)), {
+    initialValue: null,
+  });
+
   /** На узком экране таблица из пяти колонок уходила в горизонтальный
       скролл, и роль с телефоном становились недоступны — там показываем
       карточки, где видны все поля сразу. */
@@ -98,7 +105,8 @@ export class UsersPage {
     this.authRole$.pipe(takeUntilDestroyed()).subscribe((role) => {
       const admin = role === 'admin';
       this.isAdmin.set(admin);
-      this.columns.set(['name', 'email', 'phone', 'role', 'id']);
+      // Менеджеру список доступен только на просмотр, колонка действий ему не нужна.
+      this.columns.set(admin ? ['name', 'email', 'phone', 'role', 'actions'] : ['name', 'email', 'phone', 'role', 'id']);
     });
 
     // Единственное место, откуда уходит запрос списка. Раньше подписка на те же
@@ -122,9 +130,21 @@ export class UsersPage {
       );
 
     this.actions$
+      .pipe(ofType(UsersActions.adminUpdateUserSuccess), takeUntilDestroyed())
+      .subscribe(({ payload }) => this.snackBar.open(`Изменения сохранены: ${payload.name}`, 'OK', { duration: 4000 }));
+
+    this.actions$
       .pipe(ofType(UsersActions.adminCreateUserFailure, UsersActions.adminLoadUsersFailure), takeUntilDestroyed())
       .subscribe(({ error }) =>
         this.snackBar.open(errorMessage(error, 'Не удалось загрузить пользователей'), 'Понятно', { duration: 6000 })
+      );
+
+    // Отказ сервера показываем дословно: «нельзя изменить собственную роль»
+    // объясняет отказ лучше общей фразы про неудачу.
+    this.actions$
+      .pipe(ofType(UsersActions.adminUpdateUserFailure), takeUntilDestroyed())
+      .subscribe(({ error }) =>
+        this.snackBar.open(errorMessage(error, 'Не удалось сохранить изменения'), 'Понятно', { duration: 6000 })
       );
   }
 
@@ -175,6 +195,48 @@ export class UsersPage {
           // Уведомление об успехе показывается по ответу сервера, а не сразу
           // после отправки — раньше «успех» появлялся даже при ошибке.
           this.store.dispatch(UsersActions.adminCreateUser({ payload: form.getRawValue() }));
+        });
+    });
+  }
+
+  openEdit(user: UserDto): void {
+    const isSelf = user.id === this.currentUserId();
+
+    const role = new FormControl(user.role ?? 'client', {
+      nonNullable: true,
+      validators: [Validators.required],
+    });
+    if (isSelf) role.disable();
+
+    const form: EditUserForm = new FormGroup({
+      name: new FormControl(user.name, {
+        nonNullable: true,
+        validators: [Validators.required, Validators.minLength(2)],
+      }),
+      contactPhone: new FormControl(user.contactPhone ?? '', {
+        nonNullable: true,
+        validators: [Validators.pattern(/^[\d\s()+-]{5,20}$/)],
+      }),
+      role,
+    });
+
+    import('./edit-user-dialog').then(({ EditUserDialog }) => {
+      this.dialog
+        .open(EditUserDialog, { data: { form, email: user.email, isSelf }, width: '560px' })
+        .afterClosed()
+        .subscribe((confirmed) => {
+          if (!confirmed || form.invalid) return;
+
+          // Отправляем только изменённое: сервер пишет смену роли в журнал
+          // как изменение прав, и повтор прежнего значения засорял бы его.
+          const next = form.getRawValue();
+          const payload: { name?: string; contactPhone?: string; role?: string } = {};
+          if (next.name !== user.name) payload.name = next.name;
+          if (next.contactPhone !== (user.contactPhone ?? '')) payload.contactPhone = next.contactPhone;
+          if (!isSelf && next.role !== (user.role ?? 'client')) payload.role = next.role;
+          if (!Object.keys(payload).length) return;
+
+          this.store.dispatch(UsersActions.adminUpdateUser({ id: user.id, payload }));
         });
     });
   }

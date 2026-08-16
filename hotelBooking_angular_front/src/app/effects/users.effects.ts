@@ -35,6 +35,18 @@ export class UsersEffects {
     )
   );
 
+  readonly adminUpdateUser$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(UsersActions.adminUpdateUser),
+      switchMap(({ id, payload }) =>
+        this.apolloService.adminUpdateUser(id, payload).pipe(
+          map((user) => UsersActions.adminUpdateUserSuccess({ payload: user })),
+          catchError((error) => of(UsersActions.adminUpdateUserFailure({ error })))
+        )
+      )
+    )
+  );
+
   readonly adminCreateUser$ = createEffect(() =>
     this.actions$.pipe(
       ofType(UsersActions.adminCreateUser),
