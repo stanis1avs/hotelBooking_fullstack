@@ -17,7 +17,10 @@ const HOTEL_CARD = `
 export const GET_HOTELS = gql`
   query GetHotels($offset: Int, $limit: Int, $hotel: String, $dateArrival: String!, $dateDeparture: String!) {
     hotels(offset: $offset, limit: $limit, hotel: $hotel, dateArrival: $dateArrival, dateDeparture: $dateDeparture) {
-      ${HOTEL_CARD}
+      items {
+        ${HOTEL_CARD}
+      }
+      total
     }
   }
 `;

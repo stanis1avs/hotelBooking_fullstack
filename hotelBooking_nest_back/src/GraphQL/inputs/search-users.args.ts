@@ -1,6 +1,6 @@
 import { ArgsType, Field, Int } from "@nestjs/graphql";
 import { IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
-import { ROLES } from "../../Interface/Users";
+import { ROLES, Role } from "../../Interface/Users";
 
 @ArgsType()
 export class SearchUsersArgs {
@@ -38,5 +38,5 @@ export class SearchUsersArgs {
   @Field({ nullable: true })
   @IsOptional()
   @IsIn(ROLES)
-  role?: string;
+  role?: Role;
 }

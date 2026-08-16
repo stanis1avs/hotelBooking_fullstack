@@ -1,7 +1,7 @@
 import { Resolver, Query, Args } from "@nestjs/graphql";
 import { HotelsProvider } from "../../Providers/hotels.provider";
 import { ReservationsProvider } from "../../Providers/reservations.provider";
-import { HotelType } from "../types/hotel.type";
+import { HotelType, HotelsPageType } from "../types/hotel.type";
 import { SearchHotelsArgs } from "../inputs/search-hotels.args";
 import { SendHotel } from "../../Interface/Hotels";
 
@@ -28,23 +28,25 @@ export class HotelsResolver {
     };
   }
 
-  @Query(() => [HotelType])
-  async hotels(@Args() args: SearchHotelsArgs): Promise<HotelType[]> {
+  @Query(() => HotelsPageType)
+  async hotels(@Args() args: SearchHotelsArgs): Promise<HotelsPageType> {
     const reservedHotelIds = await this.reservationsProvider.getReservationsInTime(
       args.dateArrival,
       args.dateDeparture
     );
-    const hotels = await this.hotelsProvider.getAllHotels(
-      {
-        offset: args.offset ?? 0,
-        limit: args.limit ?? undefined,
-        hotel: args.hotel,
-        dateArrival: args.dateArrival,
-        dateDeparture: args.dateDeparture,
-      },
-      reservedHotelIds
-    );
-    return hotels.map((h) => this.toType(h));
+    const params = {
+      offset: args.offset ?? 0,
+      limit: args.limit ?? undefined,
+      hotel: args.hotel,
+      dateArrival: args.dateArrival,
+      dateDeparture: args.dateDeparture,
+    };
+    // Оба запроса идут по одному условию, поэтому считаем их параллельно.
+    const [hotels, total] = await Promise.all([
+      this.hotelsProvider.getAllHotels(params, reservedHotelIds),
+      this.hotelsProvider.countHotels(params, reservedHotelIds),
+    ]);
+    return { items: hotels.map((h) => this.toType(h)), total };
   }
 
   /** Карточка отеля для страницы с номерами. */

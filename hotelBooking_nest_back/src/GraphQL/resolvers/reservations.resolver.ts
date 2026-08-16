@@ -1,7 +1,11 @@
 import { Resolver, Query, Mutation, Args, Int } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 import { ReservationsProvider } from "../../Providers/reservations.provider";
-import { ClientReservationType, ManagerReservationType } from "../types/reservation.type";
+import {
+  ClientReservationType,
+  ManagerReservationType,
+  ManagerReservationsPageType,
+} from "../types/reservation.type";
 import { CreateReservationInput } from "../inputs/create-reservation.input";
 import { GqlJwtAuthGuard } from "../guards/gql-jwt.guard";
 import { GqlRolesGuard } from "../guards/gql-roles.guard";
@@ -32,12 +36,16 @@ export class ReservationsResolver {
 
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
   @Roles("manager")
-  @Query(() => [ManagerReservationType])
+  @Query(() => ManagerReservationsPageType)
   async allReservations(
-    @Args("offset", { type: () => Int, nullable: true, defaultValue: 0 }) offset: number
-  ): Promise<ManagerReservationType[]> {
-    const reservations = await this.reservationsProvider.getReservations({ offset });
-    return reservations.map((r) => ({
+    @Args("offset", { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
+    @Args("limit", { type: () => Int, nullable: true }) limit?: number
+  ): Promise<ManagerReservationsPageType> {
+    const [reservations, total] = await Promise.all([
+      this.reservationsProvider.getReservations({ offset, limit }),
+      this.reservationsProvider.countReservations(),
+    ]);
+    const items: ManagerReservationType[] = reservations.map((r) => ({
       id: String(r.id),
       dateStart: r.dateStart,
       dateEnd: r.dateEnd,
@@ -49,6 +57,7 @@ export class ReservationsResolver {
       room: { description: r.room.description, images: [] },
       hotel: { title: r.hotel.title },
     }));
+    return { items, total };
   }
 
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)

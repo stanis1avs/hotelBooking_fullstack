@@ -9,6 +9,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -21,8 +22,8 @@ import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 
 import { UsersActions } from '../../actions/users.actions';
 import {
-  selectHasNextPage, selectHasPrevPage, selectPageNumber, selectUsers,
-  selectUsersLimit, selectUsersLoading, selectUsersRole, selectUsersSearchParams,
+  selectUsers, selectUsersLimit, selectUsersLoading, selectUsersPageIndex,
+  selectUsersRole, selectUsersSearchParams, selectUsersTotal,
 } from '../../selectors/users.selectors';
 import { selectAuthRole, selectAuthUser } from '../../selectors/auth.selectors';
 import { EmptyState } from '../../shared/empty-state';
@@ -49,8 +50,8 @@ export const ROLE_LABEL: Record<string, string> = {
   imports: [
     AsyncPipe, DatePipe, ReactiveFormsModule,
     MatButtonModule, MatCardModule, MatChipsModule, MatDialogModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule,
-    MatTooltipModule, EmptyState,
+    MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule,
+    MatTableModule, MatTooltipModule, EmptyState,
   ],
   templateUrl: './users.html',
   styleUrl: './users.scss',
@@ -65,9 +66,8 @@ export class UsersPage {
 
   readonly users$ = this.store.select(selectUsers);
   readonly loading$ = this.store.select(selectUsersLoading);
-  readonly hasNext$ = this.store.select(selectHasNextPage);
-  readonly hasPrev$ = this.store.select(selectHasPrevPage);
-  readonly page$ = this.store.select(selectPageNumber);
+  readonly total$ = this.store.select(selectUsersTotal);
+  readonly pageIndex$ = this.store.select(selectUsersPageIndex);
   readonly limit$ = this.store.select(selectUsersLimit);
   readonly roleFilter$ = this.store.select(selectUsersRole);
   readonly authRole$ = this.store.select(selectAuthRole);
@@ -173,9 +173,9 @@ export class UsersPage {
     this.store.dispatch(UsersActions.clearSearchParams());
   }
 
-  next(): void { this.store.dispatch(UsersActions.nextPage()); }
-  prev(): void { this.store.dispatch(UsersActions.prevPage()); }
-  setPageSize(limit: number): void { this.store.dispatch(UsersActions.setPageSize({ limit })); }
+  onPage(event: PageEvent): void {
+    this.store.dispatch(UsersActions.setPage({ pageIndex: event.pageIndex, pageSize: event.pageSize }));
+  }
 
   openCreate(): void {
     const form: CreateUserForm = new FormGroup({

@@ -7,7 +7,7 @@ export const HotelsActions = createActionGroup({
     'Load Hotels': props<{
       params: { offset: number; limit?: number; hotel?: string; dateArrival: string; dateDeparture: string };
     }>(),
-    'Load Hotels Success': props<{ items: HotelDto[] }>(),
+    'Load Hotels Success': props<{ items: HotelDto[]; total: number }>(),
     'Load Hotels Failure': props<{ error: unknown }>(),
 
     'Set Search Term': props<{ term: string }>(),

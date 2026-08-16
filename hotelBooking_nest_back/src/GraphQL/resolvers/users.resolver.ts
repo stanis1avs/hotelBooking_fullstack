@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 import { UsersProvider } from "../../Providers/users.provider";
-import { UserType } from "../types/user.type";
+import { UserType, UsersPageType } from "../types/user.type";
 import { SearchUsersArgs } from "../inputs/search-users.args";
 import { CreateUserInput } from "../inputs/create-user.input";
 import { UpdateUserInput } from "../inputs/update-user.input";
@@ -22,6 +22,9 @@ export class UsersResolver {
       email: args.email ?? "",
       name: args.name ?? "",
       contactPhone: args.contactPhone ?? "",
+      // Роль здесь терялась, и фильтр по роли на странице «Пользователи»
+      // не имел никакого эффекта: выдача всегда приходила полная.
+      role: args.role,
     };
   }
 
@@ -29,22 +32,30 @@ export class UsersResolver {
     return { id: String(u.id), email: u.email, name: u.name, contactPhone: u.contactPhone, role: u.role };
   }
 
+  /** Страница выдачи вместе с общим количеством — по нему клиент нумерует страницы. */
+  private async page(args: SearchUsersArgs, roleScope: string | null): Promise<UsersPageType> {
+    const params = this.toArgs(args);
+    const [users, total] = await Promise.all([
+      this.usersProvider.getAllUsers(params, roleScope),
+      this.usersProvider.countUsers(params, roleScope),
+    ]);
+    return { items: users.map((u) => this.toType(u)), total };
+  }
+
   // Администратор видит все роли — включая только что созданных менеджеров.
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
   @Roles("admin")
-  @Query(() => [UserType])
-  async adminUsers(@Args() args: SearchUsersArgs): Promise<UserType[]> {
-    const users = await this.usersProvider.getAllUsers(this.toArgs(args));
-    return users.map((u) => this.toType(u));
+  @Query(() => UsersPageType)
+  async adminUsers(@Args() args: SearchUsersArgs): Promise<UsersPageType> {
+    return this.page(args, null);
   }
 
   // Менеджеру доступны только клиенты.
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
   @Roles("manager")
-  @Query(() => [UserType])
-  async managerUsers(@Args() args: SearchUsersArgs): Promise<UserType[]> {
-    const users = await this.usersProvider.getAllUsers(this.toArgs(args), "client");
-    return users.map((u) => this.toType(u));
+  @Query(() => UsersPageType)
+  async managerUsers(@Args() args: SearchUsersArgs): Promise<UsersPageType> {
+    return this.page(args, "client");
   }
 
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)

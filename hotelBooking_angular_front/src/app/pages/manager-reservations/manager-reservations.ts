@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
@@ -37,8 +38,8 @@ interface Tile {
 @Component({
   selector: 'app-manager-reservations',
   imports: [
-    DatePipe, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule,
-    MatSortModule, MatTableModule, MatTooltipModule, EmptyState, Sparkline,
+    DatePipe, MatCardModule, MatButtonModule, MatIconModule, MatPaginatorModule,
+    MatProgressBarModule, MatSortModule, MatTableModule, MatTooltipModule, EmptyState, Sparkline,
   ],
   templateUrl: './manager-reservations.html',
   styleUrl: './manager-reservations.scss',
@@ -54,7 +55,8 @@ export class ManagerReservations implements OnInit {
   reservations: ManagerReservationDto[] = [];
   loading = false;
   offset = 0;
-  readonly pageSize = PAGE_SIZE;
+  total = 0;
+  pageSize = PAGE_SIZE;
 
   readonly stats = signal<ManagerStatsDto | null>(null);
   readonly statusFilter = signal<Stay | null>(null);
@@ -133,9 +135,10 @@ export class ManagerReservations implements OnInit {
 
   loadReservations(): void {
     this.loading = true;
-    this.apollo.getManagerReservations({ offset: this.offset }).subscribe({
-      next: (items) => {
-        this.reservations = items;
+    this.apollo.getManagerReservations({ offset: this.offset, limit: this.pageSize }).subscribe({
+      next: (page) => {
+        this.reservations = page.items;
+        this.total = page.total;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -147,21 +150,13 @@ export class ManagerReservations implements OnInit {
     });
   }
 
-  get hasPrev(): boolean {
-    return this.offset > 0;
+  get pageIndex(): number {
+    return Math.floor(this.offset / this.pageSize);
   }
 
-  get hasNext(): boolean {
-    return this.reservations.length === this.pageSize;
-  }
-
-  nextPage(): void {
-    this.offset += this.pageSize;
-    this.loadReservations();
-  }
-
-  prevPage(): void {
-    this.offset = Math.max(0, this.offset - this.pageSize);
+  onPage(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.offset = event.pageIndex * event.pageSize;
     this.loadReservations();
   }
 

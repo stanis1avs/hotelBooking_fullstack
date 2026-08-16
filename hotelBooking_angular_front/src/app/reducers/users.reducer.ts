@@ -6,6 +6,8 @@ export const usersFeatureKey = 'users';
 
 export interface State {
   users: UserDto[];
+  /** Всего записей по текущему фильтру — приходит с сервера вместе со страницей. */
+  total: number;
   loading: boolean;
   error: unknown | null;
   searchParams: {
@@ -20,6 +22,7 @@ export interface State {
 
 export const initialState: State = {
   users: [],
+  total: 0,
   loading: false,
   error: null,
   searchParams: { limit: 10, offset: 0, email: '', name: '', contactPhone: '' },
@@ -29,10 +32,11 @@ export const reducer = createReducer(
   initialState,
 
   on(UsersActions.adminLoadUsers, UsersActions.managerLoadUsers, (state) => ({ ...state, loading: true, error: null })),
-  on(UsersActions.adminLoadUsersSuccess, UsersActions.managerLoadUsersSuccess, (state, { payload }) => ({
+  on(UsersActions.adminLoadUsersSuccess, UsersActions.managerLoadUsersSuccess, (state, { payload, total }) => ({
     ...state,
     loading: false,
     users: payload,
+    total,
   })),
   on(UsersActions.adminLoadUsersFailure, UsersActions.managerLoadUsersFailure, (state, { error }) => ({
     ...state,
@@ -45,6 +49,7 @@ export const reducer = createReducer(
     ...state,
     loading: false,
     users: [payload, ...state.users],
+    total: state.total + 1,
   })),
   on(UsersActions.adminCreateUserFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
@@ -68,20 +73,9 @@ export const reducer = createReducer(
 
   // Смещение считает редьюсер. Раньше это делал компонент внутри подписки
   // на те же параметры, что приводило к самозапускающемуся циклу диспатчей.
-  on(UsersActions.nextPage, (state) => ({
+  on(UsersActions.setPage, (state, { pageIndex, pageSize }) => ({
     ...state,
-    searchParams: { ...state.searchParams, offset: state.searchParams.offset + state.searchParams.limit },
-  })),
-  on(UsersActions.prevPage, (state) => ({
-    ...state,
-    searchParams: {
-      ...state.searchParams,
-      offset: Math.max(0, state.searchParams.offset - state.searchParams.limit),
-    },
-  })),
-  on(UsersActions.setPageSize, (state, { limit }) => ({
-    ...state,
-    searchParams: { ...state.searchParams, limit, offset: 0 },
+    searchParams: { ...state.searchParams, limit: pageSize, offset: pageIndex * pageSize },
   })),
 );
 

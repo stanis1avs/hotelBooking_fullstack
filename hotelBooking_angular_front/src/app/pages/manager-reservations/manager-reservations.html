@@ -124,17 +124,12 @@
         </table>
       </div>
 
-      <div class="pager">
-        <span class="text-sm muted">Показано {{ visibleRows.length }}</span>
-        <span class="flex gap-1">
-          <button mat-icon-button [disabled]="!hasPrev" (click)="prevPage()" aria-label="Предыдущая страница">
-            <mat-icon>chevron_left</mat-icon>
-          </button>
-          <button mat-icon-button [disabled]="!hasNext" (click)="nextPage()" aria-label="Следующая страница">
-            <mat-icon>chevron_right</mat-icon>
-          </button>
-        </span>
-      </div>
+      <mat-paginator
+        [length]="total"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        (page)="onPage($event)" />
     </mat-card>
   } @else if (!loading) {
     <mat-card appearance="outlined">

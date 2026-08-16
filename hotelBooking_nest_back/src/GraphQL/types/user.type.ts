@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID } from "@nestjs/graphql";
+import { ObjectType, Field, ID, Int } from "@nestjs/graphql";
 
 @ObjectType()
 export class UserType {
@@ -16,4 +16,14 @@ export class UserType {
 
   @Field({ nullable: true })
   role: string;
+}
+
+/** См. HotelsPageType: общее количество нужно клиенту для нумерации страниц. */
+@ObjectType()
+export class UsersPageType {
+  @Field(() => [UserType])
+  items: UserType[];
+
+  @Field(() => Int)
+  total: number;
 }

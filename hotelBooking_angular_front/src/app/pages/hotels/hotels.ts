@@ -12,12 +12,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { HotelsActions } from '../../actions/hotels.actions';
 import {
-  selectHotelsDateArrival, selectHotelsDateDeparture,
-  selectHotelsError, selectHotelsItems, selectHotelsLoading, selectHotelsTerm,
+  selectHotelsDateArrival, selectHotelsDateDeparture, selectHotelsError, selectHotelsItems,
+  selectHotelsLoading, selectHotelsPageIndex, selectHotelsTerm, selectHotelsTotal,
 } from '../../selectors/hotels.selectors';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
@@ -37,7 +38,8 @@ interface Preset {
   imports: [
     AsyncPipe, ReactiveFormsModule, RouterLink, MoneyPipe,
     MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatIconModule, MatDatepickerModule, MatProgressBarModule, EmptyState, ImageUrlPipe,
+    MatIconModule, MatDatepickerModule, MatPaginatorModule, MatProgressBarModule,
+    EmptyState, ImageUrlPipe,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './hotels.html',
@@ -55,9 +57,14 @@ export class Hotels implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly items$ = this.store.select(selectHotelsItems);
+  readonly total$ = this.store.select(selectHotelsTotal);
+  readonly pageIndex$ = this.store.select(selectHotelsPageIndex);
   readonly loading$ = this.store.select(selectHotelsLoading);
   /** Ошибка запроса и пустая выдача — разные состояния */
   readonly error$ = this.store.select(selectHotelsError);
+
+  /** Двенадцать карточек — три полных ряда на широком экране. */
+  pageSize = 12;
 
   readonly minDate = new Date();
   readonly amenity = AMENITY_META;
@@ -89,6 +96,15 @@ export class Hotels implements OnInit {
       но никак не показывали, какая из них сейчас применена. */
   readonly activePreset = signal<string | null>(null);
 
+  /** Размер каталога для заголовка — берётся из выдачи без фильтра,
+      иначе число в шапке менялось бы на каждый ввод в поиске. */
+  private readonly catalogSize = signal<number | null>(null);
+
+  catalogLabel(): string {
+    const n = this.catalogSize();
+    return n === null ? 'Отели по всей стране' : `${n} ${plural(n, 'отель', 'отеля', 'отелей')}`;
+  }
+
   ngOnInit(): void {
     this.store
       .select(selectHotelsTerm)
@@ -104,6 +120,12 @@ export class Hotels implements OnInit {
         if (from) this.form.controls.start.setValue(new Date(from), { emitEvent: false });
         if (to) this.form.controls.end.setValue(new Date(to), { emitEvent: false });
         this.recalcNights();
+      });
+
+    combineLatest([this.total$, this.store.select(selectHotelsTerm)])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([total, term]) => {
+        if (!term.trim()) this.catalogSize.set(total);
       });
 
     // Поиск с задержкой: раньше строка только писалась в стор,
@@ -170,7 +192,17 @@ export class Hotels implements OnInit {
     this.search();
   }
 
+  /** Новый поиск всегда открывается с первой страницы. */
   search(): void {
+    this.load(0, this.pageSize);
+  }
+
+  onPage(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.load(event.pageIndex * event.pageSize, event.pageSize);
+  }
+
+  private load(offset: number, limit: number): void {
     const start = this.form.controls.start.value;
     const end = this.form.controls.end.value;
     if (!start || !end) return;
@@ -183,7 +215,7 @@ export class Hotels implements OnInit {
     this.store.dispatch(HotelsActions.setDates({ dateArrival, dateDeparture }));
     this.store.dispatch(
       HotelsActions.loadHotels({
-        params: { offset: 0, limit: 24, hotel: term.trim() || undefined, dateArrival, dateDeparture },
+        params: { offset, limit, hotel: term.trim() || undefined, dateArrival, dateDeparture },
       })
     );
   }

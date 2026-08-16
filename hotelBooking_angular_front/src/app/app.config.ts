@@ -9,6 +9,7 @@ import {
 import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -29,6 +30,7 @@ import { usersFeature } from './reducers/users.reducer';
 import { credentialsInterceptor } from './core/credentials-interceptor';
 import { authInterceptor } from './core/auth-interceptor';
 import { AuthSession } from './core/auth-session';
+import { russianPaginatorIntl } from './core/paginator-intl';
 import { AuthEffects } from './effects/auth.effects';
 import { HotelsEffects } from './effects/hotels.effects';
 import { RoomsEffects } from './effects/rooms.effects';
@@ -103,5 +105,6 @@ export const appConfig: ApplicationConfig = {
     }),
     { provide: LOCALE_ID, useValue: 'ru-RU' },
     { provide: MAT_DATE_LOCALE, useValue: 'ru-RU' },
+    { provide: MatPaginatorIntl, useFactory: russianPaginatorIntl },
   ],
 };

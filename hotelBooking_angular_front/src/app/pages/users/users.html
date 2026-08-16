@@ -84,17 +84,14 @@
           }
         </div>
 
-        <div class="pager pager-standalone">
-          <span class="text-sm muted">Страница {{ page$ | async }}</span>
-          <span class="flex gap-1">
-            <button mat-icon-button [disabled]="!(hasPrev$ | async)" (click)="prev()" aria-label="Предыдущая страница">
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <button mat-icon-button [disabled]="!(hasNext$ | async)" (click)="next()" aria-label="Следующая страница">
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </span>
-        </div>
+        <mat-paginator
+          class="pager-standalone"
+          [length]="total$ | async"
+          [pageIndex]="(pageIndex$ | async) ?? 0"
+          [pageSize]="(limit$ | async) ?? 10"
+          [pageSizeOptions]="[10, 25, 50, 100]"
+          [hidePageSize]="true"
+          (page)="onPage($event)" />
       } @else {
       <mat-card appearance="outlined" class="overflow-hidden">
         <div class="overflow-x-auto">
@@ -157,29 +154,15 @@
           </table>
         </div>
 
-        <div class="pager">
-          <label class="flex items-center gap-2 text-sm">
-            Строк на странице
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pager-select">
-              <!-- panelWidth: без него выпадающий список наследовал ширину поля
-                   и значение обрезалось до «2…» -->
-              <mat-select [value]="limit$ | async" (valueChange)="setPageSize($event)" [panelWidth]="null">
-                @for (n of [10, 25, 50]; track n) {
-                  <mat-option [value]="n">{{ n }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </label>
-          <span class="text-sm muted">Страница {{ page$ | async }}</span>
-          <span class="flex gap-1">
-            <button mat-icon-button [disabled]="!(hasPrev$ | async)" (click)="prev()" aria-label="Предыдущая страница">
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <button mat-icon-button [disabled]="!(hasNext$ | async)" (click)="next()" aria-label="Следующая страница">
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </span>
-        </div>
+        <!-- Раньше здесь был самодельный пейджер: «Предыдущая / Следующая»
+             без номера страницы и общего количества, а наличие следующей
+             угадывалось по совпадению размера ответа с лимитом -->
+        <mat-paginator
+          [length]="total$ | async"
+          [pageIndex]="(pageIndex$ | async) ?? 0"
+          [pageSize]="(limit$ | async) ?? 10"
+          [pageSizeOptions]="[10, 25, 50, 100]"
+          (page)="onPage($event)" />
       </mat-card>
       }
     } @else if ((loading$ | async) === false) {

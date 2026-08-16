@@ -14,6 +14,7 @@ import {
   SupportMessageDto,
   CreateReservationRequestDto,
   ManagerStatsDto,
+  PageDto,
 } from '../core/api';
 
 import { ME_QUERY } from './queries/auth.queries';
@@ -83,9 +84,9 @@ export class ApolloService {
     hotel?: string;
     dateArrival: string;
     dateDeparture: string;
-  }): Observable<HotelDto[]> {
+  }): Observable<PageDto<HotelDto>> {
     return this.apollo
-      .query<{ hotels: HotelDto[] }>({
+      .query<{ hotels: PageDto<HotelDto> }>({
         query: GET_HOTELS,
         variables: params,
         fetchPolicy: 'network-only',
@@ -154,16 +155,25 @@ export class ApolloService {
       .pipe(map(() => undefined));
   }
 
-  getManagerReservations(params?: { offset?: number }): Observable<ManagerReservationDto[]> {
+  getManagerReservations(params?: { offset?: number; limit?: number }): Observable<PageDto<ManagerReservationDto>> {
+    type Row = {
+      id: string;
+      dateStart: string;
+      dateEnd: string;
+      client: { id: string; name: string; contactPhone: string };
+      room: { description: string; images: string[] };
+      hotel: { title: string };
+    };
     return this.apollo
-      .query<{ allReservations: Array<{ id: string; dateStart: string; dateEnd: string; client: { id: string; name: string; contactPhone: string }; room: { description: string; images: string[] }; hotel: { title: string } }> }>({
+      .query<{ allReservations: PageDto<Row> }>({
         query: ALL_RESERVATIONS,
-        variables: { offset: params?.offset ?? 0 },
+        variables: { offset: params?.offset ?? 0, limit: params?.limit },
         fetchPolicy: 'network-only',
       })
       .pipe(
-        map((res) =>
-          res.data!.allReservations.map((r) => ({
+        map((res) => ({
+          total: res.data!.allReservations.total,
+          items: res.data!.allReservations.items.map((r) => ({
             id: r.id,
             dateStart: r.dateStart,
             dateEnd: r.dateEnd,
@@ -171,7 +181,7 @@ export class ApolloService {
             hotel: r.hotel,
             user: { name: r.client.name, contactPhone: r.client.contactPhone },
           })),
-        ),
+        })),
       );
   }
 
@@ -186,9 +196,16 @@ export class ApolloService {
 
   // ── Users ───────────────────────────────────────────────────────────────────
 
-  adminGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }): Observable<UserDto[]> {
+  adminGetUsers(params: {
+    limit: number;
+    offset: number;
+    email?: string;
+    name?: string;
+    contactPhone?: string;
+    role?: string;
+  }): Observable<PageDto<UserDto>> {
     return this.apollo
-      .query<{ adminUsers: UserDto[] }>({
+      .query<{ adminUsers: PageDto<UserDto> }>({
         query: ADMIN_USERS,
         variables: params,
         fetchPolicy: 'network-only',
@@ -214,9 +231,15 @@ export class ApolloService {
       .pipe(map((res) => res.data!.adminUpdateUser));
   }
 
-  managerGetUsers(params: { limit: number; offset: number; email?: string; name?: string; contactPhone?: string }): Observable<UserDto[]> {
+  managerGetUsers(params: {
+    limit: number;
+    offset: number;
+    email?: string;
+    name?: string;
+    contactPhone?: string;
+  }): Observable<PageDto<UserDto>> {
     return this.apollo
-      .query<{ managerUsers: UserDto[] }>({
+      .query<{ managerUsers: PageDto<UserDto> }>({
         query: MANAGER_USERS,
         variables: params,
         fetchPolicy: 'network-only',

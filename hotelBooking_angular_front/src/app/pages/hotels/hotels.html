@@ -5,7 +5,9 @@
     <div class="hero-art" aria-hidden="true"></div>
     <div class="hero-body">
       <p class="page-eyebrow" style="color: var(--hero-eyebrow)">Пристань · бронирование</p>
-      <h1 class="hero-title">Двадцать три отеля<br />от Калининграда до Владивостока</h1>
+      <!-- Число берётся из выдачи: в вёрстке оно было записано словами
+           и разошлось бы с базой при первом же добавлении отеля -->
+      <h1 class="hero-title">{{ catalogLabel() }}<br />от Калининграда до Владивостока</h1>
       <p class="hero-sub">
         Свободные даты видно сразу в календаре — занятые номера не попадут в выдачу
         и не дадут ошибиться на шаге оплаты.
@@ -57,7 +59,7 @@
   @if (items$ | async; as hotels) {
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <p class="text-sm muted">
-        {{ countLabel(hotels.length) }} · цены за {{ nightsLabel() }}
+        {{ countLabel((total$ | async) ?? hotels.length) }} · цены за {{ nightsLabel() }}
       </p>
       @if (form.controls.term.value) {
         <button mat-button (click)="resetSearch()">
@@ -135,6 +137,13 @@
           </a>
         }
       </div>
+
+      <mat-paginator
+        [length]="total$ | async"
+        [pageIndex]="(pageIndex$ | async) ?? 0"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[12, 24, 48]"
+        (page)="onPage($event)" />
     } @else if (error$ | async) {
       <!-- Недоступный сервер — не то же самое, что пустая выдача -->
       <mat-card appearance="outlined">

@@ -37,3 +37,17 @@ export class HotelType {
   @Field(() => Int)
   roomsCount: number;
 }
+
+/**
+ * Страница выдачи. Без общего количества клиент не может показать
+ * ни номер последней страницы, ни «N из M» — приходилось угадывать наличие
+ * следующей по тому, что размер ответа совпал с лимитом.
+ */
+@ObjectType()
+export class HotelsPageType {
+  @Field(() => [HotelType])
+  items: HotelType[];
+
+  @Field(() => Int)
+  total: number;
+}

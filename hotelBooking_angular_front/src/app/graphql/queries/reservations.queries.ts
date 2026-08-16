@@ -18,23 +18,26 @@ export const MY_RESERVATIONS = gql`
 `;
 
 export const ALL_RESERVATIONS = gql`
-  query AllReservations($offset: Int) {
-    allReservations(offset: $offset) {
-      id
-      dateStart
-      dateEnd
-      client {
+  query AllReservations($offset: Int, $limit: Int) {
+    allReservations(offset: $offset, limit: $limit) {
+      items {
         id
-        name
-        contactPhone
+        dateStart
+        dateEnd
+        client {
+          id
+          name
+          contactPhone
+        }
+        room {
+          description
+          images
+        }
+        hotel {
+          title
+        }
       }
-      room {
-        description
-        images
-      }
-      hotel {
-        title
-      }
+      total
     }
   }
 `;

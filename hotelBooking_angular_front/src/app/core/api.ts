@@ -4,6 +4,16 @@ import { environment } from '../../environments/environment';
 
 export type Id = string;
 
+/**
+ * Страница выдачи. Общее количество приходит с сервера: без него
+ * `mat-paginator` не может показать ни номер последней страницы, ни «N из M»,
+ * а наличие следующей приходилось угадывать по совпадению размера ответа с лимитом.
+ */
+export interface PageDto<T> {
+  items: T[];
+  total: number;
+}
+
 export interface LoginRequestDto {
   email: string;
   password: string;

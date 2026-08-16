@@ -29,7 +29,8 @@ export const UsersActions = createActionGroup({
   source: 'Users',
   events: {
     'Admin Load Users': props<{ payload: UserSearchParams }>(),
-    'Admin Load Users Success': props<{ payload: UserDto[] }>(),
+    // total приходит с сервера: по нему считается номер последней страницы
+    'Admin Load Users Success': props<{ payload: UserDto[]; total: number }>(),
     'Admin Load Users Failure': props<{ error: unknown }>(),
 
     'Admin Create User': props<{ payload: CreateUserRequest }>(),
@@ -41,15 +42,14 @@ export const UsersActions = createActionGroup({
     'Admin Update User Failure': props<{ error: unknown }>(),
 
     'Manager Load Users': props<{ payload: UserSearchParams }>(),
-    'Manager Load Users Success': props<{ payload: UserDto[] }>(),
+    'Manager Load Users Success': props<{ payload: UserDto[]; total: number }>(),
     'Manager Load Users Failure': props<{ error: unknown }>(),
 
     'Set Search Params': props<{ payload: Partial<UserSearchParams> }>(),
     'Clear Search Params': emptyProps(),
 
-    // Пагинация выражена намерением; смещение вычисляет редьюсер.
-    'Next Page': emptyProps(),
-    'Prev Page': emptyProps(),
-    'Set Page Size': props<{ limit: number }>(),
+    // Одно событие на всю пагинацию: mat-paginator сообщает номер страницы
+    // и её размер, смещение из них вычисляет редьюсер.
+    'Set Page': props<{ pageIndex: number; pageSize: number }>(),
   },
 });

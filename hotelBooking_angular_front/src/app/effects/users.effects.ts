@@ -16,7 +16,7 @@ export class UsersEffects {
       ofType(UsersActions.adminLoadUsers),
       switchMap(({ payload }) =>
         this.apolloService.adminGetUsers(payload).pipe(
-          map((users) => UsersActions.adminLoadUsersSuccess({ payload: users })),
+          map((page) => UsersActions.adminLoadUsersSuccess({ payload: page.items, total: page.total })),
           catchError((error) => of(UsersActions.adminLoadUsersFailure({ error })))
         )
       )
@@ -28,7 +28,7 @@ export class UsersEffects {
       ofType(UsersActions.managerLoadUsers),
       switchMap(({ payload }) =>
         this.apolloService.managerGetUsers(payload).pipe(
-          map((users) => UsersActions.managerLoadUsersSuccess({ payload: users })),
+          map((page) => UsersActions.managerLoadUsersSuccess({ payload: page.items, total: page.total })),
           catchError((error) => of(UsersActions.managerLoadUsersFailure({ error })))
         )
       )

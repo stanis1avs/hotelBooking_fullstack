@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 
-import { catchError, concatMap, map, of } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { HotelsActions } from '../actions/hotels.actions';
 import { ApolloService } from '../graphql/apollo.service';
 
@@ -13,9 +13,11 @@ export class HotelsEffects {
     this.loadHotels$ = createEffect(() =>
       this.actions$.pipe(
         ofType(HotelsActions.loadHotels),
-        concatMap(({ params }) =>
+        // switchMap, а не concatMap: поиск уходит по вводу и по смене дат,
+        // и нужен результат последнего запроса — промежуточные только мигали выдачей.
+        switchMap(({ params }) =>
           this.apolloService.getHotels(params).pipe(
-            map((items) => HotelsActions.loadHotelsSuccess({ items })),
+            map((page) => HotelsActions.loadHotelsSuccess({ items: page.items, total: page.total })),
             catchError((error) => of(HotelsActions.loadHotelsFailure({ error })))
           )
         )
