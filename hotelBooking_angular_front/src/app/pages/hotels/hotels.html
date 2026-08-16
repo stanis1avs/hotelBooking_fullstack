@@ -35,8 +35,13 @@
 
       <!-- Подборки — это готовые фильтры, а не украшение -->
       <div class="hero-presets">
-        @for (preset of presets; track preset.term) {
-          <button type="button" class="preset" (click)="applyPreset(preset)">
+        @for (preset of presets; track preset.label) {
+          <button
+            type="button"
+            class="preset"
+            [class.active]="activePreset() === preset.label"
+            [attr.aria-pressed]="activePreset() === preset.label"
+            (click)="applyPreset(preset)">
             <mat-icon>{{ preset.icon }}</mat-icon>
             {{ preset.label }}
           </button>

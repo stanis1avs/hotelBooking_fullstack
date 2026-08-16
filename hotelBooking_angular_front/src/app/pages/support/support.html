@@ -99,12 +99,16 @@
                   <mat-label>Введите сообщение</mat-label>
                   <input matInput [formControl]="newMessageControl" (keyup.enter)="sendMessage()" autocomplete="off" />
                 </mat-form-field>
+                <!-- mat-fab вместо flat-кнопки: у той своя минимальная ширина
+                     и внутренние отступы, из-за которых иконка не центрировалась
+                     и кнопка не держала форму на узком экране -->
                 <button
-                  mat-flat-button
+                  mat-fab
                   color="primary"
                   class="composer-send"
                   [disabled]="newMessageControl.invalid"
                   (click)="sendMessage()"
+                  matTooltip="Отправить"
                   aria-label="Отправить сообщение">
                   <mat-icon>send</mat-icon>
                 </button>

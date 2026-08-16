@@ -62,12 +62,15 @@
 
   @if (step() === 0) {
     <mat-card appearance="outlined">
-      <mat-card-content class="pt-4 flex flex-col gap-4">
-        <div>
-          <h2 class="text-base font-semibold">Когда планируете приехать?</h2>
-          <p class="text-sm muted mt-1">Занятые даты недоступны для выбора в календаре.</p>
+      <mat-card-content>
+        <div class="step-head">
+          <h2 class="step-title">Когда планируете приехать?</h2>
+          <p class="step-hint">Занятые даты недоступны для выбора в календаре.</p>
         </div>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" style="max-width: 420px">
+
+        <!-- Подпись поля поднимается выше его рамки, поэтому между текстом
+             и полем нужен отдельный отступ, а не общий gap раскладки -->
+        <mat-form-field appearance="outline" class="dates-field">
           <mat-label>Даты проживания</mat-label>
           <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
             <input matStartDate formControlName="start" placeholder="Заезд" />
@@ -77,7 +80,8 @@
           <mat-date-range-picker #picker />
           <mat-hint>{{ nightsLabel() }}</mat-hint>
         </mat-form-field>
-        <div class="flex justify-end">
+
+        <div class="step-actions">
           <button mat-flat-button color="primary" [disabled]="range.invalid" (click)="goToStep(1)">
             Выбрать номер
             <mat-icon>arrow_forward</mat-icon>

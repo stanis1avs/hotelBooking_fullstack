@@ -75,6 +75,10 @@ export class Hotels implements OnInit {
 
   private readonly nightsCount = signal(1);
 
+  /** Выбранная подборка. Раньше кнопки фильтровали выдачу,
+      но никак не показывали, какая из них сейчас применена. */
+  readonly activePreset = signal<string | null>(null);
+
   ngOnInit(): void {
     this.store
       .select(selectHotelsTerm)
@@ -94,9 +98,15 @@ export class Hotels implements OnInit {
 
     // Поиск с задержкой: раньше строка только писалась в стор,
     // а запрос уходил исключительно по кнопке.
+    // Ручная правка запроса или дат снимает выделение с подборки:
+    // подборка задаёт обе величины сразу, и после изменения любой из них
+    // подсветка перестала бы соответствовать выдаче.
     this.form.controls.term.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe(() => this.search());
+      .subscribe(() => {
+        this.activePreset.set(null);
+        this.search();
+      });
 
     combineLatest([
       this.form.controls.start.valueChanges,
@@ -105,6 +115,7 @@ export class Hotels implements OnInit {
       .pipe(debounceTime(150), takeUntilDestroyed())
       .subscribe(() => {
         this.recalcNights();
+        this.activePreset.set(null);
         if (this.form.controls.start.valid && this.form.controls.end.valid) this.search();
       });
 
@@ -145,6 +156,7 @@ export class Hotels implements OnInit {
       { emitEvent: false }
     );
     this.recalcNights();
+    this.activePreset.set(preset.label);
     this.search();
   }
 
@@ -167,6 +179,7 @@ export class Hotels implements OnInit {
   }
 
   resetSearch(): void {
+    this.activePreset.set(null);
     this.form.controls.term.setValue('');
   }
 }

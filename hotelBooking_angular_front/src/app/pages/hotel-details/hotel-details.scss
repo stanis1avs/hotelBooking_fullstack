@@ -61,6 +61,46 @@
 }
 .amenity-icon { font-size: 14px; width: 14px; height: 14px; }
 
+/* ============================================================ ШАГ С ДАТАМИ */
+.step-head {
+  margin-bottom: 22px;
+}
+
+.step-title {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.step-hint {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 6px;
+}
+
+.dates-field {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Кнопка шла в одну линию с подсказкой «2 ночи» под полем */
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+@media (max-width: 720px) {
+  .step-actions {
+    margin-top: 20px;
+  }
+  .step-actions button {
+    width: 100%;
+  }
+}
+
 /* ============================================================ СТЕППЕР */
 .stepper {
   display: flex;

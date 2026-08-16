@@ -467,6 +467,18 @@ html .mat-mdc-card-content {
   min-width: 0;
 }
 
+/* Material жёстко задаёт внутреннему блоку поля ширину 180px.
+   Внутри flex- и grid-раскладок поле из-за этого не сжимается и
+   выдавливает соседей за границы контейнера — на телефоне кнопка
+   отправки сообщения уезжала за край экрана. */
+html .mat-mdc-form-field {
+  min-width: 0;
+}
+html .mat-mdc-form-field-infix {
+  width: auto;
+  min-width: 0;
+}
+
 .overflow-x-auto {
   max-width: 100%;
 }

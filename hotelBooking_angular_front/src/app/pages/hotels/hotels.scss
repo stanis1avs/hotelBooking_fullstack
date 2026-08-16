@@ -105,6 +105,20 @@
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.3);
 }
+
+/* Выбранная подборка. Раньше кнопки фильтровали выдачу,
+   но выглядели одинаково — понять, какая применена, было нельзя. */
+.preset.active {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-color: transparent;
+  font-weight: 650;
+}
+
+.preset:focus-visible {
+  outline: 2px solid #eaf3f0;
+  outline-offset: 2px;
+}
 .preset mat-icon {
   font-size: 17px;
   width: 17px;
