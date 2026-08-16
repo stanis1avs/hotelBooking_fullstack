@@ -4,7 +4,7 @@
     class="w-72"
     [mode]="(isHandset$ | async) ? 'over' : 'side'"
     [opened]="(isHandset$ | async) === false">
-    <div class="px-4 py-4 flex items-center gap-3">
+    <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <mat-icon>apartment</mat-icon>
       </span>
@@ -63,7 +63,7 @@
       }
 
       @if ((user$ | async) === null) {
-        <mat-divider class="my-2" />
+        <mat-divider />
         <a mat-list-item routerLink="/login" routerLinkActive="active-link">
           <mat-icon matListItemIcon>login</mat-icon>
           <span matListItemTitle>Войти</span>

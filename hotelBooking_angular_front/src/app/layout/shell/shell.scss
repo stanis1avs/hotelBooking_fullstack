@@ -1,3 +1,12 @@
+/* Логотип выровнен по иконкам меню: отступ списка плюс внутренний
+   отступ пункта, иначе знак и иконки стояли на разных вертикалях. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 26px 14px;
+}
+
 .brand-mark {
   width: 36px;
   height: 36px;
@@ -15,13 +24,35 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--mat-sys-outline);
-  padding: 16px 16px 6px;
+  padding: 18px 20px 6px;
+}
+
+/* Пункты меню — вложенные «пилюли», а не полосы во всю ширину панели.
+   Отступ по бокам задаётся списку, иначе активный пункт упирался в края. */
+.mat-mdc-nav-list {
+  padding: 4px 10px;
+}
+
+.mat-mdc-nav-list .mat-mdc-list-item {
+  height: 46px;
+  border-radius: 999px;
+  margin-bottom: 2px;
+}
+
+.mat-mdc-nav-list .mat-mdc-list-item:hover:not(.active-link) {
+  background: var(--mat-sys-surface-container);
 }
 
 .active-link {
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
   font-weight: 600;
+}
+
+/* Разделитель шёл вплотную к пункту выше и читался как его часть */
+.mat-divider {
+  margin: 10px 20px;
+  border-top-color: var(--mat-sys-outline-variant);
 }
 
 .toolbar {
