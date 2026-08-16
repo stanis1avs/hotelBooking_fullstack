@@ -24,7 +24,7 @@
   @if (hotels.length) {
     <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
       @for (hotel of hotels; track hotel.id) {
-        <mat-card appearance="outlined" class="flex flex-col">
+        <mat-card appearance="outlined" class="flex flex-col stagger-in">
           @if (hotel.image) {
             <img [src]="hotel.image | imageUrl" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="card-photo" />
           }

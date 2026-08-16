@@ -38,7 +38,8 @@
     @if (rooms.length) {
       <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
         @for (room of rooms; track room.id) {
-          <mat-card appearance="outlined" class="flex flex-col" [class.dimmed]="room.isEnabled === false">
+          <mat-card appearance="outlined" class="flex flex-col stagger-in"
+                    [class.dimmed]="room.isEnabled === false">
             @if (room.images.length) {
               <img [src]="room.images[0] | imageUrl" alt="Фотография номера" loading="lazy" class="card-photo" />
             }

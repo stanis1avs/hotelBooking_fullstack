@@ -63,7 +63,8 @@
   @if (visibleRows.length) {
     <mat-card appearance="outlined" class="overflow-hidden">
       <div class="overflow-x-auto">
-        <table mat-table [dataSource]="visibleRows" matSort (matSortChange)="sortData($event)" class="w-full">
+        <table mat-table [dataSource]="visibleRows" matSort (matSortChange)="sortData($event)"
+               class="w-full dense-table">
 
           <ng-container matColumnDef="hotel">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Отель</th>

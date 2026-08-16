@@ -72,7 +72,8 @@
     @if (hotels.length) {
       <div class="hotel-grid">
         @for (hotel of hotels; track hotel.id) {
-          <a class="hotel-card" [routerLink]="['/hotels', hotel.id]">
+          <!-- matRipple: до этого у кликабельной карточки не было отклика на нажатие -->
+          <a class="hotel-card stagger-in" matRipple [routerLink]="['/hotels', hotel.id]">
             <span class="hotel-photo-wrap">
               @if (hotel.image) {
                 <img [src]="hotel.image | imageUrl" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="hotel-photo" />

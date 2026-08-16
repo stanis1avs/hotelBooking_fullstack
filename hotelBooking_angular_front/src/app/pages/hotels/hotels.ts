@@ -11,7 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatRippleModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
@@ -39,7 +39,7 @@ interface Preset {
     AsyncPipe, ReactiveFormsModule, RouterLink, MoneyPipe,
     MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
     MatIconModule, MatDatepickerModule, MatPaginatorModule, MatProgressBarModule,
-    EmptyState, ImageUrlPipe,
+    MatRippleModule, EmptyState, ImageUrlPipe,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './hotels.html',

@@ -112,7 +112,7 @@
       @if (rooms.length) {
         <div class="flex flex-col gap-3">
           @for (room of rooms; track room.id) {
-            <div class="room" [class.picked]="selectedRoom()?.id === room.id">
+            <div class="room stagger-in" [class.picked]="selectedRoom()?.id === room.id">
               @if (room.images.length) {
                 <img [src]="room.images[0] | imageUrl" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
               } @else {

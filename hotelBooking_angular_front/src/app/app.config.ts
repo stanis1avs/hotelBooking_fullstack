@@ -10,7 +10,12 @@ import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatPaginatorIntl } from '@angular/material/paginator';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { InMemoryCache } from '@apollo/client/core';
@@ -60,7 +65,10 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withComponentInputBinding(),
-      withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' })
+      withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
+      // Смена раздела перестаёт быть мгновенной подменой кадра. В браузерах
+      // без View Transitions переход остаётся прежним — это не полифилл.
+      withViewTransitions({ skipInitialTransition: true })
     ),
     provideStore({
       [authFeature.name]: authFeature.reducer,

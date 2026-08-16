@@ -141,6 +141,8 @@
 .hotel-card {
   display: flex;
   flex-direction: column;
+  /* matRipple рисует волну в границах хоста — без relative она разошлась бы по странице */
+  position: relative;
   overflow: hidden;
   text-decoration: none;
   color: inherit;
