@@ -344,6 +344,41 @@ table.mat-mdc-table .mat-mdc-row:hover {
   gap: 8px;
 }
 
+/* --- Поля ввода ---
+   Прозрачное поле на тёмном фоне читается плохо, поэтому даём лёгкую
+   заливку: поле выглядит углублением, а рамка остаётся акцентом. */
+.mat-mdc-form-field .mdc-text-field--outlined {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-extra-small);
+  transition: background-color 0.15s;
+}
+.mat-mdc-form-field:hover .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+  background: var(--mat-sys-surface-container);
+}
+.mat-mdc-form-field.mat-focused .mdc-text-field--outlined {
+  background: var(--mat-sys-surface-container);
+}
+
+/* Chrome красит автозаполненные поля своим бледно-голубым фоном, который
+   выпадает из палитры. Штатного способа отключить его нет — перекрываем
+   внутренней тенью и замораживаем переход цвета. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--mat-sys-on-surface);
+  -webkit-box-shadow: 0 0 0 1000px var(--mat-sys-surface-container-low) inset;
+  box-shadow: 0 0 0 1000px var(--mat-sys-surface-container-low) inset;
+  caret-color: var(--mat-sys-on-surface);
+  transition: background-color 100000s ease-in-out 0s;
+}
+.mat-focused input:-webkit-autofill,
+.mat-mdc-form-field:hover input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--mat-sys-surface-container) inset;
+  box-shadow: 0 0 0 1000px var(--mat-sys-surface-container) inset;
+}
+
 /* Карточка входа и регистрации: подзаголовок в две строки почти касался
    плавающей подписи первого поля — она поднимается выше границы поля,
    и штатного отступа между шапкой и содержимым не хватало. */
