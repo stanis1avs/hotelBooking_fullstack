@@ -4,7 +4,9 @@
      выглядел зажатым рядом с полупустой панелью переписки. */
   grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  /* stretch вместо start: колонки тянулись каждая по своему содержимому
+     и заканчивались на разной высоте */
+  align-items: stretch;
 }
 
 @media (max-width: 980px) {
@@ -17,6 +19,29 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+}
+
+/* Карточка забирает остаток высоты колонки — обе панели
+   заканчиваются на одной линии независимо от содержимого */
+.support-column > mat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+}
+
+.support-column > mat-card .mat-mdc-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Лента сообщений растёт вместе с карточкой, а не по фиксированной высоте */
+.support-column > mat-card app-empty-state {
+  flex: 1;
+  display: grid;
+  place-items: center;
 }
 
 /* Одинаковая высота заголовка в обеих колонках, иначе карточки
@@ -108,14 +133,14 @@
   background: var(--mat-sys-surface-container-low);
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: var(--mat-sys-corner-medium);
-  min-height: 260px;
+  flex: 1;
+  min-height: 240px;
   max-height: 460px;
   overflow-y: auto;
 }
 
-/* Пустая панель переписки не должна растягиваться на весь экран */
 .thread-placeholder {
-  min-height: 300px;
+  flex: 1;
   display: grid;
   place-items: center;
 }
