@@ -15,3 +15,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 .idea/
+
+# Рабочие заметки: живут локально, в репозиторий не идут
+BACKLOG.md
+GRAPHQL.md
