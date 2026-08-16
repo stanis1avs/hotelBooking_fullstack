@@ -177,6 +177,35 @@
   border-radius: var(--mat-sys-corner-small);
   display: block;
 }
+/* Шаг бронирования въезжает со стороны движения. Сдвиг маленький: задача —
+   показать направление, а не разыграть переход. Собственный flex с тем же
+   зазором, что у страницы, — иначе обёртка схлопнула бы отступы между
+   карточками шага. */
+.step-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: step-in 200ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.step-panel.back {
+  animation-name: step-in-back;
+}
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes step-in-back {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-panel { animation: none; }
+}
+
 /* Фотография — кнопка открытия галереи; кнопочных стилей у неё быть не должно */
 .room-photo-btn {
   position: relative;

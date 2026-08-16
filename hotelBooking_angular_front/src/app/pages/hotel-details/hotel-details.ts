@@ -156,8 +156,16 @@ export class HotelDetails implements OnInit {
     return Array.from({ length: Math.max(0, Math.min(5, n)) });
   }
 
+  /**
+   * Направление последнего перехода между шагами: содержимое въезжает
+   * с той стороны, куда движется бронирование. Без этого «назад» и «вперёд»
+   * выглядели одинаково, и шаг подменялся без всякого объяснения.
+   */
+  readonly stepDirection = signal<'forward' | 'back'>('forward');
+
   goToStep(index: number): void {
     if (index === 2 && !this.selectedRoom()) return;
+    this.stepDirection.set(index >= this.step() ? 'forward' : 'back');
     this.step.set(index);
   }
 
@@ -172,7 +180,7 @@ export class HotelDetails implements OnInit {
 
   pickRoom(room: RoomDto): void {
     if (this.selectedRoom()?.id === room.id) {
-      this.step.set(2);
+      this.goToStep(2);
       return;
     }
     this.selectedRoom.set(room);

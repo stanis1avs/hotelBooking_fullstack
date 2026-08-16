@@ -74,7 +74,9 @@
     }
   </nav>
 
+  <!-- Содержимое шага въезжает со стороны движения: назад — справа налево -->
   @if (step() === 0) {
+    <div class="step-panel" [class.back]="stepDirection() === 'back'">
     <mat-card appearance="outlined">
       <mat-card-content>
         <div class="step-head">
@@ -103,9 +105,11 @@
         </div>
       </mat-card-content>
     </mat-card>
+    </div>
   }
 
   @if (step() === 1) {
+    <div class="step-panel" [class.back]="stepDirection() === 'back'">
     @if (loading$ | async) { <mat-progress-bar mode="indeterminate" /> }
 
     @if (rooms$ | async; as rooms) {
@@ -198,9 +202,11 @@
         </mat-card>
       }
     }
+    </div>
   }
 
   @if (step() === 2 && selectedRoom(); as room) {
+    <div class="step-panel" [class.back]="stepDirection() === 'back'">
     <div class="confirm-grid">
       <mat-card appearance="outlined">
         <mat-card-content>
@@ -263,6 +269,7 @@
           </p>
         </mat-card-content>
       </mat-card>
+    </div>
     </div>
   }
 </div>
