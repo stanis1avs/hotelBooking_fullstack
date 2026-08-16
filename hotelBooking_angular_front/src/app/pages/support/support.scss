@@ -11,7 +11,24 @@
 
 @media (max-width: 980px) {
   .support-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* На телефоне карточка переписки не должна держать 300 px по высоте
+   и распирать экран по ширине */
+@media (max-width: 720px) {
+  .support-grid {
+    gap: 16px;
+  }
+  .support-column > mat-card {
+    min-height: 0;
+  }
+  .thread {
+    max-height: 60vh;
+  }
+  .message {
+    max-width: 88%;
   }
 }
 
@@ -167,6 +184,9 @@
   background: var(--mat-sys-surface);
   border: 1px solid var(--mat-sys-outline-variant);
   color: var(--mat-sys-on-surface);
+  /* Длинная ссылка или слово без пробелов растягивали пузырь
+     за пределы ленты */
+  overflow-wrap: anywhere;
 }
 
 .message.mine .bubble {
@@ -189,8 +209,11 @@
   align-items: flex-start;
 }
 
+/* min-width: 0 обязателен: без него flex-элемент не сжимается ниже
+   ширины содержимого и строка ввода выталкивала кнопку за экран */
 .composer-field {
   flex: 1;
+  min-width: 0;
 }
 
 .composer-send {

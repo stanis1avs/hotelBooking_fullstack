@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +16,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 
 import { UsersActions } from '../../actions/users.actions';
 import {
@@ -50,6 +51,7 @@ export const ROLE_LABEL: Record<string, string> = {
     MatTooltipModule, EmptyState,
   ],
   templateUrl: './users.html',
+  styleUrl: './users.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsersPage {
@@ -70,6 +72,16 @@ export class UsersPage {
 
   readonly isAdmin = signal(false);
   readonly columns = signal<string[]>([]);
+
+  /** На узком экране таблица из пяти колонок уходила в горизонтальный
+      скролл, и роль с телефоном становились недоступны — там показываем
+      карточки, где видны все поля сразу. */
+  readonly isHandset = toSignal(
+    inject(BreakpointObserver)
+      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
+      .pipe(map((r) => r.matches)),
+    { initialValue: false }
+  );
 
   readonly search = new FormControl<string>('', { nonNullable: true });
 

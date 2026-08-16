@@ -20,13 +20,15 @@
 
   <mat-card appearance="outlined">
     <mat-card-content class="flex flex-col gap-4 pt-4">
-      <div class="grid gap-3 items-end" style="grid-template-columns: minmax(0,1fr) auto">
+      <!-- На узком экране поле и кнопка вставали в ряд, и подпись поиска
+           обрезалась до нечитаемого «Поиск по» -->
+      <div class="search-row">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Поиск по имени, почте или телефону</mat-label>
           <input matInput [formControl]="search" autocomplete="off" placeholder="Начните вводить" />
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
-        <button mat-stroked-button (click)="clear()" style="height: 56px">Сбросить</button>
+        <button mat-stroked-button (click)="clear()" class="search-reset">Сбросить</button>
       </div>
 
       @if (isAdmin()) {
@@ -49,6 +51,45 @@
 
   @if (users$ | async; as users) {
     @if (users.length) {
+      @if (isHandset()) {
+        <!-- Вместо таблицы из пяти колонок, которая на телефоне уходила
+             в горизонтальный скролл и прятала роль и телефон -->
+        <div class="user-cards">
+          @for (user of users; track user.id) {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <div class="user-card-head">
+                  <span class="avatar">{{ user.name.charAt(0) }}</span>
+                  <span class="user-card-name">{{ user.name }}</span>
+                  <span class="role-chip" [attr.data-role]="user.role || 'client'">
+                    {{ roleLabel[user.role || 'client'] }}
+                  </span>
+                </div>
+                <dl class="user-card-fields">
+                  <dt>Почта</dt>
+                  <dd>{{ user.email }}</dd>
+                  <dt>Телефон</dt>
+                  <dd class="mono">{{ user.contactPhone || '—' }}</dd>
+                  <dt>Идентификатор</dt>
+                  <dd class="mono faint">{{ user.id }}</dd>
+                </dl>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+
+        <div class="pager pager-standalone">
+          <span class="text-sm muted">Страница {{ page$ | async }}</span>
+          <span class="flex gap-1">
+            <button mat-icon-button [disabled]="!(hasPrev$ | async)" (click)="prev()" aria-label="Предыдущая страница">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button mat-icon-button [disabled]="!(hasNext$ | async)" (click)="next()" aria-label="Следующая страница">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </span>
+        </div>
+      } @else {
       <mat-card appearance="outlined" class="overflow-hidden">
         <div class="overflow-x-auto">
           <table mat-table [dataSource]="users" class="w-full">
@@ -126,6 +167,7 @@
           </span>
         </div>
       </mat-card>
+      }
     } @else if ((loading$ | async) === false) {
       <mat-card appearance="outlined">
         <app-empty-state
