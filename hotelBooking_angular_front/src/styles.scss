@@ -297,65 +297,73 @@ table.mat-mdc-table .mat-mdc-row:hover {
    ============================================================ */
 
 /* Боковая панель примыкает к контенту вплотную: скруглённый угол
-   со стороны контейнера читался как разрыв вёрстки. */
-.mat-drawer,
-.mat-sidenav,
+   со стороны контейнера читался как разрыв вёрстки.
+   Форму задаёт токен --mat-sidenav-container-shape, поэтому одного
+   border-radius не хватало — он проигрывал стилю компонента. */
+html {
+  --mat-sidenav-container-shape: 0;
+}
+.mat-drawer-container .mat-drawer,
+.mat-drawer-container .mat-sidenav,
 .mat-drawer-inner-container {
   border-radius: 0;
 }
 
-/* --- Карточки --- */
-
-/* Изображение первым элементом карточки выходило за скруглённый угол:
-   у карточки есть радиус, но содержимое по нему не обрезалось. */
-.mat-mdc-card {
+/* --- Карточки ---
+   Селекторы начинаются с html: стили компонентов Material внедряются
+   в head во время работы приложения, то есть ПОСЛЕ этой таблицы,
+   и при равной специфичности выигрывали они — отступы не применялись,
+   текст оставался прижатым к краям карточки. */
+html .mat-mdc-card {
+  /* Изображение первым элементом выходило за скруглённый угол:
+     радиус у карточки есть, но содержимое по нему не обрезалось. */
   overflow: hidden;
 }
 
-.mat-mdc-card-header {
-  padding: 24px 24px 0;
+html .mat-mdc-card-header {
+  padding: 20px 20px 0;
   display: block;
 }
-.mat-mdc-card-header .mat-mdc-card-header-text {
+html .mat-mdc-card-header .mat-mdc-card-header-text {
   margin: 0;
   width: 100%;
 }
-.mat-mdc-card-title.page-title {
+html .mat-mdc-card-title.page-title {
   font-family: var(--brand-display);
   font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.2px;
 }
-.mat-mdc-card-subtitle.page-sub {
+html .mat-mdc-card-subtitle.page-sub {
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface-variant);
   margin-top: 8px;
   display: block;
 }
-.mat-mdc-card-content {
-  padding-inline: 24px;
+html .mat-mdc-card-content {
+  padding: 16px 20px;
 }
-.mat-mdc-card-content:last-child {
-  padding-bottom: 24px;
+html .mat-mdc-card-header + .mat-mdc-card-content {
+  padding-top: 12px;
 }
-.mat-mdc-card-actions {
-  padding: 8px 16px 16px;
+html .mat-mdc-card-actions {
+  padding: 4px 12px 12px;
   gap: 8px;
 }
 
 /* --- Поля ввода ---
    Прозрачное поле на тёмном фоне читается плохо, поэтому даём лёгкую
    заливку: поле выглядит углублением, а рамка остаётся акцентом. */
-.mat-mdc-form-field .mdc-text-field--outlined {
+html .mat-mdc-form-field .mdc-text-field--outlined {
   background: var(--mat-sys-surface-container-low);
   border-radius: var(--mat-sys-corner-extra-small);
   transition: background-color 0.15s;
 }
-.mat-mdc-form-field:hover .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+html .mat-mdc-form-field:hover .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
   background: var(--mat-sys-surface-container);
 }
-.mat-mdc-form-field.mat-focused .mdc-text-field--outlined {
+html .mat-mdc-form-field.mat-focused .mdc-text-field--outlined {
   background: var(--mat-sys-surface-container);
 }
 
@@ -373,8 +381,8 @@ textarea:-webkit-autofill {
   caret-color: var(--mat-sys-on-surface);
   transition: background-color 100000s ease-in-out 0s;
 }
-.mat-focused input:-webkit-autofill,
-.mat-mdc-form-field:hover input:-webkit-autofill {
+html .mat-focused input:-webkit-autofill,
+html .mat-mdc-form-field:hover input:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 1000px var(--mat-sys-surface-container) inset;
   box-shadow: 0 0 0 1000px var(--mat-sys-surface-container) inset;
 }
@@ -382,40 +390,68 @@ textarea:-webkit-autofill {
 /* Карточка входа и регистрации: подзаголовок в две строки почти касался
    плавающей подписи первого поля — она поднимается выше границы поля,
    и штатного отступа между шапкой и содержимым не хватало. */
-.auth-card .mat-mdc-card-header {
+html .auth-card .mat-mdc-card-header {
   padding: 28px 28px 0;
 }
-.auth-card .mat-mdc-card-subtitle {
+html .auth-card .mat-mdc-card-subtitle {
   max-width: 34ch;
   line-height: 1.45;
 }
-.auth-card .mat-mdc-card-content {
+html .auth-card .mat-mdc-card-content {
   padding: 28px;
 }
-.auth-card .mat-mdc-card-actions {
+html .auth-card .mat-mdc-card-actions {
   padding: 0 28px 24px;
   justify-content: center;
   align-items: center;
 }
 
 /* --- Пункты навигации: иконка не должна прилипать к подписи --- */
-.mat-mdc-list-item {
+html .mat-mdc-list-item {
   border-radius: 999px;
 }
-.mat-mdc-list-item .mat-mdc-list-item-icon {
+html .mat-mdc-list-item .mat-mdc-list-item-icon {
   margin-inline-end: 16px;
   color: inherit;
 }
-.mat-mdc-nav-list .mat-mdc-list-item {
+html .mat-mdc-nav-list .mat-mdc-list-item {
   margin-bottom: 2px;
 }
 
-/* --- Меню пользователя --- */
-.mat-mdc-menu-panel {
-  min-width: 232px;
+/* --- Меню пользователя ---
+   Содержимое mat-menu рендерится в оверлее вне компонента, поэтому
+   стили из shell.scss (даже через ::ng-deep) до него не доходили —
+   они живут здесь, в глобальной таблице. */
+html .mat-mdc-menu-panel {
+  min-width: 248px;
 }
-.mat-mdc-menu-item .mat-icon {
+html .mat-mdc-menu-item .mat-icon {
   margin-inline-end: 12px;
+}
+
+.menu-user {
+  padding: 14px 18px 12px;
+}
+.menu-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.menu-user-email {
+  font-size: 12.5px;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.menu-user-role {
+  font-size: 11.5px;
+  color: var(--mat-sys-outline);
+  margin-top: 6px;
+}
+/* Разделитель шёл во всю ширину панели, отрезая блок с данными
+   от пункта выхода жёстче, чем нужно. */
+html .mat-mdc-menu-panel .mat-divider {
+  margin: 0 12px;
 }
 
 /* Полосы прокрутки: системная в тёмной теме выглядит инородно широкой

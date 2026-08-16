@@ -18,9 +18,11 @@
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
 
+        <!-- Поля дат лежат в той же FormGroup, что и строка поиска:
+             вложенная директива formGroup ломала рендеринг поля -->
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Даты проживания</mat-label>
-          <mat-date-range-input [formGroup]="range" [rangePicker]="picker" [min]="minDate">
+          <mat-date-range-input [rangePicker]="picker" [min]="minDate">
             <input matStartDate formControlName="start" placeholder="Заезд" />
             <input matEndDate formControlName="end" placeholder="Выезд" />
           </mat-date-range-input>

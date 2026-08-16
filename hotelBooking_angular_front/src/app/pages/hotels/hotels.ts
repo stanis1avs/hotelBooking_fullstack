@@ -52,13 +52,17 @@ export class Hotels implements OnInit {
   readonly minDate = new Date();
   readonly amenity = AMENITY_META;
 
-  readonly range = new FormGroup({
-    start: new FormControl<Date | null>(new Date(), Validators.required),
-    end: new FormControl<Date | null>(new Date(Date.now() + 86_400_000), Validators.required),
-  });
-
+  /**
+   * Одна форма на весь поиск.
+   *
+   * Раньше поле дат жило в отдельной FormGroup, вложенной директивой
+   * formGroup внутрь другой такой же — Angular не разбирал такую вложенность,
+   * и поле диапазона рендерилось без подписи и рамки.
+   */
   readonly form = new FormGroup({
     term: new FormControl<string>('', { nonNullable: true }),
+    start: new FormControl<Date | null>(new Date(), Validators.required),
+    end: new FormControl<Date | null>(new Date(Date.now() + 86_400_000), Validators.required),
   });
 
   /** Подборки подставляют параметры поиска, а не просто украшают герой. */
@@ -83,8 +87,8 @@ export class Hotels implements OnInit {
     ])
       .pipe(takeUntilDestroyed())
       .subscribe(([from, to]) => {
-        if (from) this.range.controls.start.setValue(new Date(from), { emitEvent: false });
-        if (to) this.range.controls.end.setValue(new Date(to), { emitEvent: false });
+        if (from) this.form.controls.start.setValue(new Date(from), { emitEvent: false });
+        if (to) this.form.controls.end.setValue(new Date(to), { emitEvent: false });
         this.recalcNights();
       });
 
@@ -94,16 +98,22 @@ export class Hotels implements OnInit {
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.search());
 
-    this.range.valueChanges.pipe(debounceTime(150), takeUntilDestroyed()).subscribe(() => {
-      this.recalcNights();
-      if (this.range.valid) this.search();
-    });
+    combineLatest([
+      this.form.controls.start.valueChanges,
+      this.form.controls.end.valueChanges,
+    ])
+      .pipe(debounceTime(150), takeUntilDestroyed())
+      .subscribe(() => {
+        this.recalcNights();
+        if (this.form.controls.start.valid && this.form.controls.end.valid) this.search();
+      });
 
     this.search();
   }
 
   private recalcNights(): void {
-    const { start, end } = this.range.value;
+    const start = this.form.controls.start.value;
+    const end = this.form.controls.end.value;
     if (start && end) this.nightsCount.set(nightsBetween(toLocalIsoDate(start), toLocalIsoDate(end)));
   }
 
@@ -130,15 +140,17 @@ export class Hotels implements OnInit {
 
   applyPreset(preset: Preset): void {
     const start = new Date();
-    this.range.setValue({ start, end: new Date(Date.now() + preset.nights * 86_400_000) }, { emitEvent: false });
-    this.form.controls.term.setValue(preset.term, { emitEvent: false });
+    this.form.patchValue(
+      { term: preset.term, start, end: new Date(Date.now() + preset.nights * 86_400_000) },
+      { emitEvent: false }
+    );
     this.recalcNights();
     this.search();
   }
 
   search(): void {
-    const start = this.range.controls.start.value;
-    const end = this.range.controls.end.value;
+    const start = this.form.controls.start.value;
+    const end = this.form.controls.end.value;
     if (!start || !end) return;
 
     const dateArrival = toLocalIsoDate(start);

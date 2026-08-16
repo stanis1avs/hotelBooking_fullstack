@@ -87,12 +87,19 @@
       <span class="flex-1"></span>
 
       @if (user$ | async; as user) {
-        <!-- Выход перенесён в меню пользователя: раньше кнопка дублировалась
-             в тулбаре и в боковой панели -->
-        <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
+        <!-- Обычная кнопка, а не mat-button: тот раскладывает содержимое
+             по своим правилам и три произвольных элемента внутри
+             расползались в столбик.
+             Выход перенесён в это меню — раньше кнопка дублировалась
+             в тулбаре и в боковой панели. -->
+        <button
+          type="button"
+          class="user-trigger"
+          [matMenuTriggerFor]="userMenu"
+          aria-label="Меню пользователя">
           <span class="avatar">{{ initials(user.name) }}</span>
-          <span class="hidden sm:inline ml-2">{{ user.name }}</span>
-          <mat-icon>expand_more</mat-icon>
+          <span class="user-trigger-name">{{ user.name }}</span>
+          <mat-icon class="user-trigger-caret">expand_more</mat-icon>
         </button>
         <mat-menu #userMenu="matMenu">
           <div class="menu-user">

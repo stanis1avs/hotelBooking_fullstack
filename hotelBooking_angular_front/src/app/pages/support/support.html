@@ -61,9 +61,10 @@
       @if (!isManager) {
         <mat-divider class="my-2" />
         <h2 class="column-heading">Новое обращение</h2>
-        <mat-form-field appearance="outline" class="w-full">
+        <mat-form-field appearance="outline" class="new-request-field">
           <mat-label>Опишите проблему</mat-label>
-          <textarea matInput rows="3" [formControl]="newRequestControl"></textarea>
+          <textarea matInput rows="5" [formControl]="newRequestControl"
+            placeholder="Что случилось, номер брони, что уже пробовали"></textarea>
           @if (newRequestControl.hasError('required') && newRequestControl.touched) {
             <mat-error>Напишите, что случилось</mat-error>
           } @else if (newRequestControl.hasError('minlength')) {
@@ -76,8 +77,13 @@
       }
     </div>
 
-    <mat-card appearance="outlined">
-      <mat-card-content class="pt-4 flex flex-col gap-3">
+    <div class="support-column">
+      <!-- Заголовок у правой колонки тоже нужен: без него карточки
+           начинались на разной высоте и границы не совпадали -->
+      <h2 class="column-heading">{{ selectedRequest ? 'Переписка' : 'Сообщения' }}</h2>
+
+      <mat-card appearance="outlined">
+      <mat-card-content class="flex flex-col gap-3">
         @if (selectedRequest) {
           <div>
             <h2 class="text-base font-semibold">{{ selectedRequest.title || 'Обращение' }}</h2>
@@ -139,6 +145,7 @@
           </div>
         }
       </mat-card-content>
-    </mat-card>
+      </mat-card>
+    </div>
   </div>
 </div>
