@@ -14,6 +14,8 @@
       </span>
     </div>
 
+    <div class="nav-caption">Разделы</div>
+
     <mat-nav-list>
       <a mat-list-item routerLink="/hotels" routerLinkActive="active-link">
         <mat-icon matListItemIcon>hotel</mat-icon>
@@ -62,18 +64,30 @@
         </a>
       }
 
-      @if ((user$ | async) === null) {
-        <mat-divider />
-        <a mat-list-item routerLink="/login" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>login</mat-icon>
-          <span matListItemTitle>Войти</span>
-        </a>
-        <a mat-list-item routerLink="/register" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>person_add</mat-icon>
-          <span matListItemTitle>Регистрация</span>
-        </a>
-      }
     </mat-nav-list>
+
+    <!-- Низ панели: у продукта максимум три раздела, и список
+         занимал только верх. Вход с регистрацией перенесены сюда —
+         это действия аккаунта, а не навигация по разделам. -->
+    <div class="rail-foot">
+      @if (user$ | async; as user) {
+        <div class="rail-user">
+          <span class="avatar">{{ initials(user.name) }}</span>
+          <span class="rail-user-text">
+            <span class="rail-user-name">{{ user.name }}</span>
+            <span class="rail-user-role">{{ roleLabel[user.role ?? 'client'] }}</span>
+          </span>
+        </div>
+      } @else {
+        <div class="rail-cta">
+          <mat-icon class="rail-cta-icon">luggage</mat-icon>
+          <p class="rail-cta-title">Войдите, чтобы бронировать</p>
+          <p class="rail-cta-text">Свои брони, история поездок и поддержка — в личном кабинете.</p>
+          <a mat-flat-button color="primary" routerLink="/login" class="rail-cta-button">Войти</a>
+          <a mat-stroked-button routerLink="/register" class="rail-cta-button">Создать аккаунт</a>
+        </div>
+      }
+    </div>
   </mat-sidenav>
 
   <mat-sidenav-content>
