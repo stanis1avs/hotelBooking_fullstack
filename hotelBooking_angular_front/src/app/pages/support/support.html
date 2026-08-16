@@ -29,17 +29,15 @@
           [class.selected]="selectedRequest?.id === req.id"
           [attr.aria-pressed]="selectedRequest?.id === req.id"
           (click)="openRequest(req)">
-          <span class="flex items-center justify-between gap-2 mb-1">
+          <span class="request-top">
             <span class="status-chip" [attr.data-status]="req.isActive ? 'active' : 'closed'">
               {{ req.isActive ? 'Открыто' : 'Закрыто' }}
             </span>
-            <span class="text-xs faint">{{ req.createdAt | date: 'dd.MM.yyyy' }}</span>
+            <span class="request-date">{{ req.createdAt | date: 'dd.MM.yyyy' }}</span>
           </span>
-          <span class="block text-sm font-medium leading-snug line-clamp-2">
-            {{ req.title || 'Обращение без темы' }}
-          </span>
+          <span class="request-title">{{ req.title || 'Обращение без темы' }}</span>
           @if (isManager && req.isActive) {
-            <span class="block text-right mt-2">
+            <span class="request-actions">
               <button mat-button color="warn" (click)="closeRequest(req, $event)">
                 <mat-icon>check</mat-icon>
                 Закрыть
@@ -53,99 +51,110 @@
             <app-empty-state
               icon="forum"
               title="Обращений нет"
-              [description]="isManager ? 'Открытых обращений в очереди нет.' : 'Напишите нам, если что-то пошло не так с бронью.'" />
+              [description]="isManager ? 'Открытых обращений в очереди нет.' : 'Выберите тему ниже и опишите, что случилось.'" />
           </mat-card>
         }
       }
+    </div>
 
-      @if (!isManager) {
-        <mat-divider class="my-2" />
+    <div class="support-column">
+      <!-- Заголовок есть у обеих колонок, иначе карточки под ними
+           начинались на разной высоте -->
+      <h2 class="column-heading">{{ selectedRequest ? 'Переписка' : 'Сообщения' }}</h2>
+
+      <mat-card appearance="outlined">
+        <mat-card-content class="flex flex-col gap-3">
+          @if (selectedRequest) {
+            <div>
+              <h3 class="thread-title">{{ selectedRequest.title || 'Обращение' }}</h3>
+              <p class="thread-meta">Создано {{ selectedRequest.createdAt | date: 'd MMMM y' }}</p>
+            </div>
+            <mat-divider />
+
+            @if (messagesLoading) {
+              <mat-progress-bar mode="indeterminate" />
+            }
+
+            <div class="thread" #thread>
+              @for (msg of messages; track msg.id) {
+                <!-- Свои сообщения справа, ответы поддержки слева.
+                     Раньше у всех был один класс и все выглядели как свои -->
+                <div class="message" [class.mine]="isMine(msg)">
+                  <div class="bubble">{{ msg.text }}</div>
+                  <span class="message-time">
+                    {{ msg.createdAt | date: 'HH:mm' }}
+                    @if (isMine(msg) && msg.readAt) { · прочитано }
+                  </span>
+                </div>
+              } @empty {
+                @if (!messagesLoading) {
+                  <p class="text-sm muted text-center py-6">Сообщений пока нет</p>
+                }
+              }
+            </div>
+
+            @if (selectedRequest.isActive) {
+              <div class="composer">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="composer-field">
+                  <mat-label>Введите сообщение</mat-label>
+                  <input matInput [formControl]="newMessageControl" (keyup.enter)="sendMessage()" autocomplete="off" />
+                </mat-form-field>
+                <button
+                  mat-flat-button
+                  color="primary"
+                  class="composer-send"
+                  [disabled]="newMessageControl.invalid"
+                  (click)="sendMessage()"
+                  aria-label="Отправить сообщение">
+                  <mat-icon>send</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <p class="text-sm muted text-center py-3">
+                Обращение закрыто. Если вопрос остался — создайте новое.
+              </p>
+            }
+          } @else {
+            <div class="thread-placeholder">
+              <app-empty-state
+                icon="chat"
+                title="Выберите обращение"
+                description="Слева список обращений — откройте любое, чтобы посмотреть переписку." />
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Форма нового обращения вынесена из левой колонки: там она была
+       зажата в 380 px, хотя это основное действие клиента на странице -->
+  @if (!isManager) {
+    <mat-card appearance="outlined" class="new-request">
+      <mat-card-content>
         <h2 class="column-heading">Новое обращение</h2>
+        <p class="page-sub">Опишите проблему подробно — так ответим быстрее</p>
+
         <mat-form-field appearance="outline" class="new-request-field">
-          <mat-label>Опишите проблему</mat-label>
-          <textarea matInput rows="5" [formControl]="newRequestControl"
-            placeholder="Что случилось, номер брони, что уже пробовали"></textarea>
+          <mat-label>Что случилось</mat-label>
+          <textarea
+            matInput
+            rows="5"
+            [formControl]="newRequestControl"
+            placeholder="Номер брони, что пошло не так, что уже пробовали"></textarea>
           @if (newRequestControl.hasError('required') && newRequestControl.touched) {
             <mat-error>Напишите, что случилось</mat-error>
           } @else if (newRequestControl.hasError('minlength')) {
             <mat-error>Минимум 3 символа</mat-error>
           }
         </mat-form-field>
-        <button mat-flat-button color="primary" [disabled]="newRequestControl.invalid" (click)="createRequest()">
-          Отправить обращение
-        </button>
-      }
-    </div>
 
-    <div class="support-column">
-      <!-- Заголовок у правой колонки тоже нужен: без него карточки
-           начинались на разной высоте и границы не совпадали -->
-      <h2 class="column-heading">{{ selectedRequest ? 'Переписка' : 'Сообщения' }}</h2>
-
-      <mat-card appearance="outlined">
-      <mat-card-content class="flex flex-col gap-3">
-        @if (selectedRequest) {
-          <div>
-            <h2 class="text-base font-semibold">{{ selectedRequest.title || 'Обращение' }}</h2>
-            <p class="text-xs faint mt-1">
-              Создано {{ selectedRequest.createdAt | date: 'd MMMM y' }}
-            </p>
-          </div>
-          <mat-divider />
-
-          @if (messagesLoading) {
-            <mat-progress-bar mode="indeterminate" />
-          }
-
-          <div class="thread" #thread>
-            @for (msg of messages; track msg.id) {
-              <!-- Свои сообщения справа, ответы поддержки слева.
-                   Раньше у всех был один класс и все выглядели как свои -->
-              <div class="message" [class.mine]="isMine(msg)">
-                <div class="bubble">{{ msg.text }}</div>
-                <span class="text-xs faint px-1">
-                  {{ msg.createdAt | date: 'HH:mm' }}
-                  @if (isMine(msg) && msg.readAt) { · прочитано }
-                </span>
-              </div>
-            } @empty {
-              @if (!messagesLoading) {
-                <p class="text-sm muted text-center py-6">Сообщений пока нет</p>
-              }
-            }
-          </div>
-
-          @if (selectedRequest.isActive) {
-            <div class="flex gap-2 items-start">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="flex-1">
-                <mat-label>Введите сообщение</mat-label>
-                <input matInput [formControl]="newMessageControl" (keyup.enter)="sendMessage()" autocomplete="off" />
-              </mat-form-field>
-              <button
-                mat-flat-button
-                color="primary"
-                style="height: 56px"
-                [disabled]="newMessageControl.invalid"
-                (click)="sendMessage()"
-                aria-label="Отправить сообщение">
-                <mat-icon>send</mat-icon>
-              </button>
-            </div>
-          } @else {
-            <p class="text-sm muted text-center py-3">
-              Обращение закрыто. Если вопрос остался — создайте новое.
-            </p>
-          }
-        } @else {
-          <div class="thread-placeholder">
-            <app-empty-state
-              icon="chat"
-              title="Выберите обращение"
-              description="Слева список обращений — откройте любое, чтобы посмотреть переписку." />
-          </div>
-        }
+        <div class="new-request-actions">
+          <button mat-flat-button color="primary" [disabled]="newRequestControl.invalid" (click)="createRequest()">
+            Отправить обращение
+          </button>
+        </div>
       </mat-card-content>
-      </mat-card>
-    </div>
-  </div>
+    </mat-card>
+  }
 </div>
