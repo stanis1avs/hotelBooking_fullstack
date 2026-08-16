@@ -1,0 +1,38 @@
+/* Вертикальный ритм карточки брони.
+   Утилитарные отступы давали 4px между заголовком в 18px и описанием —
+   строки читались как один слипшийся блок. */
+.reservation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.reservation-title {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.reservation-room {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 6px;
+  max-width: 60ch;
+}
+
+.reservation-id {
+  font-size: 11.5px;
+  color: var(--mat-sys-outline);
+  white-space: nowrap;
+}
+
+.reservation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}

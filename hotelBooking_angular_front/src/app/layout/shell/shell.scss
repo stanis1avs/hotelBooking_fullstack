@@ -55,9 +55,25 @@
   border-top-color: var(--mat-sys-outline-variant);
 }
 
+/* Три отдельных плана вместо одной плоскости.
+   Сайдбар и тулбар оба стояли на surface и сливались в общий угол —
+   границы между ними не читалось. Теперь панель светлее тулбара,
+   тулбар светлее рабочей области, и каждый отделён линией. */
+:host ::ng-deep .mat-drawer {
+  --mat-sidenav-container-background-color: var(--mat-sys-surface-container-low);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
 .toolbar {
   background: var(--mat-sys-surface);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
+  /* Мягкая тень под шапкой: при прокрутке контент уходит под неё,
+     и граница перестаёт быть единственным разделителем */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+:host ::ng-deep .mat-drawer-content {
+  background: var(--mat-sys-background);
 }
 
 /* Триггер меню пользователя: аватар, имя и стрелка в одну строку.

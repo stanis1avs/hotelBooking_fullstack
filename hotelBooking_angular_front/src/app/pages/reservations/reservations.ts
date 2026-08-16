@@ -22,6 +22,7 @@ import { nightWord, nightsBetween } from '../../core/date.utils';
     MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule, EmptyState,
   ],
   templateUrl: './reservations.html',
+  styleUrl: './reservations.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Reservations implements OnInit {
