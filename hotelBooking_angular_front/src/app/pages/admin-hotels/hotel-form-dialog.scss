@@ -1,0 +1,38 @@
+.hotel-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  /* Диалог обрезал бы тень поля в фокусе вплотную к краю */
+  padding-top: 6px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 8px;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.preview {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--mat-sys-corner-small);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+@media (max-width: 599px) {
+  .hotel-form {
+    grid-template-columns: 1fr;
+  }
+}

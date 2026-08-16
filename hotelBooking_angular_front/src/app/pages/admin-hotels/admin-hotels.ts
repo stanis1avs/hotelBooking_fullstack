@@ -1,38 +1,31 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
-import { MatChipsModule } from '@angular/material/chips';
+import { Observable } from 'rxjs';
 
-import { Amenity, Api, HotelDto } from '../../core/api';
+import { Api, HotelDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
-import { AMENITY_LIST, AMENITY_META } from '../../shared/amenities';
+import { AMENITY_META } from '../../shared/amenities';
 import { confirmAction } from '../../shared/confirm-dialog';
 import { errorMessage } from '../../core/error-message';
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-admin-hotels',
   imports: [
-    ReactiveFormsModule, MatCardModule, MatButtonModule, MatFormFieldModule,
-    MatInputModule, MatProgressBarModule, MatIconModule, MatTooltipModule,
-    MatSelectModule, MatChipsModule, EmptyState, MoneyPipe, ImageUrlPipe,
+    MatCardModule, MatButtonModule, MatProgressBarModule, MatIconModule,
+    MatTooltipModule, EmptyState, MoneyPipe, ImageUrlPipe,
   ],
   templateUrl: './admin-hotels.html',
   styleUrl: './admin-hotels.scss',
 })
-export class AdminHotels implements OnInit, OnDestroy {
+export class AdminHotels implements OnInit {
   private readonly api = inject(Api);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -42,37 +35,10 @@ export class AdminHotels implements OnInit, OnDestroy {
   loading = false;
   saving = false;
 
-  editingHotel: HotelDto | null = null;
-  showForm = false;
-  selectedFile: File | null = null;
-  previewUrl: string | null = null;
-
-  /** Созданные blob-URL нужно освобождать, иначе файлы висят в памяти до перезагрузки. */
-  private objectUrls: string[] = [];
-
-  readonly amenityList = AMENITY_LIST;
-
-  readonly form = new FormGroup({
-    title: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] }),
-    description: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
-    city: new FormControl<string>('', { nonNullable: true }),
-    stars: new FormControl<number>(3, { nonNullable: true, validators: [Validators.min(1), Validators.max(5)] }),
-    rating: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0), Validators.max(5)] }),
-    reviewsCount: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] }),
-    amenities: new FormControl<Amenity[]>([], { nonNullable: true }),
-  });
+  readonly amenityMeta = AMENITY_META;
 
   ngOnInit(): void {
     this.loadHotels();
-  }
-
-  ngOnDestroy(): void {
-    this.releaseUrls();
-  }
-
-  private releaseUrls(): void {
-    this.objectUrls.forEach((url) => URL.revokeObjectURL(url));
-    this.objectUrls = [];
   }
 
   loadHotels(): void {
@@ -93,102 +59,40 @@ export class AdminHotels implements OnInit, OnDestroy {
     });
   }
 
-  openCreate(): void {
-    this.editingHotel = null;
-    this.selectedFile = null;
-    this.releaseUrls();
-    this.previewUrl = null;
-    this.form.reset();
-    this.showForm = true;
-  }
-
-  openEdit(hotel: HotelDto): void {
-    this.editingHotel = hotel;
-    this.selectedFile = null;
-    this.releaseUrls();
-    this.previewUrl = hotel.image;
-    this.form.setValue({
-      title: hotel.title,
-      description: hotel.description ?? '',
-      city: hotel.city ?? '',
-      stars: hotel.stars ?? 3,
-      rating: hotel.rating ?? 0,
-      reviewsCount: hotel.reviewsCount ?? 0,
-      amenities: hotel.amenities ?? [],
-    });
-    this.showForm = true;
-  }
-
-  readonly amenityMeta = AMENITY_META;
-
   stars(n: number): number[] {
     return Array.from({ length: Math.max(0, Math.min(5, n)) });
   }
 
-  cancelForm(): void {
-    this.showForm = false;
-    this.editingHotel = null;
-    this.selectedFile = null;
-    this.releaseUrls();
-    this.previewUrl = null;
-    this.form.reset();
+  openCreate(): void {
+    this.openForm(null);
   }
 
-  onFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      this.snackBar.open('Файл больше 5 МБ — выберите изображение поменьше', 'Понятно', { duration: 5000 });
-      input.value = '';
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      this.snackBar.open('Нужен файл изображения: JPG, PNG или WebP', 'Понятно', { duration: 5000 });
-      input.value = '';
-      return;
-    }
-
-    this.releaseUrls();
-    this.selectedFile = file;
-    this.previewUrl = URL.createObjectURL(file);
-    this.objectUrls.push(this.previewUrl);
+  openEdit(hotel: HotelDto): void {
+    this.openForm(hotel);
   }
 
-  save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    if (!this.editingHotel && !this.selectedFile) {
-      this.snackBar.open('Загрузите фотографию отеля', 'Понятно', { duration: 4000 });
-      return;
-    }
+  /**
+   * Форма живёт в диалоге. Раньше она разворачивалась над списком и сдвигала
+   * его вниз: при правке нижнего отеля форма оказывалась за пределами экрана.
+   */
+  private openForm(hotel: HotelDto | null): void {
+    import('./hotel-form-dialog').then(({ HotelFormDialog }) => {
+      this.dialog
+        .open(HotelFormDialog, { data: { hotel }, width: '720px', maxWidth: '95vw', autoFocus: 'first-tabbable' })
+        .afterClosed()
+        .subscribe((payload: FormData | undefined) => {
+          if (!payload) return;
+          this.submit(hotel ? this.api.updateHotel(hotel.id, payload) : this.api.createHotel(payload), !!hotel);
+        });
+    });
+  }
 
-    const v = this.form.getRawValue();
-    const fd = new FormData();
-    fd.append('title', v.title);
-    fd.append('description', v.description);
-    fd.append('city', v.city);
-    fd.append('stars', String(v.stars));
-    fd.append('rating', String(v.rating));
-    fd.append('reviewsCount', String(v.reviewsCount));
-    // FormData не умеет массивы — на бэкенде строка разбирается по запятой
-    fd.append('amenities', v.amenities.join(','));
-    // Файл добавляем только когда он выбран — редактирование без замены
-    // фотографии теперь корректно обрабатывается сервером.
-    if (this.selectedFile) fd.append('image', this.selectedFile);
-
+  private submit(call$: Observable<unknown>, wasEditing: boolean): void {
     this.saving = true;
-    const call$ = this.editingHotel ? this.api.updateHotel(this.editingHotel.id, fd) : this.api.createHotel(fd);
-    const wasEditing = !!this.editingHotel;
-
     call$.subscribe({
       next: () => {
         this.saving = false;
         this.snackBar.open(wasEditing ? 'Изменения сохранены' : 'Отель создан', 'OK', { duration: 4000 });
-        this.cancelForm();
         this.loadHotels();
       },
       error: (error) => {

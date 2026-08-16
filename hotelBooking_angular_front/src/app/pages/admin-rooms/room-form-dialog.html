@@ -1,0 +1,92 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Редактирование номера' : 'Новый номер' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="room-form">
+    <mat-form-field appearance="outline" class="wide">
+      <mat-label>Название</mat-label>
+      <input matInput formControlName="title" placeholder="Стандарт с видом на воду" />
+      @if (form.controls.title.hasError('required')) {
+        <mat-error>Укажите название номера</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="wide">
+      <mat-label>Отель</mat-label>
+      <mat-select formControlName="hotelId">
+        @for (h of data.hotels; track h.id) {
+          <mat-option [value]="h.id">{{ h.title }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.hotelId.hasError('required')) {
+        <mat-error>Выберите отель</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Цена за ночь, ₽</mat-label>
+      <input matInput type="number" min="0" formControlName="price" />
+      @if (form.controls.price.hasError('min')) {
+        <mat-error>Цена не может быть отрицательной</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Площадь, м²</mat-label>
+      <input matInput type="number" min="0" formControlName="size" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Гостей</mat-label>
+      <input matInput type="number" min="1" max="10" formControlName="guests" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="wide">
+      <mat-label>Кровати</mat-label>
+      <input matInput formControlName="bed" placeholder="Одна двуспальная" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="wide">
+      <mat-label>Описание</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+      @if (form.controls.description.hasError('required')) {
+        <mat-error>Добавьте описание — оно показывается гостю</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="wide">
+      <p class="field-label">Фотографии</p>
+
+      @if (previewUrls.length) {
+        <div class="gallery">
+          @for (url of previewUrls; track url; let i = $index) {
+            <span class="thumb">
+              <img [src]="url | imageUrl" [alt]="'Фотография номера ' + (i + 1)" />
+              <button mat-mini-fab type="button" class="thumb-remove" (click)="removePreview(i)"
+                      [attr.aria-label]="'Удалить фотографию ' + (i + 1)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </span>
+          }
+        </div>
+      }
+
+      <div class="upload-row">
+        <button type="button" mat-stroked-button (click)="filesInput.click()">
+          <mat-icon>upload</mat-icon>
+          {{ isEdit ? 'Заменить фотографии' : 'Загрузить фотографии' }}
+        </button>
+        <input #filesInput type="file" accept="image/*" multiple hidden (change)="onFilesChange($event)" />
+        <span class="text-xs faint">До 10 файлов, каждый до 5 МБ</span>
+      </div>
+    </div>
+
+    <mat-checkbox formControlName="isEnabled" class="wide">
+      В продаже — номер виден гостям в поиске
+    </mat-checkbox>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="ref.close()">Отмена</button>
+  <button mat-flat-button color="primary" (click)="save()">Сохранить</button>
+</mat-dialog-actions>
