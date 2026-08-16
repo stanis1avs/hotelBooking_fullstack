@@ -344,6 +344,25 @@ table.mat-mdc-table .mat-mdc-row:hover {
   gap: 8px;
 }
 
+/* Карточка входа и регистрации: подзаголовок в две строки почти касался
+   плавающей подписи первого поля — она поднимается выше границы поля,
+   и штатного отступа между шапкой и содержимым не хватало. */
+.auth-card .mat-mdc-card-header {
+  padding: 28px 28px 0;
+}
+.auth-card .mat-mdc-card-subtitle {
+  max-width: 34ch;
+  line-height: 1.45;
+}
+.auth-card .mat-mdc-card-content {
+  padding: 28px;
+}
+.auth-card .mat-mdc-card-actions {
+  padding: 0 28px 24px;
+  justify-content: center;
+  align-items: center;
+}
+
 /* --- Пункты навигации: иконка не должна прилипать к подписи --- */
 .mat-mdc-list-item {
   border-radius: 999px;

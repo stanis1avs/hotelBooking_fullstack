@@ -1,12 +1,12 @@
 <div class="min-h-screen grid place-items-center p-6">
   <div class="w-full" style="max-width: 420px">
-    <mat-card appearance="outlined">
-      <mat-card-header class="pt-6 px-6">
+    <mat-card appearance="outlined" class="auth-card">
+      <mat-card-header>
         <mat-card-title class="page-title">Вход в аккаунт</mat-card-title>
         <mat-card-subtitle class="page-sub">Продолжите бронирование или откройте панель управления</mat-card-subtitle>
       </mat-card-header>
 
-      <mat-card-content class="px-6 pt-5">
+      <mat-card-content>
         @if (justRegistered()) {
           <div class="notice mb-4">
             <mat-icon>check_circle</mat-icon>
@@ -62,7 +62,7 @@
         </form>
       </mat-card-content>
 
-      <mat-card-actions class="justify-center pb-4">
+      <mat-card-actions>
         <span class="text-sm muted">Ещё нет аккаунта?</span>
         <a mat-button color="primary" routerLink="/register">Зарегистрироваться</a>
       </mat-card-actions>
