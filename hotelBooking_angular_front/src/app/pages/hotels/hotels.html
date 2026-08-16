@@ -135,6 +135,19 @@
           </a>
         }
       </div>
+    } @else if (error$ | async) {
+      <!-- Недоступный сервер — не то же самое, что пустая выдача -->
+      <mat-card appearance="outlined">
+        <app-empty-state
+          icon="cloud_off"
+          title="Не удалось загрузить отели"
+          description="Сервер не ответил на запрос. Проверьте соединение и попробуйте ещё раз.">
+          <button mat-flat-button color="primary" (click)="search()">
+            <mat-icon>refresh</mat-icon>
+            Повторить
+          </button>
+        </app-empty-state>
+      </mat-card>
     } @else if ((loading$ | async) === false) {
       <mat-card appearance="outlined">
         <app-empty-state

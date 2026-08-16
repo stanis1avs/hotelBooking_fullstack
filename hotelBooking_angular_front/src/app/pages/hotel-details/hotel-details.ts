@@ -17,7 +17,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Actions, ofType } from '@ngrx/effects';
 
 import { RoomsActions } from '../../actions/rooms.actions';
-import { selectRoomsItems, selectRoomsLoading } from '../../selectors/rooms.selectors';
+import { selectRoomsError, selectRoomsItems, selectRoomsLoading } from '../../selectors/rooms.selectors';
 import { selectAuthUser } from '../../selectors/auth.selectors';
 import { ReservationsActions } from '../../actions/reservations.actions';
 import { EmptyState } from '../../shared/empty-state';
@@ -48,6 +48,9 @@ export class HotelDetails implements OnInit {
 
   readonly rooms$ = this.store.select(selectRoomsItems);
   readonly loading$ = this.store.select(selectRoomsLoading);
+  /** Ошибка загрузки и пустой результат — разные состояния: раньше при
+      недоступном сервере интерфейс сообщал «свободных номеров нет». */
+  readonly roomsError$ = this.store.select(selectRoomsError);
   readonly isClient$ = this.store.select(selectAuthUser).pipe(map((u) => u?.role === 'client'));
 
   readonly hotel = signal<HotelDto | null>(null);
@@ -70,6 +73,24 @@ export class HotelDetails implements OnInit {
     return room ? room.price * this.nightsCount() : 0;
   });
 
+  private hotelId: string | null = null;
+
+  /** Ошибка запроса карточки отеля — без неё шапка молча не отрисовывалась. */
+  readonly hotelError = signal(false);
+
+  reload(): void {
+    if (!this.hotelId) return;
+    this.hotelError.set(false);
+    this.store.dispatch(RoomsActions.loadRooms({ hotelId: this.hotelId }));
+    this.apollo.getHotel(this.hotelId).subscribe({
+      next: (h) => this.hotel.set(h),
+      error: () => {
+        this.hotel.set(null);
+        this.hotelError.set(true);
+      },
+    });
+  }
+
   readonly guest = new FormGroup({
     name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
     phone: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
@@ -86,8 +107,8 @@ export class HotelDetails implements OnInit {
       )
       .subscribe((hotelId) => {
         if (!hotelId) return;
-        this.store.dispatch(RoomsActions.loadRooms({ hotelId }));
-        this.apollo.getHotel(hotelId).subscribe((h) => this.hotel.set(h));
+        this.hotelId = hotelId;
+        this.reload();
       });
 
     this.store

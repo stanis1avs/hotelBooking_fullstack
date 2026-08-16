@@ -17,7 +17,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { HotelsActions } from '../../actions/hotels.actions';
 import {
   selectHotelsDateArrival, selectHotelsDateDeparture,
-  selectHotelsItems, selectHotelsLoading, selectHotelsTerm,
+  selectHotelsError, selectHotelsItems, selectHotelsLoading, selectHotelsTerm,
 } from '../../selectors/hotels.selectors';
 import { EmptyState } from '../../shared/empty-state';
 import { MoneyPipe } from '../../shared/money.pipe';
@@ -48,6 +48,8 @@ export class Hotels implements OnInit {
 
   readonly items$ = this.store.select(selectHotelsItems);
   readonly loading$ = this.store.select(selectHotelsLoading);
+  /** Ошибка запроса и пустая выдача — разные состояния */
+  readonly error$ = this.store.select(selectHotelsError);
 
   readonly minDate = new Date();
   readonly amenity = AMENITY_META;
