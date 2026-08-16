@@ -4,6 +4,9 @@ import { UsersProvider } from "../../Providers/users.provider";
 import { UserType } from "../types/user.type";
 import { SearchUsersArgs } from "../inputs/search-users.args";
 import { CreateUserInput } from "../inputs/create-user.input";
+import { UpdateUserInput } from "../inputs/update-user.input";
+import { CurrentUser } from "../decorators/current-user.decorator";
+import { UserToJWTPayload } from "../../Interface/Users";
 import { GqlJwtAuthGuard } from "../guards/gql-jwt.guard";
 import { GqlRolesGuard } from "../guards/gql-roles.guard";
 import { Roles } from "../decorators/roles.decorator";
@@ -42,6 +45,17 @@ export class UsersResolver {
   async managerUsers(@Args() args: SearchUsersArgs): Promise<UserType[]> {
     const users = await this.usersProvider.getAllUsers(this.toArgs(args), "client");
     return users.map((u) => this.toType(u));
+  }
+
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("admin")
+  @Mutation(() => UserType)
+  async adminUpdateUser(
+    @Args("id") id: string,
+    @Args("input") input: UpdateUserInput,
+    @CurrentUser() actor: UserToJWTPayload
+  ): Promise<UserType> {
+    return this.toType(await this.usersProvider.updateUser(id, input, actor.id));
   }
 
   @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)

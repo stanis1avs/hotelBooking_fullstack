@@ -40,6 +40,10 @@ export class Room {
 
   @Prop({ required: true, default: true })
   isEnabled: boolean;
+
+  /** Мягкое удаление — см. комментарий в модели отеля. */
+  @Prop({ default: null, index: true })
+  deletedAt: Date | null;
 }
 
 export type RoomDocument = Room & mongoose.Document;

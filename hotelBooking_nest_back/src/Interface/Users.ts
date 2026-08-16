@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, Length, Matches, Min, MinLength } from "class-validator";
+import { IsEmail, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Length, Matches, Min, MinLength } from "class-validator";
 import { Transform } from "class-transformer";
 
 export const ROLES = ["client", "manager", "admin"] as const;
@@ -37,6 +37,42 @@ export class CreateUserDto extends RegisterUserDto {
   @IsOptional()
   @IsIn(ROLES, { message: `Роль должна быть одной из: ${ROLES.join(", ")}` })
   role?: Role;
+}
+
+/**
+ * Изменение учётной записи администратором.
+ *
+ * Почты здесь нет намеренно: это идентификатор входа, и его смена —
+ * отдельная операция с подтверждением адреса. Пароль тоже меняется отдельно,
+ * чтобы случайное сохранение формы не сбрасывало его.
+ */
+export class UpdateUserDto {
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @Length(2, 80, { message: "Имя должно быть от 2 до 80 символов" })
+  name?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @Matches(/^[\d\s()+-]{5,20}$/, { message: "Некорректный номер телефона" })
+  contactPhone?: string;
+
+  @IsOptional()
+  @IsIn(ROLES, { message: `Роль должна быть одной из: ${ROLES.join(", ")}` })
+  role?: Role;
+}
+
+/** Тело запроса на вход. */
+export class LoginDto {
+  @Transform(lower)
+  @IsEmail({}, { message: "Некорректный адрес электронной почты" })
+  email: string;
+
+  @IsString()
+  @IsNotEmpty({ message: "Введите пароль" })
+  password: string;
 }
 
 /** Внутренний тип: то, что уходит в провайдер после разбора DTO. */

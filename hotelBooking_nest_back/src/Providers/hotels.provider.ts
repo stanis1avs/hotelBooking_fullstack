@@ -44,8 +44,11 @@ export class HotelsProvider {
     return this.printFormatHotel(createdHotel);
   }
 
+  /** Удалённые записи не участвуют ни в выдаче, ни в подсчётах. */
+  private readonly alive = { deletedAt: null };
+
   private buildQuery(queryParams: SearchHotelParams, reservedHotels: string[] | null): FilterQuery<HotelDocument> {
-    const query: FilterQuery<HotelDocument> = {};
+    const query: FilterQuery<HotelDocument> = { ...this.alive };
     // $nin с null роняет запрос — массив подставляем только когда он непустой.
     if (reservedHotels?.length) query._id = { $nin: reservedHotels };
     if (queryParams.hotel?.trim()) {
@@ -73,7 +76,7 @@ export class HotelsProvider {
   /** Минимальная цена и количество доступных номеров по каждому отелю. */
   private async priceIndex(hotelIds: unknown[]): Promise<Map<string, PriceInfo>> {
     const rows = await this.roomModel.aggregate<{ _id: unknown; minPrice: number; roomsCount: number }>([
-      { $match: { hotel: { $in: hotelIds }, isEnabled: true } },
+      { $match: { hotel: { $in: hotelIds }, isEnabled: true, deletedAt: null } },
       { $group: { _id: "$hotel", minPrice: { $min: "$price" }, roomsCount: { $sum: 1 } } },
     ]);
     return new Map(rows.map((r) => [String(r._id), { minPrice: r.minPrice ?? 0, roomsCount: r.roomsCount }]));
@@ -102,12 +105,19 @@ export class HotelsProvider {
     return this.printFormatHotel(edittedHotel, prices.get(String(edittedHotel._id)));
   }
 
-  async getIdHotel(id: HotelDocument | string): Promise<HotelDocument> {
+  /**
+   * @param includeDeleted нужен для карточек в бронированиях: там отель
+   *        показывается даже после удаления, иначе история ломается.
+   */
+  async getIdHotel(id: HotelDocument | string, includeDeleted = false): Promise<HotelDocument> {
     const hotelId = typeof id === "string" ? id : String((id as HotelDocument)?._id ?? id);
     if (!isValidObjectId(hotelId)) {
       throw new NotFoundException("Отель не найден");
     }
-    const hotel = await this.hotelModel.findById(hotelId);
+    const hotel = await this.hotelModel.findOne({
+      _id: hotelId,
+      ...(includeDeleted ? {} : this.alive),
+    });
     if (!hotel) {
       throw new NotFoundException("Отель не найден");
     }
@@ -125,18 +135,30 @@ export class HotelsProvider {
     const unique = [...new Set(ids.map((i) => String((i as HotelDocument)?._id ?? i)))]
       .filter((id) => isValidObjectId(id));
     if (!unique.length) return new Map();
+    // Без фильтра по deletedAt: в бронированиях удалённый отель
+    // всё равно должен показываться, иначе история теряет данные
     const hotels = await this.hotelModel.find({ _id: { $in: unique } });
     return new Map(hotels.map((h) => [String(h._id), h]));
   }
 
+  /**
+   * Мягкое удаление: отель пропадает из поиска, но остаётся в базе.
+   * Жёсткое удаление обрывало ссылки из бронирований, и список броней
+   * у менеджера падал на первой же записи с удалённым отелем.
+   */
   async removeHotel(id: string): Promise<void> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException("Отель не найден");
     }
-    const deleted = await this.hotelModel.findByIdAndDelete(id);
+    const deleted = await this.hotelModel.findOneAndUpdate(
+      { _id: id, ...this.alive },
+      { deletedAt: new Date() }
+    );
     if (!deleted) {
       throw new NotFoundException("Отель не найден");
     }
+    // Номера удалённого отеля тоже уходят из выдачи
+    await this.roomModel.updateMany({ hotel: deleted._id, deletedAt: null }, { deletedAt: new Date() });
   }
 
   // Нормализация живёт здесь, поэтому create/edit и список отдают картинку в одном формате.

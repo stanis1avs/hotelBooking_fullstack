@@ -1,9 +1,9 @@
-import { Controller, Post, Body, Get, Query, Res, UseGuards, HttpStatus } from "@nestjs/common";
+import { Controller, Post, Patch, Body, Get, Param, Query, Req, Res, UseGuards, HttpStatus } from "@nestjs/common";
 import { Response } from "express";
 import { RolesGuard } from "../Decorators/roles.decorator";
 import { Role } from "../Decorators/setmetadata.decorator";
 import { AuthGuard } from "@nestjs/passport";
-import { SearchUserParams, CreateUserDto } from "../Interface/Users";
+import { SearchUserParams, CreateUserDto, UpdateUserDto } from "../Interface/Users";
 import { UsersProvider } from "../Providers/users.provider";
 
 @Controller("/api/admin/users/")
@@ -16,6 +16,21 @@ export class AdminUsersController {
   async createUser(@Body() data: CreateUserDto, @Res() res: Response): Promise<void> {
     const createdUser = await this.users.createUser(data);
     res.status(HttpStatus.CREATED).send(createdUser);
+  }
+
+  /**
+   * Изменение учётной записи. Раньше в интерфейсе была кнопка «Изменить»,
+   * за которой не стояло операции на сервере — её пришлось убрать.
+   */
+  @Patch(":id")
+  async updateUser(
+    @Param("id") id: string,
+    @Body() data: UpdateUserDto,
+    @Req() req,
+    @Res() res: Response
+  ): Promise<void> {
+    const updated = await this.users.updateUser(id, data, req.user.id);
+    res.status(HttpStatus.OK).send(updated);
   }
 
   @Get("/")

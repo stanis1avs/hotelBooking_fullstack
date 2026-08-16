@@ -18,6 +18,7 @@ export class RoomsProvider {
 
   async createRoom(createRoom: CreateRoom): Promise<SendRoom> {
     // Проверяем существование отеля до вставки, иначе получим номер-сироту.
+    // В удалённый отель добавить номер нельзя — includeDeleted не передаём.
     const hotel = await this.hotelsProvider.getIdHotel(createRoom.hotelId);
     const createdRoom = new this.roomModel({
       title: createRoom.title ?? "",
@@ -51,7 +52,7 @@ export class RoomsProvider {
     if (!editedRoom) {
       throw new NotFoundException("Номер не найден");
     }
-    const hotel = await this.hotelsProvider.getIdHotel(editedRoom.hotel);
+    const hotel = await this.hotelsProvider.getIdHotel(editedRoom.hotel, true);
     return this.formatRoom(editedRoom, hotel, true, true);
   }
 
@@ -63,7 +64,10 @@ export class RoomsProvider {
     if (!isValidObjectId(queryParams.hotel)) {
       throw new NotFoundException("Отель не найден");
     }
-    const query: FilterQuery<RoomDocument> = { hotel: new mongoose.Types.ObjectId(queryParams.hotel) };
+    const query: FilterQuery<RoomDocument> = {
+      hotel: new mongoose.Types.ObjectId(queryParams.hotel),
+      deletedAt: null,
+    };
     if (onlyEnabled) query.isEnabled = true;
     else if (queryParams.isEnabled !== undefined) query.isEnabled = queryParams.isEnabled;
 
@@ -76,18 +80,22 @@ export class RoomsProvider {
   }
 
   async countRoomsInHotel(hotelId: string | mongoose.Types.ObjectId): Promise<number> {
-    return this.roomModel.countDocuments({ hotel: new mongoose.Types.ObjectId(String(hotelId)), isEnabled: true });
+    return this.roomModel.countDocuments({
+      hotel: new mongoose.Types.ObjectId(String(hotelId)),
+      isEnabled: true,
+      deletedAt: null,
+    });
   }
 
   async getIdRoom(id: string): Promise<SendRoom> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException("Номер не найден");
     }
-    const foundRoom = await this.roomModel.findById(id);
+    const foundRoom = await this.roomModel.findOne({ _id: id, deletedAt: null });
     if (!foundRoom) {
       throw new NotFoundException("Номер не найден");
     }
-    const hotel = await this.hotelsProvider.getIdHotel(foundRoom.hotel);
+    const hotel = await this.hotelsProvider.getIdHotel(foundRoom.hotel, true);
     return this.formatRoom(foundRoom, hotel, true, true);
   }
 
@@ -95,16 +103,18 @@ export class RoomsProvider {
   async getRoomsByIds(ids: Array<unknown>): Promise<Map<string, SendRoom>> {
     const unique = [...new Set(ids.map(String))].filter((id) => isValidObjectId(id));
     if (!unique.length) return new Map();
+    // Удалённые номера остаются доступны для чтения: на них ссылаются брони
     const rooms = await this.roomModel.find({ _id: { $in: unique } });
     const hotels = await this.hotelsProvider.getHotelsByIds(rooms.map((r) => r.hotel));
     return new Map(rooms.map((r) => [String(r._id), this.formatRoom(r, hotels.get(String(r.hotel)), true, true)]));
   }
 
+  /** Мягкое удаление — бронирования по этому номеру остаются читаемыми. */
   async removeRoom(id: string): Promise<void> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException("Номер не найден");
     }
-    const deleted = await this.roomModel.findByIdAndDelete(id);
+    const deleted = await this.roomModel.findOneAndUpdate({ _id: id, deletedAt: null }, { deletedAt: new Date() });
     if (!deleted) {
       throw new NotFoundException("Номер не найден");
     }

@@ -1,9 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { FilterQuery, Model, isValidObjectId } from "mongoose";
 import { genSalt, hash as bcryptHash } from "bcrypt";
 import { UserDocument, User } from "../Models/Users";
-import { SearchUserParams, CreateUser, SendUser } from "../Interface/Users";
+import { SearchUserParams, CreateUser, SendUser, UpdateUserDto } from "../Interface/Users";
 
 /** Экранирует спецсимволы, чтобы пользовательский ввод не стал регулярным выражением (ReDoS). */
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -13,6 +13,8 @@ const DEFAULT_LIMIT = 50;
 
 @Injectable()
 export class UsersProvider {
+  private readonly logger = new Logger("Users");
+
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async createUser(createUser: CreateUser): Promise<SendUser> {
@@ -80,6 +82,43 @@ export class UsersProvider {
       }
     }
     return this.userModel.countDocuments(query);
+  }
+
+  /**
+   * Изменение учётной записи администратором.
+   *
+   * @param actorId кто выполняет операцию — себе роль менять нельзя,
+   *        иначе единственный администратор может случайно себя разжаловать
+   *        и потерять доступ к управлению.
+   */
+  async updateUser(id: string, patch: UpdateUserDto, actorId: string): Promise<SendUser> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException("Пользователь не найден");
+    }
+
+    const target = await this.userModel.findById(id);
+    if (!target) {
+      throw new NotFoundException("Пользователь не найден");
+    }
+
+    if (patch.role && patch.role !== target.role) {
+      if (String(target._id) === String(actorId)) {
+        throw new ForbiddenException("Нельзя изменить собственную роль");
+      }
+      // Повышение прав — событие для аудита, а не рядовая правка поля
+      this.logger.warn(`Роль ${target.email}: ${target.role} → ${patch.role} (изменил ${actorId})`);
+    }
+
+    const update: Record<string, unknown> = {};
+    for (const field of ["name", "contactPhone", "role"] as const) {
+      if (patch[field] !== undefined) update[field] = patch[field];
+    }
+    if (!Object.keys(update).length) {
+      return this.printFormatUser(target);
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(id, update, { new: true });
+    return this.printFormatUser(updated);
   }
 
   async getIdUser(id: string): Promise<SendUser> {
