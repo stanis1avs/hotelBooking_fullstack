@@ -70,10 +70,76 @@
 
 ## Запуск
 
+Скопируйте `.env.example` в `.env` (в корне) и заполните значения.
+Для локального запуска бэкенда те же ключи нужны в `hotelBooking_nest_back/.env`.
+
+### Вариант 1: всё в Docker
+
 ```bash
-cp .env.example .env          # заполнить своими значениями
-docker compose up --build     # или локально: npm start в каждой папке
+docker compose up -d --build
 ```
+
+Приложение — http://localhost:4200. Внутри поднимаются MongoDB, бэкенд и nginx,
+который отдаёт фронтенд и проксирует `/api`, `/graphql` и WebSocket на бэкенд.
+
+### Вариант 2: локально (для разработки)
+
+```bash
+# терминал 1 — база
+#   Windows: служба MongoDB уже запущена, ничего делать не нужно
+
+# терминал 2 — бэкенд
+cd hotelBooking_nest_back && npm run start:dev
+
+# терминал 3 — фронтенд
+cd hotelBooking_angular_front && npm start
+```
+
+Фронтенд — http://localhost:4200, бэкенд — http://localhost:7000.
+
+**Для активной разработки используйте вариант 2.** В Docker нет горячей
+перезагрузки: каждое изменение кода требует пересборки образа, это долго.
+
+---
+
+## Перезапуск после изменений
+
+Docker не подхватывает изменения кода сам — нужна пересборка образа.
+
+| Что поменяли | Команда |
+|---|---|
+| Код фронтенда | `docker compose up -d --build frontend` |
+| Код бэкенда | `docker compose up -d --build backend` |
+| И то и другое | `docker compose up -d --build` |
+| Только переменные в `.env` | `docker compose up -d --force-recreate` |
+| Ничего, просто перезапустить | `docker compose restart backend` |
+
+После пересборки фронтенда **обновите вкладку через Ctrl+Shift+R**: имя
+CSS-бандла меняется, но браузер может отдать старый файл из кэша.
+
+Полезное:
+
+```bash
+docker compose logs -f backend     # логи бэкенда в реальном времени
+docker compose ps                  # что запущено и на каких портах
+docker compose down                # остановить (данные в томе сохранятся)
+docker compose down -v             # остановить И УДАЛИТЬ базу — необратимо
+```
+
+### Данные
+
+База в Docker и локальная MongoDB — **разные и не синхронизируются**.
+Контейнерная живёт в томе `hotelbooking_fullstack_mongo-data` и переживает
+`docker compose down`. Перенести локальную базу в контейнер:
+
+```bash
+docker run --rm --network hotelbooking_fullstack_default \
+  -e SRC="mongodb://host.docker.internal:27017/nest" \
+  -e DST="mongodb://ЛОГИН:ПАРОЛЬ@mongodb:27017/?authSource=admin" \
+  mongo:7 sh -c 'mongodump --uri="$SRC" --archive | mongorestore --uri="$DST" --archive --nsInclude="nest.*" --drop'
+```
+
+Логин и пароль — значения `DB_NAME` и `DB_PASSWORD` из корневого `.env`.
 
 Секреты генерируются командой:
 
