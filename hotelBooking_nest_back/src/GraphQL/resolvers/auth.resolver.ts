@@ -26,10 +26,6 @@ export class AuthResolver {
     private readonly configService: ConfigService
   ) {}
 
-  private get isProd(): boolean {
-    return this.configService.get("NODE_ENV") === "production";
-  }
-
   private toUserType(user: SendUser): UserType {
     return {
       id: String(user.id),
@@ -47,7 +43,7 @@ export class AuthResolver {
       throw new UnauthorizedException("Неверный адрес или пароль");
     }
     const { access_token, refresh_token, userData } = await this.authProvider.issueTokens(user);
-    setRefreshCookie(ctx.res, refresh_token, this.isProd);
+    setRefreshCookie(ctx.res, refresh_token, ctx.req);
     return { access_token, user: this.toUserType(userData) };
   }
 
@@ -79,14 +75,14 @@ export class AuthResolver {
     }
     const payload = this.authProvider.verifyRefresh(token);
     const fresh = await this.authProvider.refresh(payload);
-    setRefreshCookie(ctx.res, fresh.refresh_token, this.isProd);
+    setRefreshCookie(ctx.res, fresh.refresh_token, ctx.req);
     return { access_token: fresh.access_token, user: this.toUserType(fresh.userData) };
   }
 
   @Mutation(() => Boolean)
   async logout(@Context() ctx: GqlContext): Promise<boolean> {
     this.authProvider.revokeRefresh(ctx.req?.cookies?.[REFRESH_COOKIE]);
-    clearRefreshCookie(ctx.res, this.isProd);
+    clearRefreshCookie(ctx.res, ctx.req);
     return true;
   }
 
