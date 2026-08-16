@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -45,6 +45,13 @@ export class HotelDetails implements OnInit {
   private readonly apollo = inject(ApolloService);
   private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
+  /**
+   * takeUntilDestroyed без аргумента требует контекста внедрения зависимостей,
+   * которого в ngOnInit нет. Из-за исключения не создавалась подписка на
+   * параметры маршрута: карточка отеля не запрашивалась, номера не грузились,
+   * и страница показывала «свободных номеров нет».
+   */
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly rooms$ = this.store.select(selectRoomsItems);
   readonly loading$ = this.store.select(selectRoomsLoading);
@@ -103,7 +110,7 @@ export class HotelDetails implements OnInit {
       .pipe(
         map((p) => p.get('hotelId')),
         distinctUntilChanged(),
-        takeUntilDestroyed()
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((hotelId) => {
         if (!hotelId) return;
@@ -113,17 +120,17 @@ export class HotelDetails implements OnInit {
 
     this.store
       .select(selectAuthUser)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((user) => {
         if (!user) return;
         this.guest.patchValue({ name: user.name, email: user.email, phone: user.contactPhone ?? '' });
       });
 
-    this.range.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.recalcNights());
+    this.range.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalcNights());
 
     // Успешное бронирование закрывает мастер — уход на «Мои брони» делает эффект
     this.actions$
-      .pipe(ofType(ReservationsActions.createReservationSuccess), takeUntilDestroyed())
+      .pipe(ofType(ReservationsActions.createReservationSuccess), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.step.set(0);
         this.selectedRoom.set(null);

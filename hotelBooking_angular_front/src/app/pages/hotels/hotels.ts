@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -45,6 +45,13 @@ interface Preset {
 })
 export class Hotels implements OnInit {
   private readonly store = inject(Store);
+  /**
+   * takeUntilDestroyed без аргумента работает только в контексте внедрения
+   * зависимостей — то есть в конструкторе или инициализаторе поля.
+   * В ngOnInit его нет, и вызов бросал исключение: подписки не создавались,
+   * поиск не запускался, страница оставалась пустой.
+   */
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly items$ = this.store.select(selectHotelsItems);
   readonly loading$ = this.store.select(selectHotelsLoading);
@@ -84,14 +91,14 @@ export class Hotels implements OnInit {
   ngOnInit(): void {
     this.store
       .select(selectHotelsTerm)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((term) => this.form.controls.term.setValue(term, { emitEvent: false }));
 
     combineLatest([
       this.store.select(selectHotelsDateArrival),
       this.store.select(selectHotelsDateDeparture),
     ])
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([from, to]) => {
         if (from) this.form.controls.start.setValue(new Date(from), { emitEvent: false });
         if (to) this.form.controls.end.setValue(new Date(to), { emitEvent: false });
@@ -104,7 +111,7 @@ export class Hotels implements OnInit {
     // подборка задаёт обе величины сразу, и после изменения любой из них
     // подсветка перестала бы соответствовать выдаче.
     this.form.controls.term.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
+      .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.activePreset.set(null);
         this.search();
@@ -114,7 +121,7 @@ export class Hotels implements OnInit {
       this.form.controls.start.valueChanges,
       this.form.controls.end.valueChanges,
     ])
-      .pipe(debounceTime(150), takeUntilDestroyed())
+      .pipe(debounceTime(150), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.recalcNights();
         this.activePreset.set(null);
