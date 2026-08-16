@@ -21,6 +21,7 @@ import { selectRoomsError, selectRoomsItems, selectRoomsLoading } from '../../se
 import { selectAuthUser } from '../../selectors/auth.selectors';
 import { ReservationsActions } from '../../actions/reservations.actions';
 import { EmptyState } from '../../shared/empty-state';
+import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { AMENITY_META } from '../../shared/amenities';
 import { ApolloService } from '../../graphql/apollo.service';
@@ -32,7 +33,7 @@ import { addDays, nightWord, nightsBetween, toLocalIsoDate } from '../../core/da
   imports: [
     AsyncPipe, DatePipe, RouterLink, ReactiveFormsModule, MoneyPipe,
     MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule,
-    MatFormFieldModule, MatInputModule, MatDatepickerModule, EmptyState,
+    MatFormFieldModule, MatInputModule, MatDatepickerModule, EmptyState, ImageUrlPipe,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './hotel-details.html',

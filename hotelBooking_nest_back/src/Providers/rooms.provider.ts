@@ -6,12 +6,14 @@ import { HotelDocument } from "../Models/Hotels";
 import { HotelsProvider } from "./hotels.provider";
 import { CreateRoom, UpdateRoomParams, SearchRoomsParams, SendRoom } from "../Interface/Hotels";
 import { normalizeImageForClient } from "../utils/image.utils";
+import { FileStorage } from "../utils/file-storage";
 
 @Injectable()
 export class RoomsProvider {
   constructor(
     @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
-    @Inject(HotelsProvider) readonly hotelsProvider: HotelsProvider
+    @Inject(HotelsProvider) readonly hotelsProvider: HotelsProvider,
+    private readonly storage: FileStorage
   ) {}
 
   async createRoom(createRoom: CreateRoom): Promise<SendRoom> {
@@ -24,7 +26,8 @@ export class RoomsProvider {
       size: createRoom.size ?? 0,
       guests: createRoom.guests ?? 2,
       bed: createRoom.bed ?? "",
-      images: createRoom.images,
+      // Файлы на диск, в документе — пути
+      images: await this.storage.saveMany(createRoom.images, "rooms"),
       isEnabled: createRoom.isEnabled ?? true,
       hotel: new mongoose.Types.ObjectId(createRoom.hotelId),
       createdAt: new Date(),
@@ -42,7 +45,7 @@ export class RoomsProvider {
     for (const field of ["title", "description", "price", "size", "guests", "bed", "isEnabled"] as const) {
       if (data[field] !== undefined) patch[field] = data[field];
     }
-    if (data.images?.length) patch.images = data.images;
+    if (data.images?.length) patch.images = await this.storage.saveMany(data.images, "rooms");
 
     const editedRoom = await this.roomModel.findByIdAndUpdate(id, patch, { new: true });
     if (!editedRoom) {

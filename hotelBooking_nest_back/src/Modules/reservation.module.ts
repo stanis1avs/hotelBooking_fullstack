@@ -8,6 +8,7 @@ import { ReservationsProvider } from "../Providers/reservations.provider";
 import { UsersProvider } from "../Providers/users.provider";
 import { RoomsProvider } from "../Providers/rooms.provider";
 import { HotelsProvider } from "../Providers/hotels.provider";
+import { FileStorage } from "../utils/file-storage";
 import { ClientReservationsController } from "../Controllers/clientReservations.controller";
 import { ManagerReservationsController } from "../Controllers/managerReservations.controller";
 
@@ -21,6 +22,6 @@ import { ManagerReservationsController } from "../Controllers/managerReservation
     ]),
   ],
   controllers: [ClientReservationsController, ManagerReservationsController],
-  providers: [ReservationsProvider, RoomsProvider, HotelsProvider, UsersProvider],
+  providers: [FileStorage, ReservationsProvider, RoomsProvider, HotelsProvider, UsersProvider],
 })
 export class ReservationModule {}

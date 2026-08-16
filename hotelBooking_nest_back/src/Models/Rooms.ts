@@ -27,8 +27,10 @@ export class Room {
   @Prop({ trim: true, default: "" })
   bed: string;
 
-  @Prop()
-  images: [Buffer];
+  // Пути в файловом хранилище вместо base64-строк: изображение больше
+  // не лежит в документе (V-8 в BACKLOG.md)
+  @Prop({ type: [String], default: [] })
+  images: string[];
 
   @Prop({ required: true })
   createdAt: Date;

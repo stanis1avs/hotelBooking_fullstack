@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Api, HotelDto, RoomDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
+import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { confirmAction } from '../../shared/confirm-dialog';
 import { errorMessage } from '../../core/error-message';
@@ -26,7 +27,7 @@ const MAX_IMAGES = 10;
   imports: [
     ReactiveFormsModule, MatCardModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule,
     MatInputModule, MatProgressBarModule, MatIconModule, MatSelectModule, MatTooltipModule,
-    EmptyState, MoneyPipe,
+    EmptyState, ImageUrlPipe, MoneyPipe,
   ],
   templateUrl: './admin-rooms.html',
   styleUrl: './admin-rooms.scss',

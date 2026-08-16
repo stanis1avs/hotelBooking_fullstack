@@ -33,6 +33,8 @@ export class Hotel {
   @Prop({ required: true })
   updatedAt: Date;
 
+  // Путь в файловом хранилище (/uploads/hotels/...), а не base64:
+  // одна фотография занимала около 2,4 МБ прямо в документе
   @Prop({ required: true })
   image: string;
 }

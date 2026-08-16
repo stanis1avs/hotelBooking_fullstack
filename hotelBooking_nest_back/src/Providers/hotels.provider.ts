@@ -5,6 +5,7 @@ import { Hotel, HotelDocument } from "../Models/Hotels";
 import { Room, RoomDocument } from "../Models/Rooms";
 import { CreateHotel, UpdateHotelParams, SearchHotelParams, SendHotel } from "../Interface/Hotels";
 import { normalizeImageForClient } from "../utils/image.utils";
+import { FileStorage } from "../utils/file-storage";
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -20,10 +21,13 @@ interface PriceInfo {
 export class HotelsProvider {
   constructor(
     @InjectModel(Hotel.name) private hotelModel: Model<HotelDocument>,
-    @InjectModel(Room.name) private roomModel: Model<RoomDocument>
+    @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
+    private readonly storage: FileStorage
   ) {}
 
   async createHotel(createHotel: CreateHotel): Promise<SendHotel> {
+    // Картинка уходит в файл, в документе остаётся путь
+    const image = await this.storage.save(createHotel.image, "hotels");
     const createdHotel = new this.hotelModel({
       title: createHotel.title,
       description: createHotel.description,
@@ -32,7 +36,7 @@ export class HotelsProvider {
       rating: createHotel.rating ?? 0,
       reviewsCount: createHotel.reviewsCount ?? 0,
       amenities: createHotel.amenities ?? [],
-      image: createHotel.image.toString("base64"),
+      image,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -88,7 +92,7 @@ export class HotelsProvider {
       if (data[field] !== undefined) patch[field] = data[field];
     }
     // Картинку перезаписываем только если её действительно прислали.
-    if (data.image) patch.image = data.image.toString("base64");
+    if (data.image) patch.image = await this.storage.save(data.image, "hotels");
 
     const edittedHotel = await this.hotelModel.findByIdAndUpdate(id, patch, { new: true });
     if (!edittedHotel) {

@@ -14,6 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 
 import { Amenity, Api, HotelDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
+import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { AMENITY_LIST, AMENITY_META } from '../../shared/amenities';
 import { confirmAction } from '../../shared/confirm-dialog';
@@ -26,7 +27,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   imports: [
     ReactiveFormsModule, MatCardModule, MatButtonModule, MatFormFieldModule,
     MatInputModule, MatProgressBarModule, MatIconModule, MatTooltipModule,
-    MatSelectModule, MatChipsModule, EmptyState, MoneyPipe,
+    MatSelectModule, MatChipsModule, EmptyState, MoneyPipe, ImageUrlPipe,
   ],
   templateUrl: './admin-hotels.html',
   styleUrl: './admin-hotels.scss',

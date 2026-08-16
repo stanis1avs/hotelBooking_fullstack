@@ -34,6 +34,10 @@ services:
       # Фронтенд ходит через nginx на том же origin, поэтому CORS в схеме
       # с compose не задействован — значение оставлено для прямых обращений к API.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200}
+    # Загруженные изображения лежат файлами, а не в документах Mongo —
+    # без тома они пропадали бы при пересоздании контейнера
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       mongodb:
         condition: service_healthy
@@ -50,3 +54,4 @@ services:
 
 volumes:
   mongo-data:
+  uploads:

@@ -82,7 +82,7 @@
 
           <div class="flex items-center gap-4 flex-wrap">
             @if (previewUrl) {
-              <img [src]="previewUrl" alt="Предпросмотр фотографии отеля" class="preview" />
+              <img [src]="previewUrl | imageUrl" alt="Предпросмотр фотографии отеля" class="preview" />
             }
             <button type="button" mat-stroked-button (click)="fileInput.click()">
               <mat-icon>upload</mat-icon>
@@ -111,7 +111,7 @@
       @for (hotel of hotels; track hotel.id) {
         <mat-card appearance="outlined" class="flex flex-col">
           @if (hotel.image) {
-            <img [src]="hotel.image" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="card-photo" />
+            <img [src]="hotel.image | imageUrl" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="card-photo" />
           }
           <mat-card-content class="pt-4 flex-1 flex flex-col gap-2">
             <div class="flex items-start justify-between gap-2">

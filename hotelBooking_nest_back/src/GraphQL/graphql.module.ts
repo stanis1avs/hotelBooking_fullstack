@@ -12,6 +12,7 @@ import { Support, SupportSchema } from "../Models/Support";
 import { Message, MessageSchema } from "../Models/Messages";
 
 import { HotelsProvider } from "../Providers/hotels.provider";
+import { FileStorage } from "../utils/file-storage";
 import { RoomsProvider } from "../Providers/rooms.provider";
 import { ReservationsProvider } from "../Providers/reservations.provider";
 import { UsersProvider } from "../Providers/users.provider";
@@ -50,6 +51,7 @@ import { StatsResolver } from "./resolvers/stats.resolver";
     }),
   ],
   providers: [
+    FileStorage,
     // Domain providers
     HotelsProvider,
     RoomsProvider,

@@ -9,6 +9,9 @@
 /upload
 /src/schema.gql
 
+# Загруженные изображения — содержимое, а не исходный код
+/uploads
+
 # Logs
 logs
 *.log

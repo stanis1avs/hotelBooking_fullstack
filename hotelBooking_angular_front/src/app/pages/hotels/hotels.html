@@ -73,7 +73,7 @@
           <a class="hotel-card" [routerLink]="['/hotels', hotel.id]">
             <span class="hotel-photo-wrap">
               @if (hotel.image) {
-                <img [src]="hotel.image" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="hotel-photo" />
+                <img [src]="hotel.image | imageUrl" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="hotel-photo" />
               } @else {
                 <span class="hotel-photo hotel-photo-empty"><mat-icon>apartment</mat-icon></span>
               }

@@ -22,7 +22,7 @@
   @if (hotel(); as h) {
     <section class="hero-card">
       @if (h.image) {
-        <img [src]="h.image" [alt]="'Фотография отеля ' + h.title" class="hero-photo" />
+        <img [src]="h.image | imageUrl" [alt]="'Фотография отеля ' + h.title" class="hero-photo" />
       }
       @if (h.stars) {
         <span class="glass hero-stars">
@@ -114,7 +114,7 @@
           @for (room of rooms; track room.id) {
             <div class="room" [class.picked]="selectedRoom()?.id === room.id">
               @if (room.images.length) {
-                <img [src]="room.images[0]" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
+                <img [src]="room.images[0] | imageUrl" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
               } @else {
                 <span class="room-photo room-photo-empty"><mat-icon>bed</mat-icon></span>
               }

@@ -20,6 +20,7 @@ import {
   selectHotelsError, selectHotelsItems, selectHotelsLoading, selectHotelsTerm,
 } from '../../selectors/hotels.selectors';
 import { EmptyState } from '../../shared/empty-state';
+import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { AMENITY_META } from '../../shared/amenities';
 import { addDays, nightWord, nightsBetween, plural, toLocalIsoDate } from '../../core/date.utils';
@@ -36,7 +37,7 @@ interface Preset {
   imports: [
     AsyncPipe, ReactiveFormsModule, RouterLink, MoneyPipe,
     MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatIconModule, MatDatepickerModule, MatProgressBarModule, EmptyState,
+    MatIconModule, MatDatepickerModule, MatProgressBarModule, EmptyState, ImageUrlPipe,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './hotels.html',

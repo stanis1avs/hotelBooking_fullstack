@@ -10,6 +10,7 @@ import { RoomsProvider } from "../Providers/rooms.provider";
 import { UsersProvider } from "../Providers/users.provider";
 import { ReservationsProvider } from "../Providers/reservations.provider";
 import { HotelsProvider } from "../Providers/hotels.provider";
+import { FileStorage } from "../utils/file-storage";
 import { AdminRoomsController } from "../Controllers/adminRooms.controller";
 import { CommonRoomsController } from "../Controllers/commonRooms.controller";
 import { AdminHotelsController } from "../Controllers/adminHotels.controller";
@@ -28,6 +29,6 @@ import { CommonHotelsController } from "../Controllers/commonHotels.controller";
     MulterModule.register({ storage: memoryStorage() }),
   ],
   controllers: [AdminHotelsController, AdminRoomsController, CommonRoomsController, CommonHotelsController],
-  providers: [HotelsProvider, RoomsProvider, ReservationsProvider, UsersProvider],
+  providers: [FileStorage, HotelsProvider, RoomsProvider, ReservationsProvider, UsersProvider],
 })
 export class HotelRoomsModule {}

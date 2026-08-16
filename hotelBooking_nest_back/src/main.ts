@@ -1,13 +1,16 @@
 import { NestFactory } from "@nestjs/core";
+import { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { join } from "path";
 import * as cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./Filters/all-exceptions.filter";
+import { UPLOADS_URL_PREFIX } from "./utils/file-storage";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
   const isProd = config.get("NODE_ENV") === "production";
 
@@ -28,6 +31,16 @@ async function bootstrap() {
   });
 
   app.use(cookieParser(config.get("COOKIE_SECRET")));
+
+  // Изображения отдаются файлами и кэшируются браузером на год: имя файла
+  // содержит хэш содержимого, поэтому изменение картинки меняет и адрес.
+  app.useStaticAssets(join(process.cwd(), "uploads"), {
+    prefix: `${UPLOADS_URL_PREFIX}/`,
+    maxAge: "1y",
+    immutable: true,
+    index: false,
+    fallthrough: false,
+  });
 
   // whitelist срезает поля, которых нет в DTO, forbidNonWhitelisted отвечает 400 при их наличии.
   // Именно это закрывает подстановку "role": "admin" в теле регистрации.
