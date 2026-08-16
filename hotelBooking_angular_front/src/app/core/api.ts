@@ -80,6 +80,8 @@ export interface HotelDto {
   /** Минимальная цена среди доступных номеров, ₽ за ночь */
   minPrice: number;
   roomsCount: number;
+  /** Свободно на выбранные даты — из этого числа берётся указание остатка */
+  freeRooms?: number;
 }
 
 export interface RoomDto {

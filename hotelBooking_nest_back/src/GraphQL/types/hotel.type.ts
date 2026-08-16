@@ -36,6 +36,10 @@ export class HotelType {
 
   @Field(() => Int)
   roomsCount: number;
+
+  /** Свободно на выбранные даты — из этого числа берётся указание остатка в карточке. */
+  @Field(() => Int)
+  freeRooms: number;
 }
 
 /**

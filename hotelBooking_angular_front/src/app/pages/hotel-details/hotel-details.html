@@ -114,7 +114,17 @@
           @for (room of rooms; track room.id) {
             <div class="room stagger-in" [class.picked]="selectedRoom()?.id === room.id">
               @if (room.images.length) {
-                <img [src]="room.images[0] | imageUrl" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
+                <!-- Раньше остальные загруженные фотографии не было видно нигде -->
+                <button type="button" class="room-photo-btn" (click)="openGallery(room)"
+                        [attr.aria-label]="'Фотографии номера ' + room.title">
+                  <img [src]="room.images[0] | imageUrl" [alt]="'Фотография номера ' + room.title" loading="lazy" class="room-photo" />
+                  @if (room.images.length > 1) {
+                    <span class="photo-count">
+                      <mat-icon class="photo-count-icon">photo_library</mat-icon>
+                      {{ room.images.length }}
+                    </span>
+                  }
+                </button>
               } @else {
                 <span class="room-photo room-photo-empty"><mat-icon>bed</mat-icon></span>
               }

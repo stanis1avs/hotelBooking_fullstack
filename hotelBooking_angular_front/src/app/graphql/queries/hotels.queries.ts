@@ -12,6 +12,7 @@ const HOTEL_CARD = `
   amenities
   minPrice
   roomsCount
+  freeRooms
 `;
 
 export const GET_HOTELS = gql`

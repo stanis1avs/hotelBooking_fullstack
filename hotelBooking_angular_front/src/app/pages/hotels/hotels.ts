@@ -16,6 +16,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { HotelsActions } from '../../actions/hotels.actions';
+import type { HotelDto } from '../../core/api';
 import {
   selectHotelsDateArrival, selectHotelsDateDeparture, selectHotelsError, selectHotelsItems,
   selectHotelsLoading, selectHotelsPageIndex, selectHotelsTerm, selectHotelsTotal,
@@ -179,6 +180,16 @@ export class Hotels implements OnInit {
 
   stars(n: number): number[] {
     return Array.from({ length: Math.max(0, Math.min(5, n)) });
+  }
+
+  /**
+   * Указание дефицита. Возвращает пустую строку, когда говорить не о чем:
+   * шаблон показывает блок только при непустом значении.
+   */
+  scarcity(hotel: HotelDto): string {
+    const left = hotel.freeRooms;
+    if (left === undefined || left <= 0 || left > 3) return '';
+    return `${left === 1 ? 'остался' : 'осталось'} ${left} ${plural(left, 'номер', 'номера', 'номеров')} на эти даты`;
   }
 
   applyPreset(preset: Preset): void {

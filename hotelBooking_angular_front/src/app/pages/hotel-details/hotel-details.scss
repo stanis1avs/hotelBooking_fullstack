@@ -177,6 +177,41 @@
   border-radius: var(--mat-sys-corner-small);
   display: block;
 }
+/* Фотография — кнопка открытия галереи; кнопочных стилей у неё быть не должно */
+.room-photo-btn {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.room-photo-btn:hover .room-photo {
+  filter: brightness(1.06);
+}
+
+.photo-count {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  color: #fff;
+  background: rgb(0 0 0 / 55%);
+}
+
+.photo-count-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
 .room-photo-empty {
   display: grid;
   place-items: center;

@@ -12,7 +12,7 @@ export class HotelsResolver {
     private readonly reservationsProvider: ReservationsProvider
   ) {}
 
-  private toType(h: SendHotel): HotelType {
+  private toType(h: SendHotel, booked = 0): HotelType {
     return {
       id: String(h.id),
       title: h.title,
@@ -25,15 +25,16 @@ export class HotelsResolver {
       amenities: h.amenities,
       minPrice: h.minPrice,
       roomsCount: h.roomsCount,
+      freeRooms: Math.max(0, h.roomsCount - booked),
     };
   }
 
   @Query(() => HotelsPageType)
   async hotels(@Args() args: SearchHotelsArgs): Promise<HotelsPageType> {
-    const reservedHotelIds = await this.reservationsProvider.getReservationsInTime(
-      args.dateArrival,
-      args.dateDeparture
-    );
+    const [reservedHotelIds, booked] = await Promise.all([
+      this.reservationsProvider.getReservationsInTime(args.dateArrival, args.dateDeparture),
+      this.reservationsProvider.bookedRoomsByHotel(args.dateArrival, args.dateDeparture),
+    ]);
     const params = {
       offset: args.offset ?? 0,
       limit: args.limit ?? undefined,
@@ -46,7 +47,7 @@ export class HotelsResolver {
       this.hotelsProvider.getAllHotels(params, reservedHotelIds),
       this.hotelsProvider.countHotels(params, reservedHotelIds),
     ]);
-    return { items: hotels.map((h) => this.toType(h)), total };
+    return { items: hotels.map((h) => this.toType(h, booked?.get(String(h.id)) ?? 0)), total };
   }
 
   /** Карточка отеля для страницы с номерами. */

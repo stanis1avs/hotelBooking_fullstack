@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { Actions, ofType } from '@ngrx/effects';
 
 import { RoomsActions } from '../../actions/rooms.actions';
@@ -46,6 +47,7 @@ export class HotelDetails implements OnInit {
   private readonly apollo = inject(ApolloService);
   private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
   /**
    * takeUntilDestroyed без аргумента требует контекста внедрения зависимостей,
    * которого в ngOnInit нет. Из-за исключения не создавалась подписка на
@@ -157,6 +159,15 @@ export class HotelDetails implements OnInit {
   goToStep(index: number): void {
     if (index === 2 && !this.selectedRoom()) return;
     this.step.set(index);
+  }
+
+  openGallery(room: RoomDto): void {
+    import('./room-gallery-dialog').then(({ RoomGalleryDialog }) => {
+      this.dialog.open(RoomGalleryDialog, {
+        data: { title: room.title, images: room.images },
+        maxWidth: '95vw',
+      });
+    });
   }
 
   pickRoom(room: RoomDto): void {

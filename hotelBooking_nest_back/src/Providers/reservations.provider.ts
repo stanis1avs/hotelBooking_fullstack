@@ -106,6 +106,25 @@ export class ReservationsProvider {
    * Теперь количество занятых номеров сравнивается с реальным числом номеров отеля.
    */
   async getReservationsInTime(dateArrival: string, dateDeparture: string): Promise<string[] | null> {
+    const booked = await this.bookedRoomsByHotel(dateArrival, dateDeparture);
+    if (booked === null) return null;
+    if (!booked.size) return [];
+
+    const hotelIds = [...booked.keys()];
+    const totals = await Promise.all(hotelIds.map((id) => this.roomsProvider.countRoomsInHotel(id)));
+
+    return hotelIds.filter((id, i) => totals[i] > 0 && booked.get(id) >= totals[i]);
+  }
+
+  /**
+   * Сколько номеров занято в каждом отеле на период.
+   *
+   * Тем же счётом пользуется и признак «мест нет», и указание остатка
+   * на карточке: гость должен видеть одно и то же число в обоих местах.
+   *
+   * @returns null, если период не задан или задан неразборчиво
+   */
+  async bookedRoomsByHotel(dateArrival: string, dateDeparture: string): Promise<Map<string, number> | null> {
     if (!dateArrival || !dateDeparture) return null;
 
     const from = new Date(dateArrival);
@@ -116,19 +135,17 @@ export class ReservationsProvider {
       dateStart: { $lt: to },
       dateEnd: { $gt: from },
     });
-    if (!overlapping.length) return [];
 
-    const bookedRoomsByHotel = new Map<string, Set<string>>();
+    // Через множество: одна и та же комната может быть занята несколькими
+    // бронями подряд внутри периода, но занимает она всё равно одну единицу.
+    const roomsByHotel = new Map<string, Set<string>>();
     for (const item of overlapping) {
       const hotelId = String(item.hotelId);
-      if (!bookedRoomsByHotel.has(hotelId)) bookedRoomsByHotel.set(hotelId, new Set());
-      bookedRoomsByHotel.get(hotelId).add(String(item.roomId));
+      if (!roomsByHotel.has(hotelId)) roomsByHotel.set(hotelId, new Set());
+      roomsByHotel.get(hotelId).add(String(item.roomId));
     }
 
-    const hotelIds = [...bookedRoomsByHotel.keys()];
-    const totals = await Promise.all(hotelIds.map((id) => this.roomsProvider.countRoomsInHotel(id)));
-
-    return hotelIds.filter((id, i) => totals[i] > 0 && bookedRoomsByHotel.get(id).size >= totals[i]);
+    return new Map([...roomsByHotel].map(([hotelId, rooms]) => [hotelId, rooms.size]));
   }
 
   async removeReservation(id: string, userId: string | null = null): Promise<void> {

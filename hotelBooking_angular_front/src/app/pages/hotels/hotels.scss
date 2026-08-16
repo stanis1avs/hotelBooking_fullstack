@@ -159,6 +159,23 @@
 }
 .hotel-card:hover .hotel-photo { transform: scale(1.05); }
 
+/* Указание дефицита: цвет предупреждающий, но не тревожный —
+   это подсказка к решению, а не ошибка */
+.scarcity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-tertiary);
+}
+
+.scarcity-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
 .hotel-photo-wrap {
   position: relative;
   display: block;

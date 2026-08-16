@@ -109,6 +109,16 @@
               }
               <span class="hotel-desc">{{ hotel.description }}</span>
 
+              <!-- Остаток показываем, только когда он действительно мал:
+                   «свободно 12 номеров» ничего не сообщает, а «остался один» —
+                   сообщает. Число считается по бронированиям на выбранные даты. -->
+              @if (scarcity(hotel); as left) {
+                <span class="scarcity">
+                  <mat-icon class="scarcity-icon">local_fire_department</mat-icon>
+                  {{ left }}
+                </span>
+              }
+
               @if (hotel.amenities.length) {
                 <span class="amenities">
                   @for (a of hotel.amenities; track a) {
