@@ -31,6 +31,8 @@ services:
       COOKIE_SECRET: ${COOKIE_SECRET}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      # Фронтенд ходит через nginx на том же origin, поэтому CORS в схеме
+      # с compose не задействован — значение оставлено для прямых обращений к API.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200}
     depends_on:
       mongodb:

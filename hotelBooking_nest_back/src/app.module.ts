@@ -35,7 +35,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       useFactory: (configService: ConfigService) => {
         const isProd = configService.get("NODE_ENV") === "production";
         return {
-          autoSchemaFile: join(process.cwd(), "src/schema.gql"),
+          // В собранном образе папки src нет: схему держим в памяти,
+          // иначе запись файла роняет старт контейнера.
+          autoSchemaFile: isProd ? true : join(process.cwd(), "src/schema.gql"),
           sortSchema: true,
           context: ({ req, res }) => ({ req, res }),
           // В проде схему наружу не показываем и песочницу не поднимаем.

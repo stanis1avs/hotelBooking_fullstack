@@ -1,9 +1,14 @@
-// Продакшен-конфигурация. Хост задаётся при сборке под конкретный стенд —
-// localhost здесь означал бы неработоспособную сборку и открытый HTTP.
+/**
+ * Продакшен-конфигурация.
+ *
+ * host пустой — запросы уходят на тот же origin, что и страница,
+ * а nginx проксирует /api и /graphql на контейнер бэкенда.
+ * Раньше здесь стоял localhost, из-за чего прод-сборка была неработоспособна.
+ */
 export const environment = {
   production: true,
   api: {
-    host: 'https://api.hotelbooking.example',
+    host: '',
     endpoints: {
       getRooms: '/api/common/hotel-rooms',
       getHotels: '/api/common/hotels',
