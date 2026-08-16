@@ -1,125 +1,85 @@
-<mat-sidenav-container class="h-screen">
-  <mat-sidenav
-    #drawer
-    class="w-72"
-    [mode]="(isHandset$ | async) ? 'over' : 'side'"
-    [opened]="(isHandset$ | async) === false">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">
-        <mat-icon>apartment</mat-icon>
-      </span>
+<mat-sidenav-container class="shell" [hasBackdrop]="true">
+  <!-- Панель нужна только на телефоне: там горизонтальный ряд разделов не помещается -->
+  <mat-sidenav #drawer mode="over" class="mobile-drawer">
+    <div class="drawer-head">
+      <span class="brand-mark" aria-hidden="true"><mat-icon>apartment</mat-icon></span>
       <span>
-        <span class="block text-base font-semibold leading-tight">Пристань</span>
-        <span class="block text-xs uppercase tracking-wider faint">бронирование</span>
+        <span class="brand-name">Пристань</span>
+        <span class="brand-sub">бронирование</span>
       </span>
     </div>
 
-    <div class="nav-caption">Разделы</div>
-
-    <mat-nav-list>
-      <a mat-list-item routerLink="/hotels" routerLinkActive="active-link">
-        <mat-icon matListItemIcon>hotel</mat-icon>
-        <span matListItemTitle>Отели</span>
-      </a>
-
-      @if ((user$ | async)?.role === 'client') {
-        <a mat-list-item routerLink="/reservations" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>event</mat-icon>
-          <span matListItemTitle>Мои брони</span>
-        </a>
-        <a mat-list-item routerLink="/support" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>support_agent</mat-icon>
-          <span matListItemTitle>Поддержка</span>
+    <nav class="drawer-nav">
+      @for (item of navItems(); track item.link) {
+        <a
+          class="drawer-link"
+          [routerLink]="item.link"
+          routerLinkActive="active"
+          (click)="drawer.close()">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          {{ item.label }}
         </a>
       }
+    </nav>
 
-      @if ((user$ | async)?.role === 'manager') {
-        <a mat-list-item routerLink="/manager/reservations" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>table_view</mat-icon>
-          <span matListItemTitle>Все брони</span>
-        </a>
-        <a mat-list-item routerLink="/manager/users" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>people</mat-icon>
-          <span matListItemTitle>Пользователи</span>
-        </a>
-        <a mat-list-item routerLink="/support" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>support_agent</mat-icon>
-          <span matListItemTitle>Поддержка</span>
-        </a>
-      }
-
-      @if ((user$ | async)?.role === 'admin') {
-        <div class="nav-caption">Администрирование</div>
-        <a mat-list-item routerLink="/admin/hotels" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
-          <span matListItemTitle>Управление отелями</span>
-        </a>
-        <a mat-list-item routerLink="/admin/rooms" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>meeting_room</mat-icon>
-          <span matListItemTitle>Номера</span>
-        </a>
-        <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link">
-          <mat-icon matListItemIcon>people</mat-icon>
-          <span matListItemTitle>Пользователи</span>
-        </a>
-      }
-
-    </mat-nav-list>
-
-    <!-- Низ панели: у продукта максимум три раздела, и список
-         занимал только верх. Вход с регистрацией перенесены сюда —
-         это действия аккаунта, а не навигация по разделам. -->
-    <div class="rail-foot">
-      @if (user$ | async; as user) {
-        <div class="rail-user">
-          <span class="avatar">{{ initials(user.name) }}</span>
-          <span class="rail-user-text">
-            <span class="rail-user-name">{{ user.name }}</span>
-            <span class="rail-user-role">{{ roleLabel[user.role ?? 'client'] }}</span>
-          </span>
-        </div>
-      } @else {
-        <div class="rail-cta">
-          <mat-icon class="rail-cta-icon">luggage</mat-icon>
-          <p class="rail-cta-title">Войдите, чтобы бронировать</p>
-          <p class="rail-cta-text">Свои брони, история поездок и поддержка — в личном кабинете.</p>
-          <a mat-flat-button color="primary" routerLink="/login" class="rail-cta-button">Войти</a>
-          <a mat-stroked-button routerLink="/register" class="rail-cta-button">Создать аккаунт</a>
-        </div>
-      }
-    </div>
+    @if (!user()) {
+      <div class="drawer-auth">
+        <a mat-flat-button color="primary" routerLink="/login" (click)="drawer.close()">Войти</a>
+        <a mat-stroked-button routerLink="/register" (click)="drawer.close()">Создать аккаунт</a>
+      </div>
+    }
   </mat-sidenav>
 
   <mat-sidenav-content>
-    <mat-toolbar class="sticky top-0 z-10 toolbar">
-      @if (isHandset$ | async) {
-        <button mat-icon-button (click)="drawer.toggle()" aria-label="Открыть меню">
+    <header class="topbar">
+      @if (isHandset()) {
+        <button mat-icon-button (click)="drawer.toggle()" aria-label="Разделы">
           <mat-icon>menu</mat-icon>
         </button>
       }
 
-      <span class="flex-1"></span>
+      <a class="brand" routerLink="/hotels" aria-label="Пристань — на главную">
+        <span class="brand-mark" aria-hidden="true"><mat-icon>apartment</mat-icon></span>
+        <span class="brand-text">
+          <span class="brand-name">Пристань</span>
+          <span class="brand-sub">бронирование</span>
+        </span>
+      </a>
 
-      @if (user$ | async; as user) {
-        <!-- Обычная кнопка, а не mat-button: тот раскладывает содержимое
-             по своим правилам и три произвольных элемента внутри
-             расползались в столбик.
-             Выход перенесён в это меню — раньше кнопка дублировалась
-             в тулбаре и в боковой панели. -->
+      <!-- Разделы: горизонтальный ряд вместо колонки в боковой панели -->
+      @if (!isHandset()) {
+        <nav class="topnav" aria-label="Разделы">
+          @for (item of navItems(); track item.link) {
+            <a
+              class="nav-pill"
+              [routerLink]="item.link"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.link === '/hotels' }">
+              <mat-icon>{{ item.icon }}</mat-icon>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+        </nav>
+      }
+
+      <span class="spacer"></span>
+
+      @if (user(); as u) {
         <button
           type="button"
           class="user-trigger"
           [matMenuTriggerFor]="userMenu"
           aria-label="Меню пользователя">
-          <span class="avatar">{{ initials(user.name) }}</span>
-          <span class="user-trigger-name">{{ user.name }}</span>
+          <span class="avatar">{{ initials(u.name) }}</span>
+          <span class="user-trigger-name">{{ u.name }}</span>
           <mat-icon class="user-trigger-caret">expand_more</mat-icon>
         </button>
+
         <mat-menu #userMenu="matMenu">
           <div class="menu-user">
-            <div class="menu-user-name">{{ user.name }}</div>
-            <div class="menu-user-email">{{ user.email }}</div>
-            <div class="menu-user-role">{{ roleLabel[user.role ?? 'client'] }}</div>
+            <div class="menu-user-name">{{ u.name }}</div>
+            <div class="menu-user-email">{{ u.email }}</div>
+            <div class="menu-user-role">{{ roleLabel[u.role ?? 'client'] }}</div>
           </div>
           <mat-divider />
           <button mat-menu-item (click)="logout()">
@@ -129,12 +89,15 @@
         </mat-menu>
       } @else {
         <a mat-button routerLink="/login">Войти</a>
-        <a mat-flat-button color="primary" routerLink="/register">Регистрация</a>
+        <a mat-flat-button color="primary" routerLink="/register" class="hide-handset">Регистрация</a>
       }
-    </mat-toolbar>
+    </header>
 
-    <div class="mx-auto p-4 md:p-6" style="max-width: 1240px">
-      <router-outlet />
-    </div>
+    <!-- Панель убрана, поэтому контенту досталась вся ширина окна -->
+    <main class="content">
+      <div class="content-inner">
+        <router-outlet />
+      </div>
+    </main>
   </mat-sidenav-content>
 </mat-sidenav-container>
