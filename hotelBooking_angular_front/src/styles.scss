@@ -65,6 +65,11 @@ html {
   --mat-sys-inverse-primary: #6fcbbd;
 
   --brand-display: 'Playfair Display', ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* Панель поиска в герое: собственный токен, потому что surface в тёмной теме
+     почти совпадает с фоном героя и форма на нём полностью терялась. */
+  --hero-panel: #ffffff;
+  --hero-panel-border: rgba(11, 31, 34, 0.08);
 }
 
 /* Тёмная тема подобрана отдельно, а не получена инверсией:
@@ -109,6 +114,9 @@ html {
   --mat-sys-inverse-surface: #e7eeec;
   --mat-sys-inverse-on-surface: #0e1817;
   --mat-sys-inverse-primary: #1b6a61;
+
+  --hero-panel: #1f2c2a;
+  --hero-panel-border: rgba(255, 255, 255, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -277,6 +285,107 @@ table.mat-mdc-table .mat-mdc-header-cell {
 }
 table.mat-mdc-table .mat-mdc-row:hover {
   background: var(--mat-sys-surface-container-low);
+}
+
+/* ============================================================
+   Согласование с Angular Material.
+
+   Утилитарные классы имеют ту же специфичность, что и стили компонентов
+   Material, но подключаются раньше — поэтому отступы и типографика
+   не применялись, и текст выглядел прижатым к краям. Здесь правила
+   привязаны к классам самих компонентов и потому выигрывают.
+   ============================================================ */
+
+/* Боковая панель примыкает к контенту вплотную: скруглённый угол
+   со стороны контейнера читался как разрыв вёрстки. */
+.mat-drawer,
+.mat-sidenav,
+.mat-drawer-inner-container {
+  border-radius: 0;
+}
+
+/* --- Карточки --- */
+
+/* Изображение первым элементом карточки выходило за скруглённый угол:
+   у карточки есть радиус, но содержимое по нему не обрезалось. */
+.mat-mdc-card {
+  overflow: hidden;
+}
+
+.mat-mdc-card-header {
+  padding: 24px 24px 0;
+  display: block;
+}
+.mat-mdc-card-header .mat-mdc-card-header-text {
+  margin: 0;
+  width: 100%;
+}
+.mat-mdc-card-title.page-title {
+  font-family: var(--brand-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+.mat-mdc-card-subtitle.page-sub {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 8px;
+  display: block;
+}
+.mat-mdc-card-content {
+  padding-inline: 24px;
+}
+.mat-mdc-card-content:last-child {
+  padding-bottom: 24px;
+}
+.mat-mdc-card-actions {
+  padding: 8px 16px 16px;
+  gap: 8px;
+}
+
+/* --- Пункты навигации: иконка не должна прилипать к подписи --- */
+.mat-mdc-list-item {
+  border-radius: 999px;
+}
+.mat-mdc-list-item .mat-mdc-list-item-icon {
+  margin-inline-end: 16px;
+  color: inherit;
+}
+.mat-mdc-nav-list .mat-mdc-list-item {
+  margin-bottom: 2px;
+}
+
+/* --- Меню пользователя --- */
+.mat-mdc-menu-panel {
+  min-width: 232px;
+}
+.mat-mdc-menu-item .mat-icon {
+  margin-inline-end: 12px;
+}
+
+/* Полосы прокрутки: системная в тёмной теме выглядит инородно широкой
+   и светлой — особенно во внутренних областях вроде ленты сообщений. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mat-sys-outline-variant) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--mat-sys-outline-variant);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mat-sys-outline);
+  background-clip: content-box;
 }
 
 @keyframes skeleton-shimmer {

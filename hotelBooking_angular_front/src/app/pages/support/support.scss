@@ -1,14 +1,28 @@
 .support-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 18px;
+  /* Левая колонка была уже правой почти втрое: список обращений
+     выглядел зажатым рядом с полупустой панелью переписки. */
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .support-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.support-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.column-heading {
+  font-size: 15px;
+  font-weight: 650;
+  padding-inline: 2px;
 }
 
 .request-card {
@@ -43,9 +57,16 @@
   background: var(--mat-sys-surface-container-low);
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: var(--mat-sys-corner-medium);
-  min-height: 260px;
-  max-height: 420px;
+  min-height: 240px;
+  max-height: 440px;
   overflow-y: auto;
+}
+
+/* Пустая панель переписки не должна растягиваться на весь экран */
+.thread-placeholder {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
 }
 
 .message {

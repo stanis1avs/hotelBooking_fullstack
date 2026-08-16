@@ -87,12 +87,13 @@
               <td mat-cell *matCellDef="let user" class="mono faint">{{ user.id }}</td>
             </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef aria-label="Действия"></th>
-              <td mat-cell *matCellDef="let user" class="text-right whitespace-nowrap">
-                <button mat-icon-button matTooltip="Изменить" [attr.aria-label]="'Изменить ' + user.name">
-                  <mat-icon>edit</mat-icon>
-                </button>
+            <!-- Колонка действий убрана: кнопка «Изменить» ничего не делала,
+                 потому что эндпоинта обновления пользователя на сервере нет.
+                 Вернуть вместе с PATCH /api/admin/users/:id -->
+            <ng-container matColumnDef="since">
+              <th mat-header-cell *matHeaderCellDef>С нами с</th>
+              <td mat-cell *matCellDef="let user" class="num muted">
+                {{ user.since ? (user.since | date: 'dd.MM.yyyy') : '—' }}
               </td>
             </ng-container>
 
@@ -105,7 +106,9 @@
           <label class="flex items-center gap-2 text-sm">
             Строк на странице
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pager-select">
-              <mat-select [value]="limit$ | async" (valueChange)="setPageSize($event)">
+              <!-- panelWidth: без него выпадающий список наследовал ширину поля
+                   и значение обрезалось до «2…» -->
+              <mat-select [value]="limit$ | async" (valueChange)="setPageSize($event)" [panelWidth]="null">
                 @for (n of [10, 25, 50]; track n) {
                   <mat-option [value]="n">{{ n }}</mat-option>
                 }

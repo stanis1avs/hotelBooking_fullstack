@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -44,7 +44,7 @@ export const ROLE_LABEL: Record<string, string> = {
 @Component({
   selector: 'app-users',
   imports: [
-    AsyncPipe, ReactiveFormsModule,
+    AsyncPipe, DatePipe, ReactiveFormsModule,
     MatButtonModule, MatCardModule, MatChipsModule, MatDialogModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule,
     MatTooltipModule, EmptyState,
@@ -86,11 +86,7 @@ export class UsersPage {
     this.authRole$.pipe(takeUntilDestroyed()).subscribe((role) => {
       const admin = role === 'admin';
       this.isAdmin.set(admin);
-      this.columns.set(
-        admin
-          ? ['name', 'email', 'phone', 'role', 'id', 'actions']
-          : ['name', 'email', 'phone', 'role', 'id']
-      );
+      this.columns.set(['name', 'email', 'phone', 'role', 'id']);
     });
 
     // Единственное место, откуда уходит запрос списка. Раньше подписка на те же

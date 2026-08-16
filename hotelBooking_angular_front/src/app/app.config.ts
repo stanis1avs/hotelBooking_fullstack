@@ -1,9 +1,13 @@
 import {
   ApplicationConfig,
   APP_INITIALIZER,
+  LOCALE_ID,
   inject,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeRu from '@angular/common/locales/ru';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -41,6 +45,10 @@ function restoreSession() {
   const session = inject(AuthSession);
   return () => firstValueFrom(session.restore());
 }
+
+// Без регистрации локали DatePipe выводит месяцы по-английски
+// («Создано 13 September 2023»), а календарь открывается с воскресенья.
+registerLocaleData(localeRu);
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -80,5 +88,7 @@ export const appConfig: ApplicationConfig = {
       };
     }),
     { provide: APP_INITIALIZER, useFactory: restoreSession, multi: true },
+    { provide: LOCALE_ID, useValue: 'ru-RU' },
+    { provide: MAT_DATE_LOCALE, useValue: 'ru-RU' },
   ],
 };

@@ -17,8 +17,8 @@
 
   <div class="support-grid">
 
-    <div class="flex flex-col gap-3">
-      <h2 class="text-base font-semibold">Обращения</h2>
+    <div class="support-column">
+      <h2 class="column-heading">Обращения</h2>
 
       @for (req of requests; track req.id) {
         <!-- Карточка стала кнопкой: раньше это был div с (click),
@@ -60,7 +60,7 @@
 
       @if (!isManager) {
         <mat-divider class="my-2" />
-        <h2 class="text-base font-semibold">Новое обращение</h2>
+        <h2 class="column-heading">Новое обращение</h2>
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Опишите проблему</mat-label>
           <textarea matInput rows="3" [formControl]="newRequestControl"></textarea>
@@ -131,10 +131,12 @@
             </p>
           }
         } @else {
-          <app-empty-state
-            icon="chat"
-            title="Выберите обращение"
-            description="Слева список обращений — откройте любое, чтобы посмотреть переписку." />
+          <div class="thread-placeholder">
+            <app-empty-state
+              icon="chat"
+              title="Выберите обращение"
+              description="Слева список обращений — откройте любое, чтобы посмотреть переписку." />
+          </div>
         }
       </mat-card-content>
     </mat-card>

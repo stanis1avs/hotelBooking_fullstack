@@ -55,20 +55,27 @@
 
 .hero-form {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(240px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
   margin-top: 22px;
-  padding: 12px;
+  padding: 14px;
   border-radius: var(--mat-sys-corner-large);
-  background: var(--mat-sys-surface);
-  box-shadow: var(--mat-sys-level3);
+  /* Отдельный токен вместо surface: в тёмной теме surface сливался с героем */
+  background: var(--hero-panel);
+  border: 1px solid var(--hero-panel-border);
+  box-shadow: 0 18px 44px rgba(4, 14, 16, 0.42);
   color: var(--mat-sys-on-surface);
+}
+
+/* Поля внутри панели живут на её фоне, а не на фоне героя */
+.hero-form .mat-mdc-form-field {
+  width: 100%;
 }
 
 .hero-submit {
   height: 56px;
-  min-width: 120px;
+  min-width: 132px;
 }
 
 .hero-presets {
