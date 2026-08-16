@@ -197,6 +197,32 @@
   .room-side .text-right { text-align: left; }
 }
 
+/* ============================================================ ДАННЫЕ ГОСТЯ */
+.guest-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Между рядами больше, чем между колонками: подпись поля поднимается
+     выше рамки и съедала вертикальный зазор */
+  gap: 26px 16px;
+}
+
+.guest-form .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .guest-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Кнопка возврата шла вплотную к подсказке под последним полем */
+.step-back {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
 /* ============================================================ ПОДТВЕРЖДЕНИЕ */
 .confirm-grid {
   display: grid;
