@@ -2,7 +2,7 @@
 
   <header class="flex items-end justify-between gap-4 flex-wrap">
     <div>
-      <p class="page-eyebrow">{{ hotels.length }} в системе</p>
+      <p class="page-eyebrow">{{ hotels().length }} в системе</p>
       <h1 class="page-title">Управление отелями</h1>
       <p class="page-sub">Карточка, фотография и описание — то, что видят гости в поиске</p>
     </div>
@@ -17,13 +17,13 @@
     </div>
   </header>
 
-  @if (loading || saving) {
+  @if (loading() || saving()) {
     <mat-progress-bar mode="indeterminate" />
   }
 
-  @if (hotels.length) {
+  @if (hotels().length) {
     <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
-      @for (hotel of hotels; track hotel.id) {
+      @for (hotel of hotels(); track hotel.id) {
         <mat-card appearance="outlined" class="flex flex-col stagger-in">
           @if (hotel.image) {
             <img [src]="hotel.image | imageUrl" [alt]="'Фотография отеля ' + hotel.title" loading="lazy" class="card-photo" />
@@ -65,7 +65,7 @@
         </mat-card>
       }
     </div>
-  } @else if (!loading) {
+  } @else if (!loading()) {
     <mat-card appearance="outlined">
       <app-empty-state
         icon="apartment"

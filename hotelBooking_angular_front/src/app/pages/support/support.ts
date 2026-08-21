@@ -1,6 +1,10 @@
-import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, inject, signal,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,16 +16,27 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { take } from 'rxjs';
 
-import { ApolloService } from '../../graphql/apollo.service';
-import { SupportUnread } from '../../core/support-unread';
+import { SupportActions } from '../../actions/support.actions';
+import {
+  selectMessagesLoading, selectSelectedRequest, selectSupportItems,
+  selectSupportLoading, selectSupportMessages,
+} from '../../selectors/support.selectors';
 import { SupportMessageDto, SupportRequestDto } from '../../core/api';
 import { selectAuthUser } from '../../selectors/auth.selectors';
 import { EmptyState } from '../../shared/empty-state';
 import { confirmAction } from '../../shared/confirm-dialog';
 import { errorMessage } from '../../core/error-message';
 
+/**
+ * Страница поддержки.
+ *
+ * Раньше здесь лежало собственное состояние в полях компонента и ручные
+ * `detectChanges`, при том что слайс NgRx для поддержки существовал и не
+ * использовался никем. Хуже того, копия выбранного обращения жила отдельно
+ * от списка и расходилась с ним: закрытое обращение оставалось раскрытым
+ * в правой панели. Теперь источник один — стор.
+ */
 @Component({
   selector: 'app-support',
   imports: [
@@ -31,28 +46,26 @@ import { errorMessage } from '../../core/error-message';
   ],
   templateUrl: './support.html',
   styleUrl: './support.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Support implements OnInit, AfterViewChecked {
+export class Support implements AfterViewChecked {
   private readonly store = inject(Store);
-  private readonly apollo = inject(ApolloService);
-  readonly unread = inject(SupportUnread);
+  private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   @ViewChild('thread') threadRef?: ElementRef<HTMLElement>;
 
-  requests: SupportRequestDto[] = [];
-  requestsLoading = false;
+  readonly requests = toSignal(this.store.select(selectSupportItems), { initialValue: [] });
+  readonly requestsLoading = toSignal(this.store.select(selectSupportLoading), { initialValue: false });
+  readonly selectedRequest = toSignal(this.store.select(selectSelectedRequest), { initialValue: null });
+  readonly messages = toSignal(this.store.select(selectSupportMessages), { initialValue: [] });
+  readonly messagesLoading = toSignal(this.store.select(selectMessagesLoading), { initialValue: false });
 
-  selectedRequest: SupportRequestDto | null = null;
-  messages: SupportMessageDto[] = [];
-  messagesLoading = false;
+  private readonly user = toSignal(this.store.select(selectAuthUser), { initialValue: null });
+  readonly isManager = computed(() => this.user()?.role === 'manager');
 
-  userRole: string | null = null;
-  userId: string | null = null;
-
-  private scrollPending = false;
+  private scrollPending = signal(false);
 
   readonly newRequestControl = new FormControl<string>('', {
     nonNullable: true,
@@ -63,81 +76,68 @@ export class Support implements OnInit, AfterViewChecked {
     validators: [Validators.required, Validators.minLength(1)],
   });
 
-  ngOnInit(): void {
+  constructor() {
+    this.store.dispatch(SupportActions.loadSupportRequests());
+
+    // Переписка доросла снизу — прокручиваем к последнему сообщению
     this.store
-      .select(selectAuthUser)
-      .pipe(take(1))
-      .subscribe((user) => {
-        this.userRole = user?.role ?? null;
-        this.userId = user?.id ?? null;
-        this.loadRequests();
+      .select(selectSupportMessages)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.scrollPending.set(true));
+
+    this.actions$
+      .pipe(ofType(SupportActions.createSupportRequestSuccess), takeUntilDestroyed())
+      .subscribe(() => {
+        this.newRequestControl.reset();
+        this.snackBar.open('Обращение создано', 'OK', { duration: 4000 });
       });
+
+    this.actions$
+      .pipe(ofType(SupportActions.closeSupportRequestSuccess), takeUntilDestroyed())
+      .subscribe(() => this.snackBar.open('Обращение закрыто', 'OK', { duration: 4000 }));
+
+    // Текст возвращается в поле, чтобы написанное не пропало вместе с ошибкой
+    this.actions$
+      .pipe(ofType(SupportActions.sendMessageFailure), takeUntilDestroyed())
+      .subscribe(({ error, text }) => {
+        this.newMessageControl.setValue(text);
+        this.snackBar.open(errorMessage(error, 'Сообщение не отправлено'), 'Понятно', { duration: 5000 });
+      });
+
+    this.actions$
+      .pipe(
+        ofType(
+          SupportActions.loadSupportRequestsFailure,
+          SupportActions.loadMessagesFailure,
+          SupportActions.createSupportRequestFailure,
+          SupportActions.closeSupportRequestFailure,
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe(({ error }) =>
+        this.snackBar.open(errorMessage(error, 'Не удалось выполнить действие'), 'Понятно', { duration: 5000 })
+      );
   }
 
   ngAfterViewChecked(): void {
-    if (this.scrollPending && this.threadRef) {
+    if (this.scrollPending() && this.threadRef) {
       this.threadRef.nativeElement.scrollTop = this.threadRef.nativeElement.scrollHeight;
-      this.scrollPending = false;
+      this.scrollPending.set(false);
     }
-  }
-
-  get isManager(): boolean {
-    return this.userRole === 'manager';
   }
 
   /** Своё сообщение или ответ поддержки — раньше все выглядели одинаково. */
   isMine(message: SupportMessageDto): boolean {
-    return String(message.author) === String(this.userId);
+    return String(message.author) === String(this.user()?.id);
   }
 
+  /** Кнопка «Обновить» в шапке списка. */
   loadRequests(): void {
-    this.requestsLoading = true;
-    // Через ApolloService: REST-методы, которые здесь вызывались раньше,
-    // били в несуществующие эндпоинты и возвращали 404.
-    const call$ = this.isManager
-      ? this.apollo.getManagerSupportRequests()
-      : this.apollo.getClientSupportRequests();
-
-    call$.subscribe({
-      next: (items) => {
-        this.requests = items;
-        this.requestsLoading = false;
-        if (this.selectedRequest) {
-          this.selectedRequest = items.find((r) => r.id === this.selectedRequest?.id) ?? null;
-        }
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.requestsLoading = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось загрузить обращения'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.store.dispatch(SupportActions.loadSupportRequests());
   }
 
   openRequest(request: SupportRequestDto): void {
-    this.selectedRequest = request;
-    this.messages = [];
-    this.messagesLoading = true;
-    this.apollo.getSupportMessages(request.id).subscribe({
-      next: (msgs) => {
-        this.messages = msgs;
-        this.messagesLoading = false;
-        this.scrollPending = true;
-        this.cdr.markForCheck();
-        // Переписку открыли — сообщения собеседника считаются прочитанными,
-        // и отметка в меню гаснет на оставшееся количество.
-        this.apollo.markSupportMessagesRead(request.id).subscribe({
-          next: (left) => this.unread.count.set(left),
-          error: () => undefined,
-        });
-      },
-      error: (error) => {
-        this.messagesLoading = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось загрузить переписку'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.store.dispatch(SupportActions.selectRequest({ id: request.id }));
   }
 
   closeRequest(request: SupportRequestDto, event: Event): void {
@@ -148,14 +148,7 @@ export class Support implements OnInit, AfterViewChecked {
       confirmLabel: 'Закрыть обращение',
     }).subscribe((confirmed) => {
       if (!confirmed) return;
-      this.apollo.closeSupportRequest(request.id).subscribe({
-        next: () => {
-          this.snackBar.open('Обращение закрыто', 'OK', { duration: 4000 });
-          this.loadRequests();
-        },
-        error: (error) =>
-          this.snackBar.open(errorMessage(error, 'Не удалось закрыть обращение'), 'Понятно', { duration: 5000 }),
-      });
+      this.store.dispatch(SupportActions.closeSupportRequest({ id: request.id }));
     });
   }
 
@@ -164,35 +157,14 @@ export class Support implements OnInit, AfterViewChecked {
       this.newRequestControl.markAsTouched();
       return;
     }
-    this.apollo.createSupportRequest(this.newRequestControl.value).subscribe({
-      next: (item) => {
-        this.snackBar.open('Обращение создано', 'OK', { duration: 4000 });
-        this.newRequestControl.reset();
-        this.loadRequests();
-        this.openRequest(item);
-      },
-      error: (error) =>
-        this.snackBar.open(errorMessage(error, 'Не удалось создать обращение'), 'Понятно', { duration: 5000 }),
-    });
+    this.store.dispatch(SupportActions.createSupportRequest({ text: this.newRequestControl.value }));
   }
 
   sendMessage(): void {
-    if (this.newMessageControl.invalid || !this.selectedRequest) return;
+    const request = this.selectedRequest();
+    if (this.newMessageControl.invalid || !request) return;
     const text = this.newMessageControl.value;
-    const requestId = this.selectedRequest.id;
     this.newMessageControl.reset();
-
-    this.apollo.sendSupportMessage(requestId, text).subscribe({
-      next: (msg) => {
-        this.messages = [...this.messages, msg];
-        this.scrollPending = true;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        // Возвращаем текст в поле, чтобы не потерять написанное
-        this.newMessageControl.setValue(text);
-        this.snackBar.open(errorMessage(error, 'Сообщение не отправлено'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.store.dispatch(SupportActions.sendMessage({ requestId: request.id, text }));
   }
 }

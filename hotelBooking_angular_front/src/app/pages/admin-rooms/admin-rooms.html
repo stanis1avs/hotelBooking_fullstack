@@ -8,13 +8,13 @@
 
   <mat-card appearance="outlined">
     <mat-card-content class="pt-4">
-      @if (hotelsLoading) {
+      @if (hotelsLoading()) {
         <mat-progress-bar mode="indeterminate" />
       } @else {
         <mat-form-field appearance="outline" subscriptSizing="dynamic" style="max-width: 460px" class="w-full">
           <mat-label>Отель</mat-label>
-          <mat-select [value]="selectedHotelId" (valueChange)="selectHotel($event)">
-            @for (hotel of hotels; track hotel.id) {
+          <mat-select [value]="selectedHotelId()" (valueChange)="selectHotel($event)">
+            @for (hotel of hotels(); track hotel.id) {
               <mat-option [value]="hotel.id">{{ hotel.title }}</mat-option>
             }
           </mat-select>
@@ -23,7 +23,7 @@
     </mat-card-content>
   </mat-card>
 
-  @if (selectedHotelId) {
+  @if (selectedHotelId()) {
     <div class="flex justify-end">
       <button mat-flat-button color="primary" (click)="openCreate()">
         <mat-icon>add</mat-icon>
@@ -31,13 +31,13 @@
       </button>
     </div>
 
-    @if (roomsLoading || saving) {
+    @if (roomsLoading() || saving()) {
       <mat-progress-bar mode="indeterminate" />
     }
 
-    @if (rooms.length) {
+    @if (rooms().length) {
       <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
-        @for (room of rooms; track room.id) {
+        @for (room of rooms(); track room.id) {
           <mat-card appearance="outlined" class="flex flex-col stagger-in"
                     [class.dimmed]="room.isEnabled === false">
             @if (room.images.length) {
@@ -71,7 +71,7 @@
           </mat-card>
         }
       </div>
-    } @else if (!roomsLoading) {
+    } @else if (!roomsLoading()) {
       <mat-card appearance="outlined">
         <app-empty-state
           icon="meeting_room"
@@ -84,7 +84,7 @@
         </app-empty-state>
       </mat-card>
     }
-  } @else if (!hotelsLoading) {
+  } @else if (!hotelsLoading()) {
     <mat-card appearance="outlined">
       <app-empty-state
         icon="apartment"

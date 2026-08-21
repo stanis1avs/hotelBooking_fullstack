@@ -2,7 +2,7 @@
 
   <header class="flex items-end justify-between gap-4 flex-wrap">
     <div>
-      <p class="page-eyebrow">{{ isManager ? 'Очередь обращений' : 'Служба заботы' }}</p>
+      <p class="page-eyebrow">{{ isManager() ? 'Очередь обращений' : 'Служба заботы' }}</p>
       <h1 class="page-title">Поддержка</h1>
       <p class="page-sub">Обычно отвечаем в течение 15 минут</p>
     </div>
@@ -11,7 +11,7 @@
     </button>
   </header>
 
-  @if (requestsLoading) {
+  @if (requestsLoading()) {
     <mat-progress-bar mode="indeterminate" />
   }
 
@@ -20,14 +20,14 @@
     <div class="support-column">
       <h2 class="column-heading">Обращения</h2>
 
-      @for (req of requests; track req.id) {
+      @for (req of requests(); track req.id) {
         <!-- Карточка стала кнопкой: раньше это был div с (click),
              недоступный с клавиатуры -->
         <button
           type="button"
           class="request-card"
-          [class.selected]="selectedRequest?.id === req.id"
-          [attr.aria-pressed]="selectedRequest?.id === req.id"
+          [class.selected]="selectedRequest()?.id === req.id"
+          [attr.aria-pressed]="selectedRequest()?.id === req.id"
           (click)="openRequest(req)">
           <span class="request-top">
             <span class="status-chip" [attr.data-status]="req.isActive ? 'active' : 'closed'">
@@ -36,7 +36,7 @@
             <span class="request-date">{{ req.createdAt | date: 'dd.MM.yyyy' }}</span>
           </span>
           <span class="request-title">{{ req.title || 'Обращение без темы' }}</span>
-          @if (isManager && req.isActive) {
+          @if (isManager() && req.isActive) {
             <span class="request-actions">
               <button mat-button color="warn" (click)="closeRequest(req, $event)">
                 <mat-icon>check</mat-icon>
@@ -46,12 +46,12 @@
           }
         </button>
       } @empty {
-        @if (!requestsLoading) {
+        @if (!requestsLoading()) {
           <mat-card appearance="outlined">
             <app-empty-state
               icon="forum"
               title="Обращений нет"
-              [description]="isManager ? 'Открытых обращений в очереди нет.' : 'Выберите тему ниже и опишите, что случилось.'" />
+              [description]="isManager() ? 'Открытых обращений в очереди нет.' : 'Выберите тему ниже и опишите, что случилось.'" />
           </mat-card>
         }
       }
@@ -60,23 +60,23 @@
     <div class="support-column">
       <!-- Заголовок есть у обеих колонок, иначе карточки под ними
            начинались на разной высоте -->
-      <h2 class="column-heading">{{ selectedRequest ? 'Переписка' : 'Сообщения' }}</h2>
+      <h2 class="column-heading">{{ selectedRequest() ? 'Переписка' : 'Сообщения' }}</h2>
 
       <mat-card appearance="outlined">
         <mat-card-content class="flex flex-col gap-3">
-          @if (selectedRequest) {
+          @if (selectedRequest(); as selected) {
             <div>
-              <h3 class="thread-title">{{ selectedRequest.title || 'Обращение' }}</h3>
-              <p class="thread-meta">Создано {{ selectedRequest.createdAt | date: 'd MMMM y' }}</p>
+              <h3 class="thread-title">{{ selected.title || 'Обращение' }}</h3>
+              <p class="thread-meta">Создано {{ selected.createdAt | date: 'd MMMM y' }}</p>
             </div>
             <mat-divider />
 
-            @if (messagesLoading) {
+            @if (messagesLoading()) {
               <mat-progress-bar mode="indeterminate" />
             }
 
             <div class="thread" #thread>
-              @for (msg of messages; track msg.id) {
+              @for (msg of messages(); track msg.id) {
                 <!-- Свои сообщения справа, ответы поддержки слева.
                      Раньше у всех был один класс и все выглядели как свои -->
                 <div class="message" [class.mine]="isMine(msg)">
@@ -87,13 +87,13 @@
                   </span>
                 </div>
               } @empty {
-                @if (!messagesLoading) {
+                @if (!messagesLoading()) {
                   <p class="text-sm muted text-center py-6">Сообщений пока нет</p>
                 }
               }
             </div>
 
-            @if (selectedRequest.isActive) {
+            @if (selected.isActive) {
               <div class="composer">
                 <mat-form-field appearance="outline" subscriptSizing="dynamic" class="composer-field">
                   <mat-label>Введите сообщение</mat-label>
@@ -133,7 +133,7 @@
 
   <!-- Форма нового обращения вынесена из левой колонки: там она была
        зажата в 380 px, хотя это основное действие клиента на странице -->
-  @if (!isManager) {
+  @if (!isManager()) {
     <mat-card appearance="outlined" class="new-request">
       <mat-card-content>
         <h2 class="column-heading">Новое обращение</h2>

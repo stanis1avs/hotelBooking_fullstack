@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -8,10 +9,15 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Observable } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
 
-import { Api, HotelDto, RoomDto } from '../../core/api';
-import { ApolloService } from '../../graphql/apollo.service';
+import { AdminActions } from '../../actions/admin.actions';
+import {
+  selectAdminHotels, selectAdminHotelsLoading, selectAdminRooms,
+  selectAdminRoomsLoading, selectAdminSaving, selectAdminSelectedHotelId,
+} from '../../selectors/admin.selectors';
+import { RoomDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
@@ -26,64 +32,49 @@ import { errorMessage } from '../../core/error-message';
   ],
   templateUrl: './admin-rooms.html',
   styleUrl: './admin-rooms.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminRooms implements OnInit {
-  /** REST остался только под multipart, всё остальное — GraphQL. */
-  private readonly api = inject(Api);
-  private readonly apollo = inject(ApolloService);
+export class AdminRooms {
+  private readonly store = inject(Store);
+  private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  hotels: HotelDto[] = [];
-  rooms: RoomDto[] = [];
-  hotelsLoading = false;
-  roomsLoading = false;
-  saving = false;
-  selectedHotelId: string | null = null;
+  readonly hotels = toSignal(this.store.select(selectAdminHotels), { initialValue: [] });
+  readonly hotelsLoading = toSignal(this.store.select(selectAdminHotelsLoading), { initialValue: false });
+  readonly rooms = toSignal(this.store.select(selectAdminRooms), { initialValue: [] });
+  readonly roomsLoading = toSignal(this.store.select(selectAdminRoomsLoading), { initialValue: false });
+  readonly saving = toSignal(this.store.select(selectAdminSaving), { initialValue: false });
+  readonly selectedHotelId = toSignal(this.store.select(selectAdminSelectedHotelId), { initialValue: null });
 
-  ngOnInit(): void {
-    this.loadHotels();
-  }
+  constructor() {
+    this.store.dispatch(AdminActions.loadHotels());
 
-  loadHotels(): void {
-    this.hotelsLoading = true;
-    this.apollo.adminGetHotels({ limit: 50 }).subscribe({
-      next: (page) => {
-        this.hotels = page.items;
-        this.hotelsLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.hotelsLoading = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось загрузить отели'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.actions$
+      .pipe(ofType(AdminActions.saveRoomSuccess), takeUntilDestroyed())
+      .subscribe(({ wasEditing }) =>
+        this.snackBar.open(wasEditing ? 'Номер обновлён' : 'Номер добавлен', 'OK', { duration: 4000 })
+      );
+
+    this.actions$
+      .pipe(ofType(AdminActions.deleteRoomSuccess), takeUntilDestroyed())
+      .subscribe(() => this.snackBar.open('Номер удалён', 'OK', { duration: 4000 }));
+
+    this.actions$
+      .pipe(
+        ofType(
+          AdminActions.loadHotelsFailure, AdminActions.loadRoomsFailure,
+          AdminActions.saveRoomFailure, AdminActions.deleteRoomFailure,
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe(({ error }) =>
+        this.snackBar.open(errorMessage(error, 'Не удалось выполнить действие'), 'Понятно', { duration: 6000 })
+      );
   }
 
   selectHotel(hotelId: string): void {
-    this.selectedHotelId = hotelId;
-    this.loadRooms();
-  }
-
-  loadRooms(): void {
-    if (!this.selectedHotelId) return;
-    this.roomsLoading = true;
-    // Админский запрос возвращает и отключённые номера: через публичный
-    // их не было видно, а значит нельзя было включить обратно.
-    this.apollo.adminGetRooms(this.selectedHotelId).subscribe({
-      next: (rooms) => {
-        this.rooms = rooms;
-        this.roomsLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.roomsLoading = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось загрузить номера'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.store.dispatch(AdminActions.selectHotel({ id: hotelId }));
   }
 
   openCreate(): void {
@@ -99,7 +90,7 @@ export class AdminRooms implements OnInit {
     import('./room-form-dialog').then(({ RoomFormDialog }) => {
       this.dialog
         .open(RoomFormDialog, {
-          data: { room, hotels: this.hotels, hotelId: this.selectedHotelId ?? '' },
+          data: { room, hotels: this.hotels(), hotelId: this.selectedHotelId() ?? '' },
           width: '720px',
           maxWidth: '95vw',
           autoFocus: 'first-tabbable',
@@ -107,24 +98,8 @@ export class AdminRooms implements OnInit {
         .afterClosed()
         .subscribe((payload: FormData | undefined) => {
           if (!payload) return;
-          this.submit(room ? this.api.updateRoom(room.id, payload) : this.api.createRoom(payload), !!room);
+          this.store.dispatch(AdminActions.saveRoom({ id: room?.id ?? null, payload }));
         });
-    });
-  }
-
-  private submit(call$: Observable<unknown>, wasEditing: boolean): void {
-    this.saving = true;
-    call$.subscribe({
-      next: () => {
-        this.saving = false;
-        this.snackBar.open(wasEditing ? 'Номер обновлён' : 'Номер добавлен', 'OK', { duration: 4000 });
-        this.loadRooms();
-      },
-      error: (error) => {
-        this.saving = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось сохранить'), 'Понятно', { duration: 6000 });
-      },
     });
   }
 
@@ -136,14 +111,7 @@ export class AdminRooms implements OnInit {
       destructive: true,
     }).subscribe((confirmed) => {
       if (!confirmed) return;
-      this.apollo.deleteRoom(room.id).subscribe({
-        next: () => {
-          this.snackBar.open('Номер удалён', 'OK', { duration: 4000 });
-          this.loadRooms();
-        },
-        error: (error) =>
-          this.snackBar.open(errorMessage(error, 'Не удалось удалить номер'), 'Понятно', { duration: 5000 }),
-      });
+      this.store.dispatch(AdminActions.deleteRoom({ id: room.id }));
     });
   }
 }

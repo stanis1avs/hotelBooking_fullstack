@@ -6,7 +6,7 @@
       <h1 class="page-title">Все бронирования</h1>
       <p class="page-sub">Динамика считается к тому же периоду прошлого месяца</p>
     </div>
-    <button mat-icon-button (click)="loadReservations(); loadStats()" matTooltip="Обновить" aria-label="Обновить данные">
+    <button mat-icon-button (click)="refresh()" matTooltip="Обновить" aria-label="Обновить данные">
       <mat-icon>refresh</mat-icon>
     </button>
   </header>
@@ -49,21 +49,21 @@
   @if (statusFilter(); as filter) {
     <div class="filter-note">
       <mat-icon>filter_alt</mat-icon>
-      <span>Показаны брони со статусом «<strong>{{ stayLabel[filter] }}</strong>» — {{ visibleRows.length }} из {{ reservations.length }}</span>
+      <span>Показаны брони со статусом «<strong>{{ stayLabel[filter] }}</strong>» — {{ visibleRows().length }} из {{ total() }}</span>
       <button mat-icon-button (click)="clearFilter()" aria-label="Сбросить фильтр">
         <mat-icon>close</mat-icon>
       </button>
     </div>
   }
 
-  @if (loading) {
+  @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   }
 
-  @if (visibleRows.length) {
+  @if (visibleRows().length) {
     <mat-card appearance="outlined" class="overflow-hidden">
       <div class="overflow-x-auto">
-        <table mat-table [dataSource]="visibleRows" matSort (matSortChange)="sortData($event)"
+        <table mat-table [dataSource]="visibleRows()" matSort (matSortChange)="sortData($event)"
                class="w-full dense-table">
 
           <ng-container matColumnDef="hotel">
@@ -126,13 +126,13 @@
       </div>
 
       <mat-paginator
-        [length]="total"
-        [pageIndex]="pageIndex"
-        [pageSize]="pageSize"
+        [length]="total()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
         [pageSizeOptions]="[10, 25, 50, 100]"
         (page)="onPage($event)" />
     </mat-card>
-  } @else if (!loading) {
+  } @else if (!loading()) {
     <mat-card appearance="outlined">
       <app-empty-state
         icon="event_busy"

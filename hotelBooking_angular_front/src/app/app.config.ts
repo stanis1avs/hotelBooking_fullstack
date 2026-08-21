@@ -26,6 +26,7 @@ import { routes } from './app.routes';
 import { provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideEffects } from '@ngrx/effects';
+import { adminFeature } from './reducers/admin.reducer';
 import { authFeature } from './reducers/auth.reducer';
 import { hotelsFeature } from './reducers/hotels.reducer';
 import { roomsFeature } from './reducers/rooms.reducer';
@@ -36,6 +37,7 @@ import { credentialsInterceptor } from './core/credentials-interceptor';
 import { authInterceptor } from './core/auth-interceptor';
 import { AuthSession } from './core/auth-session';
 import { russianPaginatorIntl } from './core/paginator-intl';
+import { AdminEffects } from './effects/admin.effects';
 import { AuthEffects } from './effects/auth.effects';
 import { HotelsEffects } from './effects/hotels.effects';
 import { RoomsEffects } from './effects/rooms.effects';
@@ -71,6 +73,7 @@ export const appConfig: ApplicationConfig = {
       withViewTransitions({ skipInitialTransition: true })
     ),
     provideStore({
+      [adminFeature.name]: adminFeature.reducer,
       [authFeature.name]: authFeature.reducer,
       [hotelsFeature.name]: hotelsFeature.reducer,
       [roomsFeature.name]: roomsFeature.reducer,
@@ -78,7 +81,10 @@ export const appConfig: ApplicationConfig = {
       [supportFeature.name]: supportFeature.reducer,
       [usersFeature.name]: usersFeature.reducer,
     }),
-    provideEffects([AuthEffects, HotelsEffects, RoomsEffects, ReservationsEffects, SupportEffects, UsersEffects]),
+    provideEffects([
+      AdminEffects, AuthEffects, HotelsEffects, RoomsEffects,
+      ReservationsEffects, SupportEffects, UsersEffects,
+    ]),
     // В проде DevTools отдавали наружу всё состояние приложения, включая данные пользователей.
     provideStoreDevtools({
       maxAge: 25,

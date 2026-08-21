@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -6,10 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Observable } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
 
-import { Api, HotelDto } from '../../core/api';
-import { ApolloService } from '../../graphql/apollo.service';
+import { AdminActions } from '../../actions/admin.actions';
+import { selectAdminHotels, selectAdminHotelsLoading, selectAdminSaving } from '../../selectors/admin.selectors';
+import { HotelDto } from '../../core/api';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
@@ -25,41 +28,45 @@ import { errorMessage } from '../../core/error-message';
   ],
   templateUrl: './admin-hotels.html',
   styleUrl: './admin-hotels.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminHotels implements OnInit {
-  /** REST остался только под multipart, всё остальное — GraphQL. */
-  private readonly api = inject(Api);
-  private readonly apollo = inject(ApolloService);
+export class AdminHotels {
+  private readonly store = inject(Store);
+  private readonly actions$ = inject(Actions);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  hotels: HotelDto[] = [];
-  loading = false;
-  saving = false;
+  readonly hotels = toSignal(this.store.select(selectAdminHotels), { initialValue: [] });
+  readonly loading = toSignal(this.store.select(selectAdminHotelsLoading), { initialValue: false });
+  readonly saving = toSignal(this.store.select(selectAdminSaving), { initialValue: false });
 
   readonly amenityMeta = AMENITY_META;
 
-  ngOnInit(): void {
-    this.loadHotels();
+  constructor() {
+    this.store.dispatch(AdminActions.loadHotels());
+
+    this.actions$
+      .pipe(ofType(AdminActions.saveHotelSuccess), takeUntilDestroyed())
+      .subscribe(({ wasEditing }) =>
+        this.snackBar.open(wasEditing ? 'Изменения сохранены' : 'Отель создан', 'OK', { duration: 4000 })
+      );
+
+    this.actions$
+      .pipe(ofType(AdminActions.deleteHotelSuccess), takeUntilDestroyed())
+      .subscribe(() => this.snackBar.open('Отель удалён', 'OK', { duration: 4000 }));
+
+    this.actions$
+      .pipe(
+        ofType(AdminActions.loadHotelsFailure, AdminActions.saveHotelFailure, AdminActions.deleteHotelFailure),
+        takeUntilDestroyed(),
+      )
+      .subscribe(({ error }) =>
+        this.snackBar.open(errorMessage(error, 'Не удалось выполнить действие'), 'Понятно', { duration: 6000 })
+      );
   }
 
   loadHotels(): void {
-    this.loading = true;
-    // Отдельный запрос без дат: у публичного они обязательны, и админ видел
-    // только то, что свободно на подставленный период.
-    this.apollo.adminGetHotels({ limit: 50 }).subscribe({
-      next: (page) => {
-        this.hotels = page.items;
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.loading = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось загрузить отели'), 'Понятно', { duration: 5000 });
-      },
-    });
+    this.store.dispatch(AdminActions.loadHotels());
   }
 
   stars(n: number): number[] {
@@ -85,24 +92,8 @@ export class AdminHotels implements OnInit {
         .afterClosed()
         .subscribe((payload: FormData | undefined) => {
           if (!payload) return;
-          this.submit(hotel ? this.api.updateHotel(hotel.id, payload) : this.api.createHotel(payload), !!hotel);
+          this.store.dispatch(AdminActions.saveHotel({ id: hotel?.id ?? null, payload }));
         });
-    });
-  }
-
-  private submit(call$: Observable<unknown>, wasEditing: boolean): void {
-    this.saving = true;
-    call$.subscribe({
-      next: () => {
-        this.saving = false;
-        this.snackBar.open(wasEditing ? 'Изменения сохранены' : 'Отель создан', 'OK', { duration: 4000 });
-        this.loadHotels();
-      },
-      error: (error) => {
-        this.saving = false;
-        this.cdr.markForCheck();
-        this.snackBar.open(errorMessage(error, 'Не удалось сохранить'), 'Понятно', { duration: 6000 });
-      },
     });
   }
 
@@ -115,14 +106,7 @@ export class AdminHotels implements OnInit {
       destructive: true,
     }).subscribe((confirmed) => {
       if (!confirmed) return;
-      this.apollo.deleteHotel(hotel.id).subscribe({
-        next: () => {
-          this.snackBar.open('Отель удалён', 'OK', { duration: 4000 });
-          this.loadHotels();
-        },
-        error: (error) =>
-          this.snackBar.open(errorMessage(error, 'Не удалось удалить отель'), 'Понятно', { duration: 5000 }),
-      });
+      this.store.dispatch(AdminActions.deleteHotel({ id: hotel.id }));
     });
   }
 }
