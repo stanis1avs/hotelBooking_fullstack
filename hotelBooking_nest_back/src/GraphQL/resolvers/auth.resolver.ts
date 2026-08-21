@@ -1,4 +1,5 @@
 import { Resolver, Mutation, Args, Query, Context } from "@nestjs/graphql";
+import { Throttle } from "@nestjs/throttler";
 import { UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Request, Response } from "express";
@@ -36,6 +37,14 @@ export class AuthResolver {
     };
   }
 
+  /**
+   * Пять попыток в минуту с адреса — защита от подбора пароля.
+   *
+   * Лимит стоял на REST-эндпоинте входа, но тот удалён вместе с остальным
+   * дублированием транспортов, и вход остался только здесь. Без этой строки
+   * подбор ограничивался бы лишь общим лимитом в 120 запросов в минуту.
+   */
+  @Throttle(5, 60)
   @Mutation(() => AuthPayloadType)
   async login(@Args("input") input: LoginInput, @Context() ctx: GqlContext): Promise<AuthPayloadType> {
     const user = await this.authProvider.validateUser(input.email, input.password);
@@ -47,6 +56,7 @@ export class AuthResolver {
     return { access_token, user: this.toUserType(userData) };
   }
 
+  @Throttle(5, 60)
   @Mutation(() => UserType)
   async register(@Args("input") input: RegisterInput): Promise<UserType> {
     // В RegisterInput нет поля role — роль назначается принудительно.

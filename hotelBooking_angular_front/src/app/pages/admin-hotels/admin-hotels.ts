@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 
 import { Api, HotelDto } from '../../core/api';
+import { ApolloService } from '../../graphql/apollo.service';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
@@ -26,7 +27,9 @@ import { errorMessage } from '../../core/error-message';
   styleUrl: './admin-hotels.scss',
 })
 export class AdminHotels implements OnInit {
+  /** REST остался только под multipart, всё остальное — GraphQL. */
   private readonly api = inject(Api);
+  private readonly apollo = inject(ApolloService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -43,11 +46,11 @@ export class AdminHotels implements OnInit {
 
   loadHotels(): void {
     this.loading = true;
-    // Без фиктивных дат 2024 года: раньше админ видел максимум 10 отелей,
-    // отфильтрованных по бронированиям того года.
-    this.api.getAllHotels({ limit: 50 }).subscribe({
-      next: (response) => {
-        this.hotels = response.body ?? [];
+    // Отдельный запрос без дат: у публичного они обязательны, и админ видел
+    // только то, что свободно на подставленный период.
+    this.apollo.adminGetHotels({ limit: 50 }).subscribe({
+      next: (page) => {
+        this.hotels = page.items;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -112,7 +115,7 @@ export class AdminHotels implements OnInit {
       destructive: true,
     }).subscribe((confirmed) => {
       if (!confirmed) return;
-      this.api.deleteHotel(hotel.id).subscribe({
+      this.apollo.deleteHotel(hotel.id).subscribe({
         next: () => {
           this.snackBar.open('Отель удалён', 'OK', { duration: 4000 });
           this.loadHotels();

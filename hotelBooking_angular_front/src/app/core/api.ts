@@ -141,13 +141,16 @@ export interface ReservationDto {
 })
 export class Api {
   private readonly host = environment.api.host;
-  private readonly e = environment.api.endpoints;
 
   constructor(private readonly http: HttpClient) {}
 
-  // Чтение и мутации данных идут через ApolloService.
-  // Здесь остаётся только то, что GraphQL не покрывает: загрузка файлов и удаление.
-
+  /**
+   * Единственное, что осталось за REST, — загрузка файлов.
+   *
+   * Всё чтение, удаление и остальные мутации живут в GraphQL. Здесь multipart:
+   * Apollo Client в этой сборке файлы не возит, а тащить ради двух форм
+   * graphql-upload с его серверной частью — обмен худший, чем два HTTP-вызова.
+   */
   createHotel(body: FormData) {
     return this.http.post<HotelDto>(`${this.host}/api/admin/hotels`, body);
   }
@@ -156,40 +159,11 @@ export class Api {
     return this.http.put<HotelDto>(`${this.host}/api/admin/hotels/${hotelId}`, body);
   }
 
-  deleteHotel(hotelId: Id) {
-    return this.http.delete<void>(`${this.host}/api/admin/hotels/${hotelId}`);
-  }
-
   createRoom(body: FormData) {
     return this.http.post<RoomDto>(`${this.host}/api/admin/hotel-rooms`, body);
   }
 
   updateRoom(roomId: Id, body: FormData) {
     return this.http.put<RoomDto>(`${this.host}/api/admin/hotel-rooms/${roomId}`, body);
-  }
-
-  deleteRoom(roomId: Id) {
-    return this.http.delete<void>(`${this.host}/api/admin/hotel-rooms/${roomId}`);
-  }
-
-  /**
-   * Полный список отелей для админки — без фильтра по датам.
-   * Раньше сюда подставлялись фиктивные даты 2024 года, из-за чего админ видел
-   * только первые десять отелей, да ещё и отфильтрованных по броням того года.
-   */
-  getAllHotels(params: { offset?: number; limit?: number; hotel?: string } = {}) {
-    return this.http.get<HotelDto[]>(`${this.host}${this.e.getHotels}`, {
-      params: {
-        offset: params.offset ?? 0,
-        limit: params.limit ?? 50,
-        ...(params.hotel ? { hotel: params.hotel } : {}),
-      },
-      observe: 'response',
-    });
-  }
-
-  /** Номера для админки — включая отключённые. */
-  getAdminRooms(params: { hotel: Id }) {
-    return this.http.get<RoomDto[]>(`${this.host}/api/admin/hotel-rooms`, { params: { hotel: params.hotel } });
   }
 }

@@ -1,9 +1,13 @@
-import { Resolver, Query, Args } from "@nestjs/graphql";
+import { Resolver, Query, Mutation, Args, Int } from "@nestjs/graphql";
+import { UseGuards } from "@nestjs/common";
 import { HotelsProvider } from "../../Providers/hotels.provider";
 import { ReservationsProvider } from "../../Providers/reservations.provider";
 import { HotelType, HotelsPageType } from "../types/hotel.type";
 import { SearchHotelsArgs } from "../inputs/search-hotels.args";
 import { SendHotel } from "../../Interface/Hotels";
+import { GqlJwtAuthGuard } from "../guards/gql-jwt.guard";
+import { GqlRolesGuard } from "../guards/gql-roles.guard";
+import { Roles } from "../decorators/roles.decorator";
 
 @Resolver(() => HotelType)
 export class HotelsResolver {
@@ -48,6 +52,37 @@ export class HotelsResolver {
       this.hotelsProvider.countHotels(params, reservedHotelIds),
     ]);
     return { items: hotels.map((h) => this.toType(h, booked?.get(String(h.id)) ?? 0)), total };
+  }
+
+  /**
+   * Админский список отелей.
+   *
+   * Отдельно от `hotels`, потому что тому обязательны даты: он отсеивает занятое
+   * на период. Админке нужен весь фонд независимо от брони — раньше страница
+   * управления подставляла ради этого выдуманные даты 2024 года и теряла отели.
+   */
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("admin")
+  @Query(() => HotelsPageType)
+  async adminHotels(
+    @Args("limit", { type: () => Int, nullable: true }) limit?: number,
+    @Args("offset", { type: () => Int, nullable: true }) offset?: number,
+    @Args("search", { nullable: true }) search?: string
+  ): Promise<HotelsPageType> {
+    const params = { offset: offset ?? 0, limit, hotel: search, dateArrival: "", dateDeparture: "" };
+    const [hotels, total] = await Promise.all([
+      this.hotelsProvider.getAllHotels(params, null),
+      this.hotelsProvider.countHotels(params, null),
+    ]);
+    return { items: hotels.map((h) => this.toType(h)), total };
+  }
+
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("admin")
+  @Mutation(() => Boolean)
+  async deleteHotel(@Args("id") id: string): Promise<boolean> {
+    await this.hotelsProvider.removeHotel(id);
+    return true;
   }
 
   /** Карточка отеля для страницы с номерами. */

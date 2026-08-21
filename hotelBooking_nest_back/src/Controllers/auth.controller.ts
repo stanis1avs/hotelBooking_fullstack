@@ -1,40 +1,22 @@
-import { Body, Controller, HttpStatus, Post, Req, Request, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, HttpStatus, Post, Req, Request, Res, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { Throttle } from "@nestjs/throttler";
 import { Request as ExpressRequest, Response } from "express";
 import { AuthProvider } from "../Providers/auth.provider";
-import { LoginDto } from "../Interface/Users";
 import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from "../Auth/refresh-cookie";
 
+/**
+ * Единственный REST-контроллер аутентификации, и остался он не по недосмотру.
+ *
+ * Вход, регистрация и текущий пользователь переехали в GraphQL — здесь их больше
+ * нет. А вот обновление токена увести туда нельзя: его вызывает HTTP-интерцептор
+ * в ответ на 401, и запрос через Apollo уходил бы в тот же интерцептор,
+ * то есть в рекурсию. Выход рядом с обновлением по той же причине: обе операции
+ * работают с httpOnly-cookie, которую слой данных не видит вовсе.
+ */
 @Controller("/api/auth")
 export class AuthController {
   constructor(private auth: AuthProvider) {}
-
-  /**
-   * Вход. Стратегия Passport local убрана: она была лишним слоем, который
-   * вызывал тот же validateUser, но давал второй путь входа со своей
-   * обработкой ошибок — REST и GraphQL отвечали по-разному на одну и ту же
-   * ситуацию. Теперь оба вызывают провайдер напрямую.
-   *
-   * Пять попыток в минуту с одного адреса — защита от подбора пароля.
-   */
-  @Throttle(5, 60)
-  @Post("/login")
-  async login(@Body() body: LoginDto, @Req() req: ExpressRequest, @Res() res: Response): Promise<void> {
-    const user = await this.auth.validateUser(body.email, body.password);
-    if (!user) {
-      throw new UnauthorizedException("Неверный адрес или пароль");
-    }
-    const { access_token, refresh_token, userData } = await this.auth.issueTokens(user);
-    setRefreshCookie(res, refresh_token, req);
-    res.status(HttpStatus.OK).send({ ...userData, access_token });
-  }
-
-  @UseGuards(AuthGuard("jwt"))
-  @Post("/user")
-  async getUserByToken(@Request() req, @Res() res: Response): Promise<void> {
-    res.status(HttpStatus.OK).send({ ...req.user });
-  }
 
   @Throttle(30, 60)
   @UseGuards(AuthGuard("jwt-refresh-token"))

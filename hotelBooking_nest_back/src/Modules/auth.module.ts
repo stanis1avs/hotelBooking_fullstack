@@ -9,7 +9,6 @@ import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
 import { JwtStrategy } from "../Auth/jwt.strategy";
 import { JwtRefreshStrategy } from "../Auth/jwt-refresh.strategy";
 import { AuthController } from "../Controllers/auth.controller";
-import { ClientAuthController } from "../Controllers/clientAuth.controller";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
@@ -24,7 +23,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, ClientAuthController],
+  // Из REST остались только refresh и logout: их вызывает HTTP-интерцептор,
+  // и увести их в Apollo нельзя — получилась бы рекурсия на обновлении токена.
+  controllers: [AuthController],
   providers: [AuthProvider, UsersProvider, TokenBlacklistProvider, JwtStrategy, JwtRefreshStrategy],
   // Blacklist общий на всё приложение: GraphQL-модуль переиспользует тот же экземпляр.
   exports: [AuthProvider, TokenBlacklistProvider],

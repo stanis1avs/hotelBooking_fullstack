@@ -18,8 +18,8 @@ import {
 } from '../core/api';
 
 import { ME_QUERY } from './queries/auth.queries';
-import { GET_HOTEL, GET_HOTELS } from './queries/hotels.queries';
-import { GET_HOTEL_ROOMS } from './queries/rooms.queries';
+import { ADMIN_HOTELS, GET_HOTEL, GET_HOTELS } from './queries/hotels.queries';
+import { ADMIN_ROOMS, GET_HOTEL_ROOMS } from './queries/rooms.queries';
 import { MANAGER_STATS } from './queries/stats.queries';
 import { MY_RESERVATIONS, ALL_RESERVATIONS } from './queries/reservations.queries';
 import { ADMIN_USERS, MANAGER_USERS } from './queries/users.queries';
@@ -32,6 +32,7 @@ import {
 
 import { LOGIN_MUTATION, LOGOUT_MUTATION, REGISTER_MUTATION } from './mutations/auth.mutations';
 import { CREATE_RESERVATION, DELETE_RESERVATION } from './mutations/reservations.mutations';
+import { DELETE_HOTEL, DELETE_ROOM } from './mutations/hotels.mutations';
 import { ADMIN_CREATE_USER, ADMIN_UPDATE_USER } from './mutations/users.mutations';
 import {
   CLOSE_SUPPORT_REQUEST,
@@ -114,6 +115,23 @@ export class ApolloService {
       .pipe(map((res) => res.data!.hotel));
   }
 
+  /** Список для админки: без дат, вместе с занятыми на любой период. */
+  adminGetHotels(params: { limit?: number; offset?: number; search?: string } = {}): Observable<PageDto<HotelDto>> {
+    return this.apollo
+      .query<{ adminHotels: PageDto<HotelDto> }>({
+        query: ADMIN_HOTELS,
+        variables: { limit: params.limit ?? 50, offset: params.offset ?? 0, search: params.search },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(map((res) => res.data!.adminHotels));
+  }
+
+  deleteHotel(id: string): Observable<void> {
+    return this.apollo
+      .mutate<{ deleteHotel: boolean }>({ mutation: DELETE_HOTEL, variables: { id } })
+      .pipe(map(() => undefined));
+  }
+
   getManagerStats(days = 30): Observable<ManagerStatsDto> {
     return this.apollo
       .query<{ managerStats: ManagerStatsDto }>({
@@ -134,6 +152,23 @@ export class ApolloService {
         fetchPolicy: 'network-only',
       })
       .pipe(map((res) => res.data!.hotelRooms));
+  }
+
+  /** Админский список номеров — вместе с отключёнными. */
+  adminGetRooms(hotel: string): Observable<RoomDto[]> {
+    return this.apollo
+      .query<{ adminRooms: RoomDto[] }>({
+        query: ADMIN_ROOMS,
+        variables: { hotel },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(map((res) => res.data!.adminRooms));
+  }
+
+  deleteRoom(id: string): Observable<void> {
+    return this.apollo
+      .mutate<{ deleteRoom: boolean }>({ mutation: DELETE_ROOM, variables: { id } })
+      .pipe(map(() => undefined));
   }
 
   // ── Reservations ─────────────────────────────────────────────────────────────

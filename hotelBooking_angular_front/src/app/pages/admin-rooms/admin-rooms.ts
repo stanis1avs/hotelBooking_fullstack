@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 
 import { Api, HotelDto, RoomDto } from '../../core/api';
+import { ApolloService } from '../../graphql/apollo.service';
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
@@ -27,7 +28,9 @@ import { errorMessage } from '../../core/error-message';
   styleUrl: './admin-rooms.scss',
 })
 export class AdminRooms implements OnInit {
+  /** REST остался только под multipart, всё остальное — GraphQL. */
   private readonly api = inject(Api);
+  private readonly apollo = inject(ApolloService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -45,9 +48,9 @@ export class AdminRooms implements OnInit {
 
   loadHotels(): void {
     this.hotelsLoading = true;
-    this.api.getAllHotels({ limit: 50 }).subscribe({
-      next: (response) => {
-        this.hotels = response.body ?? [];
+    this.apollo.adminGetHotels({ limit: 50 }).subscribe({
+      next: (page) => {
+        this.hotels = page.items;
         this.hotelsLoading = false;
         this.cdr.markForCheck();
       },
@@ -67,9 +70,9 @@ export class AdminRooms implements OnInit {
   loadRooms(): void {
     if (!this.selectedHotelId) return;
     this.roomsLoading = true;
-    // Админский эндпоинт возвращает и отключённые номера: через публичный
+    // Админский запрос возвращает и отключённые номера: через публичный
     // их не было видно, а значит нельзя было включить обратно.
-    this.api.getAdminRooms({ hotel: this.selectedHotelId }).subscribe({
+    this.apollo.adminGetRooms(this.selectedHotelId).subscribe({
       next: (rooms) => {
         this.rooms = rooms;
         this.roomsLoading = false;
@@ -133,7 +136,7 @@ export class AdminRooms implements OnInit {
       destructive: true,
     }).subscribe((confirmed) => {
       if (!confirmed) return;
-      this.api.deleteRoom(room.id).subscribe({
+      this.apollo.deleteRoom(room.id).subscribe({
         next: () => {
           this.snackBar.open('Номер удалён', 'OK', { duration: 4000 });
           this.loadRooms();

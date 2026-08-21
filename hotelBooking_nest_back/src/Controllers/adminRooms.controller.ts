@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Put, Delete, Get, Body, Param, Query, Res, UseGuards, HttpStatus,
+  Controller, Post, Put, Body, Param, Res, UseGuards, HttpStatus,
   UseInterceptors, UploadedFiles, BadRequestException,
 } from "@nestjs/common";
 import { Response, Express } from "express";
@@ -7,23 +7,19 @@ import { RolesGuard } from "../Decorators/roles.decorator";
 import { Role } from "../Decorators/setmetadata.decorator";
 import { AuthGuard } from "@nestjs/passport";
 import { FilesInterceptor } from "@nestjs/platform-express";
-import { CreateRoomDto, SearchRoomsParams, UpdateRoomDto, UpdateRoomParams } from "../Interface/Hotels";
+import { CreateRoomDto, UpdateRoomDto, UpdateRoomParams } from "../Interface/Hotels";
 import { RoomsProvider } from "../Providers/rooms.provider";
 import { MAX_IMAGES_PER_ROOM, assertRealImage, imageUploadOptions } from "../utils/upload.options";
 
 @Controller("/api/admin/hotel-rooms")
 @UseGuards(AuthGuard("jwt"), RolesGuard)
 @Role("admin")
+/**
+ * Из REST здесь остались только операции с файлами: чтение и удаление
+ * живут в GraphQL (`adminRooms`, `deleteRoom`).
+ */
 export class AdminRoomsController {
   constructor(private rooms: RoomsProvider) {}
-
-  // Публичный эндпоинт отдаёт только номера в продаже, а админке нужны все —
-  // иначе отключённый номер невозможно найти и включить обратно.
-  @Get("/")
-  async getRooms(@Query() query: SearchRoomsParams, @Res() res: Response): Promise<void> {
-    const rooms = await this.rooms.getAllRooms(query, false);
-    res.status(HttpStatus.OK).send(rooms);
-  }
 
   @Post("/")
   @UseInterceptors(FilesInterceptor("images", MAX_IMAGES_PER_ROOM, imageUploadOptions(MAX_IMAGES_PER_ROOM)))
@@ -56,11 +52,5 @@ export class AdminRoomsController {
     }
     const editedRoom = await this.rooms.editRoom(id, patch);
     res.status(HttpStatus.OK).send(editedRoom);
-  }
-
-  @Delete(":id")
-  async deleteRoom(@Param("id") id: string, @Res() res: Response): Promise<void> {
-    await this.rooms.removeRoom(id);
-    res.status(HttpStatus.NO_CONTENT).send();
   }
 }

@@ -25,27 +25,38 @@
 ### Backend
 1. **NestJS** — основной фреймворк
 2. **MongoDB** + **Mongoose** — база данных
-3. **JWT + Passport.js** — аутентификация (access + refresh токены)
-4. **Socket.IO** — реалтайм чат поддержки
-5. **Apollo Server**
+3. **Apollo Server** + **@nestjs/graphql** — GraphQL-схема по code-first
+4. **JWT + Passport.js** — аутентификация: access в памяти клиента,
+   refresh в httpOnly-cookie, со своим секретом, `jti` и отзывом на сервере
+5. **class-validator** + **class-transformer** — валидация DTO и аргументов GraphQL
+6. **@nestjs/throttler** — ограничение частоты запросов на входе и регистрации
+7. **helmet** — заголовки безопасности
+8. **bcrypt** — хеширование паролей
+9. **Socket.IO** — шлюз чата поддержки
+10. **Jest** — юнит-тесты провайдеров
 
 ### В разработке
-- **Whisper AI + Web Speech API** - общение с техподдержкой
-- **Hyperledger Fabric** — проверка бронирования через блокчейн
-- **Hugging Face** — фильтр сообщений
-- **Python аддон** — Time-series ML - анализ загруженности отелей
+- **ЮKassa** — оплата брони: депозит, правила отмены, возврат
+- **Temporal** — сага бронирования и оплаты, письма и отложенные напоминания
+- **Hugging Face** — смысловой поиск отелей: эмбеддинги вместо поиска по подстроке
+- **sharp** — нарезка изображений в webp трёх размеров под `srcset`
+- **OpenTelemetry** — трассировка запросов, следом метрики
+- **Python-аддон** — Time-series ML, прогноз загрузки для дашборда менеджера
+- **Hyperledger Fabric** — общий реестр квот и комиссии с каналом продаж
+- **Redis** — когда экземпляров станет больше одного
 
 ### Frontend (Angular — актуальный)
-1. **Angular 21** 
-2. **NgRx**
-3. **Angular Material**
-4. **Tailwind CSS**
+1. **Angular 21** — standalone-компоненты, сигналы, новый синтаксис шаблонов
+2. **NgRx** — store и effects
+3. **Angular Material 3** — системные токены темы
+4. **Tailwind CSS** — шкала текста завязана на токены M3
 5. **RxJS**
-6. **Apollo Client**
+6. **Apollo Client** — весь обмен данными, кроме загрузки файлов
+7. **Vitest** — юнит-тесты редьюсеров и утилит
 
 ### В разработке
-- **Socket.IO client**
-- **Three.js** — 3D визуализация отелей
+- **Socket.IO client** — живая доставка сообщений поддержки
+- **Three.js** — панорамы номеров 360°
 
 ### Frontend (React — legacy)
 > Первоначальная реализация, заменена на Angular.

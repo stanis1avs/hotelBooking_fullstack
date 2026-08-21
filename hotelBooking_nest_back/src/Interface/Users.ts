@@ -64,17 +64,6 @@ export class UpdateUserDto {
   role?: Role;
 }
 
-/** Тело запроса на вход. */
-export class LoginDto {
-  @Transform(lower)
-  @IsEmail({}, { message: "Некорректный адрес электронной почты" })
-  email: string;
-
-  @IsString()
-  @IsNotEmpty({ message: "Введите пароль" })
-  password: string;
-}
-
 /** Внутренний тип: то, что уходит в провайдер после разбора DTO. */
 export interface CreateUser {
   email: string;

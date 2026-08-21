@@ -33,3 +33,20 @@ export const GET_HOTEL = gql`
     }
   }
 `;
+
+/**
+ * Список для админки — без дат.
+ *
+ * Отдельно от GET_HOTELS: тому даты обязательны, он отсеивает занятое на период.
+ * Управлению отелями нужен весь фонд независимо от брони.
+ */
+export const ADMIN_HOTELS = gql`
+  query AdminHotels($limit: Int, $offset: Int, $search: String) {
+    adminHotels(limit: $limit, offset: $offset, search: $search) {
+      items {
+        ${HOTEL_CARD}
+      }
+      total
+    }
+  }
+`;

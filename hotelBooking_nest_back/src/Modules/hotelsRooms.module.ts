@@ -12,9 +12,7 @@ import { ReservationsProvider } from "../Providers/reservations.provider";
 import { HotelsProvider } from "../Providers/hotels.provider";
 import { FileStorage } from "../utils/file-storage";
 import { AdminRoomsController } from "../Controllers/adminRooms.controller";
-import { CommonRoomsController } from "../Controllers/commonRooms.controller";
 import { AdminHotelsController } from "../Controllers/adminHotels.controller";
-import { CommonHotelsController } from "../Controllers/commonHotels.controller";
 
 @Module({
   imports: [
@@ -28,7 +26,9 @@ import { CommonHotelsController } from "../Controllers/commonHotels.controller";
     // Ограничения размера и типа задаются на уровне интерцепторов — см. utils/upload.options.ts.
     MulterModule.register({ storage: memoryStorage() }),
   ],
-  controllers: [AdminHotelsController, AdminRoomsController, CommonRoomsController, CommonHotelsController],
+  // REST оставлен только под multipart: создание и правка возят файлы,
+  // всё остальное чтение и удаление живёт в GraphQL.
+  controllers: [AdminHotelsController, AdminRoomsController],
   providers: [FileStorage, HotelsProvider, RoomsProvider, ReservationsProvider, UsersProvider],
 })
 export class HotelRoomsModule {}

@@ -1,7 +1,11 @@
-import { Resolver, Query, Args } from "@nestjs/graphql";
+import { Resolver, Query, Mutation, Args } from "@nestjs/graphql";
+import { UseGuards } from "@nestjs/common";
 import { RoomsProvider } from "../../Providers/rooms.provider";
 import { RoomType } from "../types/room.type";
 import { SendRoom } from "../../Interface/Hotels";
+import { GqlJwtAuthGuard } from "../guards/gql-jwt.guard";
+import { GqlRolesGuard } from "../guards/gql-roles.guard";
+import { Roles } from "../decorators/roles.decorator";
 
 @Resolver(() => RoomType)
 export class RoomsResolver {
@@ -42,5 +46,25 @@ export class RoomsResolver {
   async hotelRoom(@Args("id") id: string): Promise<RoomType | null> {
     const r = await this.roomsProvider.getIdRoom(id);
     return r ? this.toType(r) : null;
+  }
+
+  /**
+   * Админский список: в отличие от hotelRooms отдаёт и отключённые номера,
+   * иначе снятый с продажи номер невозможно найти и вернуть обратно.
+   */
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("admin")
+  @Query(() => [RoomType])
+  async adminRooms(@Args("hotel") hotel: string): Promise<RoomType[]> {
+    const rooms = await this.roomsProvider.getAllRooms({ hotel }, false);
+    return rooms.map((r) => this.toType(r));
+  }
+
+  @UseGuards(GqlJwtAuthGuard, GqlRolesGuard)
+  @Roles("admin")
+  @Mutation(() => Boolean)
+  async deleteRoom(@Args("id") id: string): Promise<boolean> {
+    await this.roomsProvider.removeRoom(id);
+    return true;
   }
 }

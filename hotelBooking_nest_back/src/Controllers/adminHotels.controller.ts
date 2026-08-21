@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Put, Delete, Body, Param, Res, UseGuards, HttpStatus,
+  Controller, Post, Put, Body, Param, Res, UseGuards, HttpStatus,
   UseInterceptors, UploadedFile, BadRequestException,
 } from "@nestjs/common";
 import { Response, Express } from "express";
@@ -16,6 +16,7 @@ import { assertRealImage, imageUploadOptions } from "../utils/upload.options";
 @Controller("/api/admin/hotels")
 @UseGuards(AuthGuard("jwt"), RolesGuard)
 @Role("admin")
+/** Из REST остались только операции с файлами: удаление живёт в GraphQL. */
 export class AdminHotelsController {
   constructor(private hotels: HotelsProvider) {}
 
@@ -48,11 +49,5 @@ export class AdminHotelsController {
     }
     const editedHotel = await this.hotels.editHotel(id, patch);
     res.status(HttpStatus.OK).send(editedHotel);
-  }
-
-  @Delete(":id")
-  async deleteHotel(@Param("id") id: string, @Res() res: Response): Promise<void> {
-    await this.hotels.removeHotel(id);
-    res.status(HttpStatus.NO_CONTENT).send();
   }
 }

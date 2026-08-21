@@ -6,9 +6,6 @@ import { MessageSchema, Message } from "../Models/Messages";
 import { UserSchema, User } from "../Models/Users";
 import { SupportProvider } from "../Providers/support.provider";
 import { SupportChatGateway } from "../Providers/supportChat.gateway";
-import { ClientSupportController } from "../Controllers/clientSupport.controller";
-import { ManagerSupportController } from "../Controllers/managerSupport.controller";
-import { CommonSupportController } from "../Controllers/commonSupport.controller";
 import { WsAuthGuard } from "../Auth/ws-auth";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
@@ -27,7 +24,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       inject: [ConfigService],
     }),
   ],
-  controllers: [CommonSupportController, ClientSupportController, ManagerSupportController],
+  controllers: [],
   providers: [SupportProvider, SupportChatGateway, WsAuthGuard],
 })
 export class SupportModule {}
