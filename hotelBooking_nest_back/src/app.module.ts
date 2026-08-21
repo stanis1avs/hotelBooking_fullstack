@@ -6,6 +6,11 @@ import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { GqlThrottlerGuard } from "./Auth/gql-throttler.guard";
 import { join } from "path";
+// import ... = require: allowSyntheticDefaultImports пропускает обычный default-импорт
+// на этапе проверки типов, но в CommonJS-выводе он превращается в `.default`,
+// которого у этого пакета нет — падало бы при старте, а не при сборке.
+import depthLimit = require("graphql-depth-limit");
+import { complexityPlugin } from "./GraphQL/complexity.plugin";
 import { HotelRoomsModule } from "./Modules/hotelsRooms.module";
 import { UserManagementModule } from "./Modules/userManagement.module";
 import { ReservationModule } from "./Modules/reservation.module";
@@ -41,6 +46,15 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
           autoSchemaFile: isProd ? true : join(process.cwd(), "src/schema.gql"),
           sortSchema: true,
           context: ({ req, res }) => ({ req, res }),
+          /**
+           * Глубина. Самый вложенный запрос приложения — `hotelRooms → hotel → title`,
+           * это три уровня. Порог 7 оставляет запас и при этом закрывает рекурсию,
+           * которая появится, как только у отеля заведут поле со списком номеров:
+           * тогда `hotel → rooms → hotel → …` можно раскрутить на любую глубину,
+           * и один запрос превратится в тысячи обращений к базе.
+           */
+          validationRules: [depthLimit(7)],
+          plugins: [complexityPlugin(Number(configService.get("GRAPHQL_MAX_COMPLEXITY") ?? 1000))],
           // В проде схему наружу не показываем и песочницу не поднимаем.
           introspection: !isProd,
           playground: !isProd,
