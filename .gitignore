@@ -19,3 +19,5 @@ Thumbs.db
 # Рабочие заметки: живут локально, в репозиторий не идут
 BACKLOG.md
 GRAPHQL.md
+AUTH.md
+SECURITY.md
