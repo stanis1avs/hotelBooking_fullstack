@@ -66,6 +66,8 @@ export interface ManagerReservationDto {
 }
 
 export type Amenity = 'wifi' | 'parking' | 'breakfast' | 'pool' | 'spa' | 'pets';
+/** Тип направления: по нему работают подборки в поиске. */
+export type Destination = 'sea' | 'mountains' | 'city' | 'countryside' | 'ski';
 
 export interface HotelDto {
   id: Id;
@@ -77,6 +79,7 @@ export interface HotelDto {
   rating: number;
   reviewsCount: number;
   amenities: Amenity[];
+  destinations: Destination[];
   /** Минимальная цена среди доступных номеров, ₽ за ночь */
   minPrice: number;
   roomsCount: number;

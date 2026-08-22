@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import * as mongoose from "mongoose";
-import { AMENITIES } from "../Interface/Hotels";
+import { AMENITIES, DESTINATIONS } from "../Interface/Hotels";
 
 @Schema({ versionKey: false })
 export class Hotel {
@@ -26,6 +26,10 @@ export class Hotel {
 
   @Prop({ type: [String], enum: AMENITIES, default: [] })
   amenities: string[];
+
+  /** Тип направления: море, горы, город. По нему работают подборки в поиске. */
+  @Prop({ type: [String], enum: DESTINATIONS, default: [], index: true })
+  destinations: string[];
 
   @Prop({ required: true })
   createdAt: Date;

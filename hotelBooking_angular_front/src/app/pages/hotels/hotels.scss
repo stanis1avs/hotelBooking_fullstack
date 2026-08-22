@@ -106,6 +106,36 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Второй ряд — удобства. Он подчинён первому: кнопки ниже и тише,
+   иначе два одинаковых ряда читаются как один длинный список. */
+.hero-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-presets.secondary {
+  margin-top: 0;
+}
+
+.preset.small {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.11);
+}
+
+.preset.reset {
+  background: none;
+  border-color: transparent;
+  color: rgba(220, 234, 230, 0.75);
+}
+.preset.reset:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* Выбранная подборка. Раньше кнопки фильтровали выдачу,
    но выглядели одинаково — понять, какая применена, было нельзя. */
 .preset.active {

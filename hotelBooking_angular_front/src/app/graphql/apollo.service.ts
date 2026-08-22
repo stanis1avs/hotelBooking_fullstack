@@ -95,6 +95,8 @@ export class ApolloService {
     hotel?: string;
     dateArrival: string;
     dateDeparture: string;
+    destinations?: string[];
+    amenities?: string[];
   }): Observable<PageDto<HotelDto>> {
     return this.apollo
       .query<{ hotels: PageDto<HotelDto> }>({

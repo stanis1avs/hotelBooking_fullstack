@@ -27,6 +27,7 @@ export class HotelsResolver {
       rating: h.rating,
       reviewsCount: h.reviewsCount,
       amenities: h.amenities,
+      destinations: h.destinations,
       minPrice: h.minPrice,
       roomsCount: h.roomsCount,
       freeRooms: Math.max(0, h.roomsCount - booked),
@@ -45,6 +46,8 @@ export class HotelsResolver {
       hotel: args.hotel,
       dateArrival: args.dateArrival,
       dateDeparture: args.dateDeparture,
+      destinations: args.destinations,
+      amenities: args.amenities,
     };
     // Оба запроса идут по одному условию, поэтому считаем их параллельно.
     const [hotels, total] = await Promise.all([

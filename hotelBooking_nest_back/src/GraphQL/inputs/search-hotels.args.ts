@@ -1,5 +1,6 @@
 import { ArgsType, Field, Int } from "@nestjs/graphql";
-import { IsDateString, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
+import { IsArray, IsDateString, IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
+import { AMENITIES, Amenity, DESTINATIONS, Destination } from "../../Interface/Hotels";
 
 /**
  * Глобальный ValidationPipe работает с whitelist и forbidNonWhitelisted,
@@ -35,4 +36,16 @@ export class SearchHotelsArgs {
   @Field()
   @IsDateString({}, { message: "Дата выезда должна быть в формате ГГГГ-ММ-ДД" })
   dateDeparture: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsIn(DESTINATIONS, { each: true })
+  destinations?: Destination[];
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsIn(AMENITIES, { each: true })
+  amenities?: Amenity[];
 }

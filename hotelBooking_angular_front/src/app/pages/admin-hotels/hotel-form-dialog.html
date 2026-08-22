@@ -48,6 +48,18 @@
     </mat-form-field>
 
     <div class="wide">
+      <p class="field-label">Направление</p>
+      <mat-chip-listbox multiple formControlName="destinations" aria-label="Тип направления">
+        @for (d of destinationList; track d.value) {
+          <mat-chip-option [value]="d.value">
+            <mat-icon>{{ d.icon }}</mat-icon>
+            {{ d.label }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+
+    <div class="wide">
       <p class="field-label">Удобства</p>
       <mat-chip-listbox multiple formControlName="amenities" aria-label="Удобства отеля">
         @for (a of amenityList; track a.value) {

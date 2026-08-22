@@ -30,6 +30,10 @@ export class HotelType {
   @Field(() => [String])
   amenities: string[];
 
+  /** Тип направления: по нему работают подборки «К морю», «В горы». */
+  @Field(() => [String])
+  destinations: string[];
+
   /** Минимальная цена среди доступных номеров, ₽ за ночь */
   @Field(() => Int)
   minPrice: number;

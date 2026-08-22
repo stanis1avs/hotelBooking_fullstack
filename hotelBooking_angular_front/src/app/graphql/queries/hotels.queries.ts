@@ -10,14 +10,23 @@ const HOTEL_CARD = `
   rating
   reviewsCount
   amenities
+  destinations
   minPrice
   roomsCount
   freeRooms
 `;
 
 export const GET_HOTELS = gql`
-  query GetHotels($offset: Int, $limit: Int, $hotel: String, $dateArrival: String!, $dateDeparture: String!) {
-    hotels(offset: $offset, limit: $limit, hotel: $hotel, dateArrival: $dateArrival, dateDeparture: $dateDeparture) {
+  query GetHotels(
+    $offset: Int, $limit: Int, $hotel: String,
+    $dateArrival: String!, $dateDeparture: String!,
+    $destinations: [String!], $amenities: [String!]
+  ) {
+    hotels(
+      offset: $offset, limit: $limit, hotel: $hotel,
+      dateArrival: $dateArrival, dateDeparture: $dateDeparture,
+      destinations: $destinations, amenities: $amenities
+    ) {
       items {
         ${HOTEL_CARD}
       }

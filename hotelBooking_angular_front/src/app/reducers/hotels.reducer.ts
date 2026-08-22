@@ -1,6 +1,6 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
 import { HotelsActions } from '../actions/hotels.actions';
-import { HotelDto } from '../core/api';
+import { Amenity, Destination, HotelDto } from '../core/api';
 
 export const hotelsFeatureKey = 'hotels';
 
@@ -15,6 +15,8 @@ export interface State {
   term: string;
   dateArrival: string;
   dateDeparture: string;
+  destinations: Destination[];
+  amenities: Amenity[];
 }
 
 function toIsoDate(d: Date): string {
@@ -34,6 +36,8 @@ export const initialState: State = {
   offset: 0,
   limit: 12,
   term: '',
+  destinations: [],
+  amenities: [],
   dateArrival: toIsoDate(today),
   dateDeparture: toIsoDate(in7days),
 };
@@ -42,6 +46,7 @@ export const reducer = createReducer(
   initialState,
   on(HotelsActions.setSearchTerm, (state, { term }) => ({ ...state, term })),
   on(HotelsActions.setDates, (state, { dateArrival, dateDeparture }) => ({ ...state, dateArrival, dateDeparture })),
+  on(HotelsActions.setFilters, (state, { destinations, amenities }) => ({ ...state, destinations, amenities })),
 
   // Смещение и размер страницы держим в сторе: по ним пагинатор
   // восстанавливает своё положение после каждой загрузки.

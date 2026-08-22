@@ -49,6 +49,25 @@ const AMENITY_SETS = [
 const ROOM_NAMES = ['Стандарт', 'Улучшенный', 'Полулюкс', 'Люкс', 'Семейный', 'Студия'];
 const BEDS = ['Одна двуспальная', 'Две односпальные', 'Двуспальная + диван', 'Две двуспальные'];
 
+/**
+ * Направление выводится из города — это единственный признак, по которому
+ * его вообще можно определить у существующих записей. У новых отелей
+ * направления проставляет администратор в форме.
+ */
+const DESTINATION_BY_CITY = {
+  'Сочи': ['sea'],
+  'Калининград': ['sea'],
+  'Владивосток': ['sea'],
+  'Мурманск': ['sea'],
+  'Карелия': ['mountains', 'countryside'],
+  'Выборг': ['countryside'],
+  'Суздаль': ['countryside'],
+  'Москва': ['city'],
+  'Санкт-Петербург': ['city'],
+  'Казань': ['city'],
+  'Нижний Новгород': ['city'],
+};
+
 /** Если город назван в самом названии отеля — берём его, а не случайный. */
 const CITY_HINTS = [
   [/moscow|москв/i, 'Москва'],
@@ -88,6 +107,10 @@ const num = (id, min, max, salt = 0) => {
     if (!hotel.amenities || !hotel.amenities.length)
       set.amenities = demo ? pick(AMENITY_SETS, hotel._id) : [];
     if (!hotel.city && demo) set.city = cityFromTitle(hotel.title) || pick(CITIES, hotel._id);
+    // Город берём уже проставленный или тот, что назначили строкой выше
+    if (!hotel.destinations || !hotel.destinations.length) {
+      set.destinations = DESTINATION_BY_CITY[set.city || hotel.city] || ['city'];
+    }
 
     if (Object.keys(set).length) {
       hotelsTouched++;

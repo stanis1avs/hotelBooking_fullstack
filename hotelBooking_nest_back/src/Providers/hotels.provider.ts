@@ -36,6 +36,7 @@ export class HotelsProvider {
       rating: createHotel.rating ?? 0,
       reviewsCount: createHotel.reviewsCount ?? 0,
       amenities: createHotel.amenities ?? [],
+      destinations: createHotel.destinations ?? [],
       image,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -56,6 +57,19 @@ export class HotelsProvider {
       // Поиск и по названию, и по городу: гость чаще ищет направление, а не отель
       query.$or = [{ title: { $regex: term, $options: "i" } }, { city: { $regex: term, $options: "i" } }];
     }
+
+    // Направления складываются по ИЛИ: «к морю» плюс «в горы» — это расширение
+    // выбора, гость смотрит и то, и другое.
+    if (queryParams.destinations?.length) {
+      query.destinations = { $in: queryParams.destinations };
+    }
+
+    // Удобства — наоборот, по И: отметив бассейн и спа, гость хочет отель,
+    // где есть и то, и другое, а не любой из двух.
+    if (queryParams.amenities?.length) {
+      query.amenities = { $all: queryParams.amenities };
+    }
+
     return query;
   }
 
@@ -91,7 +105,9 @@ export class HotelsProvider {
       throw new NotFoundException("Отель не найден");
     }
     const patch: Record<string, unknown> = { updatedAt: new Date() };
-    for (const field of ["title", "description", "city", "stars", "rating", "reviewsCount", "amenities"] as const) {
+    for (const field of [
+      "title", "description", "city", "stars", "rating", "reviewsCount", "amenities", "destinations",
+    ] as const) {
       if (data[field] !== undefined) patch[field] = data[field];
     }
     // Картинку перезаписываем только если её действительно прислали.
@@ -173,6 +189,7 @@ export class HotelsProvider {
       rating: hotel.rating ?? 0,
       reviewsCount: hotel.reviewsCount ?? 0,
       amenities: hotel.amenities ?? [],
+      destinations: hotel.destinations ?? [],
       minPrice: price?.minPrice ?? 0,
       roomsCount: price?.roomsCount ?? 0,
     };

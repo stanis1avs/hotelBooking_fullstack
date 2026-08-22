@@ -9,8 +9,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { Amenity, HotelDto } from '../../core/api';
+import { Amenity, Destination, HotelDto } from '../../core/api';
 import { AMENITY_LIST } from '../../shared/amenities';
+import { DESTINATION_LIST } from '../../shared/destinations';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -41,6 +42,7 @@ export class HotelFormDialog implements OnDestroy {
   readonly data = inject<HotelFormData>(MAT_DIALOG_DATA);
 
   readonly amenityList = AMENITY_LIST;
+  readonly destinationList = DESTINATION_LIST;
 
   selectedFile: File | null = null;
   previewUrl: string | null = null;
@@ -56,6 +58,8 @@ export class HotelFormDialog implements OnDestroy {
     rating: new FormControl(0, { nonNullable: true, validators: [Validators.min(0), Validators.max(5)] }),
     reviewsCount: new FormControl(0, { nonNullable: true, validators: [Validators.min(0)] }),
     amenities: new FormControl<Amenity[]>([], { nonNullable: true }),
+    // По направлению работают подборки в поиске: без него отель в них не попадёт
+    destinations: new FormControl<Destination[]>([], { nonNullable: true }),
   });
 
   constructor() {
@@ -70,6 +74,7 @@ export class HotelFormDialog implements OnDestroy {
         rating: hotel.rating ?? 0,
         reviewsCount: hotel.reviewsCount ?? 0,
         amenities: hotel.amenities ?? [],
+        destinations: hotel.destinations ?? [],
       });
     }
   }
@@ -123,6 +128,7 @@ export class HotelFormDialog implements OnDestroy {
     fd.append('reviewsCount', String(v.reviewsCount));
     // FormData не умеет массивы — на бэкенде строка разбирается по запятой
     fd.append('amenities', v.amenities.join(','));
+    fd.append('destinations', v.destinations.join(','));
     // Файл добавляем только когда он выбран: правка без замены фотографии
     // не должна затирать существующую.
     if (this.selectedFile) fd.append('image', this.selectedFile);

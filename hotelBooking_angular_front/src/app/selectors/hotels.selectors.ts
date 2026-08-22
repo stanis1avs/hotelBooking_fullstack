@@ -15,5 +15,7 @@ export const selectHotelsLimit = createSelector(selectHotelsState, (state) => st
 export const selectHotelsPageIndex = createSelector(selectHotelsState, (s) => Math.floor(s.offset / s.limit));
 
 export const selectHotelsTerm = createSelector(selectHotelsState, (state) => state.term);
+export const selectHotelsDestinations = createSelector(selectHotelsState, (s) => s.destinations);
+export const selectHotelsAmenities = createSelector(selectHotelsState, (s) => s.amenities);
 export const selectHotelsDateArrival = createSelector(selectHotelsState, (state) => state.dateArrival);
 export const selectHotelsDateDeparture = createSelector(selectHotelsState, (state) => state.dateDeparture);

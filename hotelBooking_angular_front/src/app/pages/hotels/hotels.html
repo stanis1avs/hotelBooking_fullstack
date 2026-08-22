@@ -35,19 +35,43 @@
         <button mat-flat-button color="primary" type="submit" class="hero-submit">Найти</button>
       </form>
 
-      <!-- Подборки меняют только период; строку поиска не трогают -->
-      <div class="hero-presets">
-        @for (preset of presets; track preset.label) {
-          <button
-            type="button"
-            class="preset"
-            [class.active]="activePreset() === preset.label"
-            [attr.aria-pressed]="activePreset() === preset.label"
-            (click)="applyPreset(preset)">
-            <mat-icon>{{ preset.icon }}</mat-icon>
-            {{ preset.label }}
-          </button>
-        }
+      <!-- Два ряда подборок: направление и удобства. Оба — настоящие условия
+           запроса, а не подстановка города в строку поиска, как было раньше -->
+      <div class="hero-filters">
+        <div class="hero-presets">
+          @for (d of destinationList; track d.value) {
+            <button
+              type="button"
+              class="preset"
+              [class.active]="destinations().includes(d.value)"
+              [attr.aria-pressed]="destinations().includes(d.value)"
+              (click)="toggleDestination(d.value)">
+              <mat-icon>{{ d.icon }}</mat-icon>
+              {{ d.label }}
+            </button>
+          }
+        </div>
+
+        <div class="hero-presets secondary">
+          @for (a of amenityList; track a.value) {
+            <button
+              type="button"
+              class="preset small"
+              [class.active]="amenities().includes(a.value)"
+              [attr.aria-pressed]="amenities().includes(a.value)"
+              (click)="toggleAmenity(a.value)">
+              <mat-icon>{{ a.icon }}</mat-icon>
+              {{ a.label }}
+            </button>
+          }
+
+          @if (hasFilters()) {
+            <button type="button" class="preset reset" (click)="clearFilters()">
+              <mat-icon>close</mat-icon>
+              Сбросить
+            </button>
+          }
+        </div>
       </div>
     </div>
   </section>

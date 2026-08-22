@@ -5,6 +5,14 @@ import { Transform } from "class-transformer";
 export const AMENITIES = ["wifi", "parking", "breakfast", "pool", "spa", "pets"] as const;
 export type Amenity = (typeof AMENITIES)[number];
 
+/**
+ * Тип направления. Заведён затем, чтобы подборки «К морю» и «В горы» были
+ * настоящим фильтром: раньше такая кнопка подставляла в поиск захардкоженный
+ * город, и подпись не соответствовала действию.
+ */
+export const DESTINATIONS = ["sea", "mountains", "city", "countryside", "ski"] as const;
+export type Destination = (typeof DESTINATIONS)[number];
+
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 const toBool = ({ value }: { value: unknown }) =>
   value === "true" || value === true ? true : value === "false" || value === false ? false : value;
@@ -61,6 +69,13 @@ export class CreateHotelDto {
   @ArrayMaxSize(6)
   @IsIn(AMENITIES, { each: true, message: `Допустимые удобства: ${AMENITIES.join(", ")}` })
   amenities?: Amenity[];
+
+  @IsOptional()
+  @Transform(toArray)
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsIn(DESTINATIONS, { each: true, message: `Допустимые направления: ${DESTINATIONS.join(", ")}` })
+  destinations?: Destination[];
 }
 
 export class UpdateHotelDto extends CreateHotelDto {
@@ -150,6 +165,18 @@ export class SearchHotelParams {
   @IsOptional()
   @IsString()
   dateDeparture?: string;
+
+  /** Любое из выбранных направлений: «к морю» или «в горы» — это ИЛИ. */
+  @IsOptional()
+  @IsArray()
+  @IsIn(DESTINATIONS, { each: true })
+  destinations?: Destination[];
+
+  /** Все выбранные удобства сразу: бассейн И спа — это И. */
+  @IsOptional()
+  @IsArray()
+  @IsIn(AMENITIES, { each: true })
+  amenities?: Amenity[];
 }
 
 export class SearchRoomsParams {
@@ -164,14 +191,16 @@ export class SearchRoomsParams {
 
 /* --- Внутренние типы уровня провайдеров --- */
 
-export interface CreateHotel extends Omit<CreateHotelDto, "amenities"> {
+export interface CreateHotel extends Omit<CreateHotelDto, "amenities" | "destinations"> {
   image: Buffer;
   amenities?: string[];
+  destinations?: string[];
 }
 
-export interface UpdateHotelParams extends Partial<Omit<CreateHotelDto, "amenities">> {
+export interface UpdateHotelParams extends Partial<Omit<CreateHotelDto, "amenities" | "destinations">> {
   image?: Buffer;
   amenities?: string[];
+  destinations?: string[];
 }
 
 export interface CreateRoom extends CreateRoomDto {
@@ -211,6 +240,7 @@ export class SendHotel {
   rating: number;
   reviewsCount: number;
   amenities: string[];
+  destinations: string[];
   /** Минимальная цена среди доступных номеров — «от N ₽ за ночь» в карточке. */
   minPrice: number;
   roomsCount: number;

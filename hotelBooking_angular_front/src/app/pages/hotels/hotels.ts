@@ -16,7 +16,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { HotelsActions } from '../../actions/hotels.actions';
-import type { HotelDto } from '../../core/api';
+import type { Amenity, Destination, HotelDto } from '../../core/api';
 import {
   selectHotelsDateArrival, selectHotelsDateDeparture, selectHotelsError, selectHotelsItems,
   selectHotelsLoading, selectHotelsPageIndex, selectHotelsTerm, selectHotelsTotal,
@@ -24,34 +24,9 @@ import {
 import { EmptyState } from '../../shared/empty-state';
 import { ImageUrlPipe } from '../../shared/image-url.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
-import { AMENITY_META } from '../../shared/amenities';
+import { AMENITY_LIST, AMENITY_META } from '../../shared/amenities';
+import { DESTINATION_LIST } from '../../shared/destinations';
 import { addDays, nightWord, nightsBetween, plural, toLocalIsoDate } from '../../core/date.utils';
-
-/**
- * Подборка задаёт только период проживания.
- *
- * Раньше здесь был ещё и `term`, и кнопка «В горы» подставляла в видимое поле
- * поиска слово «Карелия», а «К морю» — «Сочи». Подпись не соответствовала
- * действию: это был не фильтр, а поиск по подстроке в названии и городе,
- * причём затиравший то, что пользователь набрал сам. Фильтровать по признаку
- * «у моря» нечем — такого поля в модели нет.
- */
-interface Preset {
-  label: string;
-  icon: string;
-  /** Возвращает даты заезда и выезда от текущего дня. */
-  range: () => { start: Date; end: Date };
-}
-
-const DAY = 86_400_000;
-
-/** Ближайшая пятница, считая сегодняшнюю, если сегодня пятница. */
-function upcomingFriday(): Date {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + ((5 - date.getDay() + 7) % 7));
-  return date;
-}
 
 @Component({
   selector: 'app-hotels',
@@ -102,33 +77,19 @@ export class Hotels implements OnInit {
     end: new FormControl<Date | null>(new Date(Date.now() + 86_400_000), Validators.required),
   });
 
-  /** Подборки задают период: одно нажатие вместо возни с календарём. */
-  readonly presets: Preset[] = [
-    {
-      // Пятница — воскресенье, а не «две ночи от сегодня»: иначе во вторник
-      // кнопка «На выходные» предлагала бы вторник и четверг.
-      label: 'На выходные',
-      icon: 'weekend',
-      range: () => {
-        const start = upcomingFriday();
-        return { start, end: new Date(start.getTime() + 2 * DAY) };
-      },
-    },
-    {
-      label: 'На неделю',
-      icon: 'date_range',
-      range: () => {
-        const start = new Date();
-        return { start, end: new Date(start.getTime() + 7 * DAY) };
-      },
-    },
-  ];
+  /**
+   * Два ряда подборок — оба настоящие фильтры, оба считаются на сервере.
+   *
+   * Направления складываются по ИЛИ: «к морю» плюс «в горы» расширяют выбор.
+   * Удобства — по И: отметив бассейн и спа, гость хочет отель, где есть оба.
+   */
+  readonly destinationList = DESTINATION_LIST;
+  readonly amenityList = AMENITY_LIST;
+
+  readonly destinations = signal<Destination[]>([]);
+  readonly amenities = signal<Amenity[]>([]);
 
   private readonly nightsCount = signal(1);
-
-  /** Выбранная подборка. Раньше кнопки фильтровали выдачу,
-      но никак не показывали, какая из них сейчас применена. */
-  readonly activePreset = signal<string | null>(null);
 
   /** Размер каталога для заголовка — берётся из выдачи без фильтра,
       иначе число в шапке менялось бы на каждый ввод в поиске. */
@@ -176,8 +137,6 @@ export class Hotels implements OnInit {
       .pipe(debounceTime(150), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.recalcNights();
-        // Даты правили вручную — подборка больше не описывает то, что на экране
-        this.activePreset.set(null);
         if (this.form.controls.start.valid && this.form.controls.end.valid) this.search();
       });
 
@@ -221,12 +180,27 @@ export class Hotels implements OnInit {
     return `${left === 1 ? 'остался' : 'осталось'} ${left} ${plural(left, 'номер', 'номера', 'номеров')} на эти даты`;
   }
 
-  /** Меняет только период. Строку поиска не трогает — она принадлежит пользователю. */
-  applyPreset(preset: Preset): void {
-    const { start, end } = preset.range();
-    this.form.patchValue({ start, end }, { emitEvent: false });
-    this.recalcNights();
-    this.activePreset.set(preset.label);
+  toggleDestination(value: Destination): void {
+    this.destinations.update((list) =>
+      list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
+    );
+    this.search();
+  }
+
+  toggleAmenity(value: Amenity): void {
+    this.amenities.update((list) =>
+      list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
+    );
+    this.search();
+  }
+
+  hasFilters(): boolean {
+    return this.destinations().length > 0 || this.amenities().length > 0;
+  }
+
+  clearFilters(): void {
+    this.destinations.set([]);
+    this.amenities.set([]);
     this.search();
   }
 
@@ -249,17 +223,29 @@ export class Hotels implements OnInit {
     const dateDeparture = toLocalIsoDate(end) === dateArrival ? addDays(1, start) : toLocalIsoDate(end);
     const term = this.form.controls.term.value;
 
+    const destinations = this.destinations();
+    const amenities = this.amenities();
+
     this.store.dispatch(HotelsActions.setSearchTerm({ term }));
     this.store.dispatch(HotelsActions.setDates({ dateArrival, dateDeparture }));
+    this.store.dispatch(HotelsActions.setFilters({ destinations, amenities }));
     this.store.dispatch(
       HotelsActions.loadHotels({
-        params: { offset, limit, hotel: term.trim() || undefined, dateArrival, dateDeparture },
+        params: {
+          offset,
+          limit,
+          hotel: term.trim() || undefined,
+          dateArrival,
+          dateDeparture,
+          // Пустой список означает «фильтр не применён», и на сервер он не уходит
+          destinations: destinations.length ? destinations : undefined,
+          amenities: amenities.length ? amenities : undefined,
+        },
       })
     );
   }
 
   resetSearch(): void {
-    this.activePreset.set(null);
     this.form.controls.term.setValue('');
   }
 }
