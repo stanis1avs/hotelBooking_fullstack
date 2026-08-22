@@ -40,13 +40,9 @@
 3. **Apollo Server** + **@nestjs/graphql** — GraphQL-схема по code-first
 4. **JWT + Passport.js** — аутентификация: access в памяти клиента,
    refresh в httpOnly-cookie, со своим секретом, `jti` и отзывом на сервере
-5. **class-validator** + **class-transformer** — валидация DTO и аргументов GraphQL
-6. **@nestjs/throttler** — ограничение частоты запросов на входе и регистрации
-7. **graphql-depth-limit** + **graphql-query-complexity** — потолок глубины и стоимости запроса
-8. **helmet** — заголовки безопасности
-9. **bcrypt** — хеширование паролей
-10. **Socket.IO** — шлюз чата поддержки
-11. **Jest** — юнит-тесты провайдеров
+5. **helmet** — заголовки безопасности
+6. **Socket.IO** — шлюз чата поддержки
+7. **Jest** — юнит-тесты провайдеров
 
 ### В разработке
 - _**ЮKassa**_ — оплата брони: депозит, правила отмены, возврат
