@@ -52,6 +52,19 @@ async function bootstrap() {
     immutable: true,
     index: false,
     fallthrough: false,
+    /**
+     * Фотографии обязаны встраиваться с чужого источника — это их назначение.
+     *
+     * helmet по умолчанию ставит `Cross-Origin-Resource-Policy: same-origin`
+     * на все ответы, и в разработке снимок с localhost:7000 не отображался
+     * на странице с localhost:4200: браузер отклонял ответ с
+     * ERR_BLOCKED_BY_RESPONSE.NotSameOrigin. Пока картинки лежали в документах
+     * base64, запроса не было вовсе, и проблема не проявлялась.
+     *
+     * Ослабление точечное — только для файлов. Ответы API остаются
+     * с `same-origin`, потому что встраивать их со стороннего сайта нечем и незачем.
+     */
+    setHeaders: (res) => res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"),
   });
 
   // whitelist срезает поля, которых нет в DTO, forbidNonWhitelisted отвечает 400 при их наличии.

@@ -355,6 +355,20 @@ html .mat-mdc-card-actions {
 /* --- Поля ввода ---
    Прозрачное поле на тёмном фоне читается плохо, поэтому даём лёгкую
    заливку: поле выглядит углублением, а рамка остаётся акцентом. */
+/* Иконка внутри чипа.
+   Material держит для ведущей иконки размер 18 px, но так он применяется только
+   к слоту графики — а иконка, поставленная в содержимое чипа, остаётся 24 px
+   и занимает почти всю его высоту. Префикс html обязателен: стили компонентов
+   Material подключаются в head позже глобального файла и при равной
+   специфичности перебивают его. */
+html .mat-mdc-standard-chip .mat-mdc-chip-action-label .mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
 html .mat-mdc-form-field .mdc-text-field--outlined {
   background: var(--mat-sys-surface-container-low);
   border-radius: var(--mat-sys-corner-extra-small);
