@@ -35,7 +35,7 @@
         <button mat-flat-button color="primary" type="submit" class="hero-submit">Найти</button>
       </form>
 
-      <!-- Подборки — это готовые фильтры, а не украшение -->
+      <!-- Подборки меняют только период; строку поиска не трогают -->
       <div class="hero-presets">
         @for (preset of presets; track preset.label) {
           <button

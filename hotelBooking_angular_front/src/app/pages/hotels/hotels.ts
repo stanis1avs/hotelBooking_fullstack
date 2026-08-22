@@ -27,11 +27,30 @@ import { MoneyPipe } from '../../shared/money.pipe';
 import { AMENITY_META } from '../../shared/amenities';
 import { addDays, nightWord, nightsBetween, plural, toLocalIsoDate } from '../../core/date.utils';
 
+/**
+ * Подборка задаёт только период проживания.
+ *
+ * Раньше здесь был ещё и `term`, и кнопка «В горы» подставляла в видимое поле
+ * поиска слово «Карелия», а «К морю» — «Сочи». Подпись не соответствовала
+ * действию: это был не фильтр, а поиск по подстроке в названии и городе,
+ * причём затиравший то, что пользователь набрал сам. Фильтровать по признаку
+ * «у моря» нечем — такого поля в модели нет.
+ */
 interface Preset {
   label: string;
   icon: string;
-  term: string;
-  nights: number;
+  /** Возвращает даты заезда и выезда от текущего дня. */
+  range: () => { start: Date; end: Date };
+}
+
+const DAY = 86_400_000;
+
+/** Ближайшая пятница, считая сегодняшнюю, если сегодня пятница. */
+function upcomingFriday(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + ((5 - date.getDay() + 7) % 7));
+  return date;
 }
 
 @Component({
@@ -83,12 +102,26 @@ export class Hotels implements OnInit {
     end: new FormControl<Date | null>(new Date(Date.now() + 86_400_000), Validators.required),
   });
 
-  /** Подборки подставляют параметры поиска, а не просто украшают герой. */
+  /** Подборки задают период: одно нажатие вместо возни с календарём. */
   readonly presets: Preset[] = [
-    { label: 'К морю', icon: 'beach_access', term: 'Сочи', nights: 7 },
-    { label: 'На выходные', icon: 'weekend', term: '', nights: 2 },
-    { label: 'В горы', icon: 'landscape', term: 'Карелия', nights: 4 },
-    { label: 'Командировка', icon: 'work', term: 'Москва', nights: 3 },
+    {
+      // Пятница — воскресенье, а не «две ночи от сегодня»: иначе во вторник
+      // кнопка «На выходные» предлагала бы вторник и четверг.
+      label: 'На выходные',
+      icon: 'weekend',
+      range: () => {
+        const start = upcomingFriday();
+        return { start, end: new Date(start.getTime() + 2 * DAY) };
+      },
+    },
+    {
+      label: 'На неделю',
+      icon: 'date_range',
+      range: () => {
+        const start = new Date();
+        return { start, end: new Date(start.getTime() + 7 * DAY) };
+      },
+    },
   ];
 
   private readonly nightsCount = signal(1);
@@ -130,16 +163,11 @@ export class Hotels implements OnInit {
       });
 
     // Поиск с задержкой: раньше строка только писалась в стор,
-    // а запрос уходил исключительно по кнопке.
-    // Ручная правка запроса или дат снимает выделение с подборки:
-    // подборка задаёт обе величины сразу, и после изменения любой из них
-    // подсветка перестала бы соответствовать выдаче.
+    // а запрос уходил исключительно по кнопке. Подсветку подборки ввод
+    // не снимает — подборка задаёт период, и к строке запроса отношения не имеет.
     this.form.controls.term.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.activePreset.set(null);
-        this.search();
-      });
+      .subscribe(() => this.search());
 
     combineLatest([
       this.form.controls.start.valueChanges,
@@ -148,6 +176,7 @@ export class Hotels implements OnInit {
       .pipe(debounceTime(150), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.recalcNights();
+        // Даты правили вручную — подборка больше не описывает то, что на экране
         this.activePreset.set(null);
         if (this.form.controls.start.valid && this.form.controls.end.valid) this.search();
       });
@@ -192,12 +221,10 @@ export class Hotels implements OnInit {
     return `${left === 1 ? 'остался' : 'осталось'} ${left} ${plural(left, 'номер', 'номера', 'номеров')} на эти даты`;
   }
 
+  /** Меняет только период. Строку поиска не трогает — она принадлежит пользователю. */
   applyPreset(preset: Preset): void {
-    const start = new Date();
-    this.form.patchValue(
-      { term: preset.term, start, end: new Date(Date.now() + preset.nights * 86_400_000) },
-      { emitEvent: false }
-    );
+    const { start, end } = preset.range();
+    this.form.patchValue({ start, end }, { emitEvent: false });
     this.recalcNights();
     this.activePreset.set(preset.label);
     this.search();
