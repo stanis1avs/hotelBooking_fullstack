@@ -28,9 +28,9 @@ export class AuthController {
   }
 
   @Post("/logout")
-  logout(@Req() req: ExpressRequest, @Res() res: Response): void {
+  async logout(@Req() req: ExpressRequest, @Res() res: Response): Promise<void> {
     // Отзываем refresh на сервере, иначе украденный токен работал бы до конца TTL.
-    this.auth.revokeRefresh(req.cookies?.[REFRESH_COOKIE]);
+    await this.auth.revokeRefresh(req.cookies?.[REFRESH_COOKIE]);
     clearRefreshCookie(res, req);
     res.status(HttpStatus.NO_CONTENT).send();
   }

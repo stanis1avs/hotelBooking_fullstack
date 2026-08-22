@@ -83,7 +83,7 @@ export class AuthResolver {
     if (!token) {
       throw new UnauthorizedException("Refresh-токен не передан");
     }
-    const payload = this.authProvider.verifyRefresh(token);
+    const payload = await this.authProvider.verifyRefresh(token);
     const fresh = await this.authProvider.refresh(payload);
     setRefreshCookie(ctx.res, fresh.refresh_token, ctx.req);
     return { access_token: fresh.access_token, user: this.toUserType(fresh.userData) };
@@ -91,7 +91,7 @@ export class AuthResolver {
 
   @Mutation(() => Boolean)
   async logout(@Context() ctx: GqlContext): Promise<boolean> {
-    this.authProvider.revokeRefresh(ctx.req?.cookies?.[REFRESH_COOKIE]);
+    await this.authProvider.revokeRefresh(ctx.req?.cookies?.[REFRESH_COOKIE]);
     clearRefreshCookie(ctx.res, ctx.req);
     return true;
   }

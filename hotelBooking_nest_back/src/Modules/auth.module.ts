@@ -6,6 +6,7 @@ import { UserSchema, User } from "../Models/Users";
 import { AuthProvider } from "../Providers/auth.provider";
 import { UsersProvider } from "../Providers/users.provider";
 import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
+import { RevokedToken, RevokedTokenSchema } from "../Models/RevokedTokens";
 import { JwtStrategy } from "../Auth/jwt.strategy";
 import { JwtRefreshStrategy } from "../Auth/jwt-refresh.strategy";
 import { AuthController } from "../Controllers/auth.controller";
@@ -13,7 +14,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: RevokedToken.name, schema: RevokedTokenSchema },
+    ]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

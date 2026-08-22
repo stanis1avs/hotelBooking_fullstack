@@ -77,13 +77,13 @@ export class AuthProvider {
       throw new UnauthorizedException("Пользователь не найден");
     }
     if (payload.jti) {
-      this.blacklist.revoke(payload.jti, payload.exp ?? Math.floor(Date.now() / 1000) + 2592000);
+      await this.blacklist.revoke(payload.jti, payload.exp ?? Math.floor(Date.now() / 1000) + 2592000);
     }
     return this.issueTokens(this.printFormatUser(user));
   }
 
   /** Разбирает refresh-токен вне Passport — нужно для GraphQL-мутации. */
-  verifyRefresh(token: string): UserToJWTPayload & { jti?: string; exp?: number } {
+  async verifyRefresh(token: string): Promise<UserToJWTPayload & { jti?: string; exp?: number }> {
     let decoded: Record<string, unknown>;
     try {
       decoded = this.jwtService.verify(token, { secret: this.refreshSecret });
@@ -93,7 +93,7 @@ export class AuthProvider {
     if (decoded.type !== "refresh") {
       throw new UnauthorizedException("Ожидался refresh-токен");
     }
-    if (decoded.jti && this.blacklist.isRevoked(String(decoded.jti))) {
+    if (decoded.jti && (await this.blacklist.isRevoked(String(decoded.jti)))) {
       throw new UnauthorizedException("Refresh-токен отозван");
     }
     return {
@@ -106,11 +106,11 @@ export class AuthProvider {
   }
 
   /** Выход: отзываем refresh, чтобы он не работал до конца TTL. */
-  revokeRefresh(token: string | undefined): void {
+  async revokeRefresh(token: string | undefined): Promise<void> {
     if (!token) return;
     try {
       const decoded: any = this.jwtService.verify(token, { secret: this.refreshSecret });
-      if (decoded?.jti) this.blacklist.revoke(decoded.jti, decoded.exp);
+      if (decoded?.jti) await this.blacklist.revoke(decoded.jti, decoded.exp);
     } catch {
       // Просроченный или битый токен отзывать не нужно
     }

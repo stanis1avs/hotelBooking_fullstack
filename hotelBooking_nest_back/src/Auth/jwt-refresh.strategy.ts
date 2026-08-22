@@ -28,7 +28,9 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, "jwt-refresh-
     if (payload?.type !== "refresh") {
       throw new UnauthorizedException("Ожидался refresh-токен");
     }
-    if (payload.jti && this.blacklist.isRevoked(payload.jti)) {
+    // await обязателен: без него в условие попадёт Promise, а он всегда истинный,
+    // и любой refresh-токен считался бы отозванным. Проверка типов такое пропускает.
+    if (payload.jti && (await this.blacklist.isRevoked(payload.jti))) {
       throw new UnauthorizedException("Refresh-токен отозван");
     }
     return { id: String(payload.sub), role: payload.role, email: payload.email, jti: payload.jti, exp: payload.exp };

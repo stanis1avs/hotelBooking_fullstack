@@ -19,6 +19,7 @@ import { UsersProvider } from "../Providers/users.provider";
 import { AuthProvider } from "../Providers/auth.provider";
 import { SupportProvider } from "../Providers/support.provider";
 import { TokenBlacklistProvider } from "../Providers/tokenBlacklist.provider";
+import { RevokedToken, RevokedTokenSchema } from "../Models/RevokedTokens";
 import { StatsProvider } from "../Providers/stats.provider";
 
 import { JwtStrategy } from "../Auth/jwt.strategy";
@@ -40,6 +41,7 @@ import { StatsResolver } from "./resolvers/stats.resolver";
       { name: User.name, schema: UserSchema },
       { name: Support.name, schema: SupportSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: RevokedToken.name, schema: RevokedTokenSchema },
     ]),
     PassportModule,
     JwtModule.registerAsync({

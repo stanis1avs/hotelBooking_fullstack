@@ -1,48 +1,43 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { RevokedToken, RevokedTokenDocument } from "../Models/RevokedTokens";
 
 /**
  * Хранилище отозванных refresh-токенов (по jti).
  *
- * Реализация в памяти: работает для одного инстанса и сбрасывается при рестарте.
- * Для нескольких инстансов заменить на Redis: SET revoked:{jti} 1 EX <ttl> / EXISTS revoked:{jti}.
- * См. пункт F-17 в BACKLOG.md.
+ * Записи живут в MongoDB и удаляются TTL-индексом, когда истекает сам токен.
+ * Прежняя реализация держала их в Map: она терялась при перезапуске, и после
+ * каждого деплоя отозванные токены снова начинали работать.
+ *
+ * Для нескольких экземпляров бэкенда это тоже подходит — база одна на всех,
+ * так что отдельное хранилище под отзыв не понадобится. См. F-17 в BACKLOG.md.
  */
 @Injectable()
 export class TokenBlacklistProvider {
   private readonly logger = new Logger("TokenBlacklist");
-  private readonly revoked = new Map<string, number>();
 
-  constructor() {
-    // Раз в час выкидываем записи, у которых истёк срок самого токена.
-    const timer = setInterval(() => this.sweep(), 60 * 60 * 1000);
-    timer.unref?.();
-  }
+  constructor(
+    @InjectModel(RevokedToken.name) private readonly revokedModel: Model<RevokedTokenDocument>
+  ) {}
 
-  revoke(jti: string, expiresAtSec: number): void {
+  async revoke(jti: string, expiresAtSec: number): Promise<void> {
     if (!jti) return;
-    this.revoked.set(jti, expiresAtSec * 1000);
+    try {
+      // upsert: повторный выход тем же токеном не должен падать на уникальном индексе
+      await this.revokedModel.updateOne(
+        { jti },
+        { $set: { jti, expiresAt: new Date(expiresAtSec * 1000) } },
+        { upsert: true }
+      );
+    } catch (e) {
+      // Отзыв не должен ронять выход из аккаунта: cookie всё равно очищается
+      this.logger.error(`Не удалось отозвать токен ${jti}: ${(e as Error).message}`);
+    }
   }
 
-  isRevoked(jti: string): boolean {
+  async isRevoked(jti: string): Promise<boolean> {
     if (!jti) return false;
-    const until = this.revoked.get(jti);
-    if (until === undefined) return false;
-    if (until < Date.now()) {
-      this.revoked.delete(jti);
-      return false;
-    }
-    return true;
-  }
-
-  private sweep(): void {
-    const now = Date.now();
-    let removed = 0;
-    for (const [jti, until] of this.revoked) {
-      if (until < now) {
-        this.revoked.delete(jti);
-        removed++;
-      }
-    }
-    if (removed) this.logger.debug(`Очищено просроченных записей: ${removed}`);
+    return (await this.revokedModel.exists({ jti })) !== null;
   }
 }
